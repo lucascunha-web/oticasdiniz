@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Óticas Diniz</title>
+    <link rel="stylesheet" href="style-painel.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+
+    <div class="sidebar">
+        <img src="logodiniz.png" class="logo-side" alt="Diniz">
+        <nav>
+            <a href="#" class="nav-link active" data-target="aba-ranking">
+                <i class="fas fa-chart-line"></i> <span>Dashboard</span>
+            </a>
+            <a href="#" class="nav-link" data-target="aba-comunicados">
+                <i class="fas fa-bullhorn"></i> <span>Comunicados</span>
+            </a>
+            <a href="#" class="nav-link" data-target="aba-lentes">
+                <i class="fas fa-glasses"></i> <span>Lentes Estoque</span>
+            </a>
+
+            <div class="sidebar-item">
+                <a href="#" class="nav-link" id="btnTabelas" onclick="toggleTabelas(event)">
+                    <i class="fas fa-table"></i> <span>Tabelas</span> 
+                    <i class="fas fa-chevron-down" style="margin-left: auto; font-size: 0.7rem;"></i>
+                </a>
+                <div id="submenuTabelas" class="submenu">
+                    <a href="#" id="link-DINIZ" target="_blank" class="sub-nav-link">Cardápio</a>
+                    <a href="#" id="link-ZEISS" target="_blank" class="sub-nav-link">Zeiss</a>
+                    <a href="#" id="link-HOYA" target="_blank" class="sub-nav-link">Hoya</a>
+                    <a href="#" id="link-ESSILOR" target="_blank" class="sub-nav-link">Essilor</a>
+                </div>
+            </div>
+
+            <a href="#" class="nav-link" data-target="aba-calculadora">
+                <i class="fas fa-calculator"></i> <span>Calculadora</span>
+            </a>
+            <hr>
+            <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a>
+        </nav>
+    </div>
+
+    <div class="main-content">
+        
+        <section id="aba-ranking" class="content-section active">
+            <header>
+                <h2>Olá, <span id="nomeUsuario">...</span></h2>
+            </header>
+
+            <div class="stats-grid" id="areaIndicadores" style="display: none;">
+                <div class="stat-card">
+                    <span class="rank-badge" id="rankFaturamento">#--º</span>
+                    <i class="fas fa-dollar-sign icon-faturamento"></i>
+                    <div class="stat-info"><h3>Faturamento</h3><p id="totalFaturamento">R$ 0,00</p></div>
+                </div>
+                <div class="stat-card">
+                    <span class="rank-badge" id="rankTicket">#--º</span>
+                    <i class="fas fa-ticket-alt icon-ticket"></i>
+                    <div class="stat-info"><h3>Ticket Médio</h3><p id="ticketMedio">R$ 0,00</p></div>
+                </div>
+                <div class="stat-card">
+                    <span class="rank-badge" id="rankDesconto">#--º</span>
+                    <i class="fas fa-percentage icon-desconto"></i>
+                    <div class="stat-info"><h3>Desconto</h3><p id="totalDesconto">0%</p></div>
+                </div>
+                <div class="stat-card">
+                    <span class="rank-badge" id="rankVendas">#--º</span>
+                    <i class="fas fa-shopping-bag icon-vendas"></i>
+                    <div class="stat-info"><h3>Vendas</h3><p id="totalVendas">0</p></div>
+                </div>
+            </div>
+
+            <div class="ranking-card">
+                <div class="ranking-header">
+                    <h3><i class="fas fa-medal"></i> <span id="tituloRanking">Ranking de Faturamento</span></h3>
+                    
+                    <div id="filtroAdminRanking" style="display: none;">
+                        <select id="selectIndicador" onchange="atualizarRankingPorFiltro()">
+                            <option value="faturamento">Faturamento</option>
+                            <option value="ticket">Ticket Médio</option>
+                            <option value="vendas">Vendas</option>
+                            <option value="desconto">Desconto</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="rankingContainer"></div>
+            </div>
+        </section>
+
+        <section id="aba-comunicados" class="content-section">
+            <header><h2>Comunicados Internos</h2></header>
+            <div id="listaComunicados" class="comunicados-grid">
+                <p>Carregando comunicados...</p>
+            </div>
+        </section>
+
+        <section id="aba-lentes" class="content-section">
+            <header class="header-lentes">
+                <h2>Lentes de Estoque</h2>
+                <button class="btn-balanco" onclick="abrirBalanco()">Balanço</button>
+            </header>
+            <div class="lentes-grid">
+                <div class="olho-card">
+                    <div class="olho-header blue"><i class="fas fa-eye"></i> OLHO DIREITO</div>
+                    <div class="olho-body">
+                        <div class="campo-grau"><label>Esférico</label><select id="esfOD"></select></div>
+                        <div class="campo-grau"><label>Cilíndrico</label><select id="cilOD"></select></div>
+                    </div>
+                </div>
+                <div class="olho-card">
+                    <div class="olho-header purple"><i class="fas fa-eye"></i> OLHO ESQUERDO</div>
+                    <div class="olho-body">
+                        <div class="campo-grau"><label>Esférico</label><select id="esfOE"></select></div>
+                        <div class="campo-grau"><label>Cilíndrico</label><select id="cilOE"></select></div>
+                    </div>
+                </div>
+            </div>
+            <button class="btn-consultar" id="btnConsultar" onclick="consultarEstoque()">CONSULTAR</button>
+            <div id="resultadosLentes" class="resultados-lentes"></div>
+        </section>
+
+        <section id="aba-calculadora" class="content-section">
+            <header><h2>Calculadora Óptica</h2></header>
+            
+            <div class="calc-container">
+                <div class="calc-tabs">
+                    <button class="calc-tab-btn active" onclick="switchCalcTab(event, 'calc-perto')">PERTO</button>
+                    <button class="calc-tab-btn" onclick="switchCalcTab(event, 'calc-adicao')">ADIÇÃO</button>
+                    <button class="calc-tab-btn" onclick="switchCalcTab(event, 'calc-transp')">TRANSP.</button>
+                </div>
+
+                <div id="calc-perto" class="calc-tab-content active">
+                    <div class="calc-card">
+                        <h3>PRESCRIÇÃO LONGE + ADIÇÃO</h3>
+                        <div class="input-group-row">
+                            <span class="eye-label">OD</span>
+                            <select id="pEsfOd"></select>
+                            <select id="pCilOd"></select>
+                            <select id="pAddOd"></select>
+                        </div>
+                        <div class="input-group-row">
+                            <span class="eye-label">OE</span>
+                            <select id="pEsfOe"></select>
+                            <select id="pCilOe"></select>
+                            <select id="pAddOe"></select>
+                        </div>
+                        <button class="btn-primary-calc" onclick="calcularPerto()">CALCULAR GRAU DE PERTO</button>
+                    </div>
+                    <div id="resPerto" class="result-box" style="display:none"></div>
+                </div>
+
+                <div id="calc-adicao" class="calc-tab-content">
+                    <div class="calc-card">
+                        <h3>VALORES DE LONGE</h3>
+                        <div class="input-group-row">
+                            <span class="eye-label">OD</span>
+                            <select id="aLongeEsfOd"></select>
+                            <select id="aLongeCilOd"></select>
+                        </div>
+                        <div class="input-group-row">
+                            <span class="eye-label">OE</span>
+                            <select id="aLongeEsfOe"></select>
+                            <select id="aLongeCilOe"></select>
+                        </div>
+                        <hr style="margin: 15px 0; border: 0; border-top: 1px solid #eee;">
+                        <h3>VALORES DE PERTO</h3>
+                        <div class="input-group-row">
+                            <span class="eye-label">OD</span>
+                            <select id="aPertoEsfOd"></select>
+                            <select id="aPertoCilOd"></select>
+                        </div>
+                        <div class="input-group-row">
+                            <span class="eye-label">OE</span>
+                            <select id="aPertoEsfOe"></select>
+                            <select id="aPertoCilOe"></select>
+                        </div>
+                        <button class="btn-primary-calc" onclick="calcularAdicao()">CALCULAR ADIÇÃO</button>
+                    </div>
+                    <div id="resAdicao" class="result-box" style="display:none"></div>
+                </div>
+
+                <div id="calc-transp" class="calc-tab-content">
+                    <div class="calc-card">
+                        <h3>CONVERTER CILÍNDRICO (+) PARA (-)</h3>
+                        <div class="input-group-row">
+                            <span class="eye-label">OD</span>
+                            <select id="tEsfOd"></select>
+                            <select id="tCilOd"></select>
+                            <select id="tEixoOd"></select>
+                        </div>
+                        <div class="input-group-row">
+                            <span class="eye-label">OE</span>
+                            <select id="tEsfOe"></select>
+                            <select id="tCilOe"></select>
+                            <select id="tEixoOe"></select>
+                        </div>
+                        <button class="btn-primary-calc" onclick="calcularTransp()">REALIZAR TRANSPOSIÇÃO</button>
+                    </div>
+                    <div id="resTransp" class="result-box" style="display:none"></div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div id="modalBalanco" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="fecharBalanco()">&times;</span>
+            <h3>Balanço de Estoque</h3>
+            <div class="aba-selector" id="abaSelector">
+                <button id="btnAbaACRILICA" class="aba-ar active" onclick="mudarAbaBalanco(this, 'ACRILICA AR')">ACRILICA AR</button>
+                <button id="btnAbaFILTRO" class="aba-filtro" onclick="mudarAbaBalanco(this, 'FILTRO AZUL')">FILTRO AZUL</button>
+                <button id="btnAbaZEISS" class="aba-zeiss" onclick="mudarAbaBalanco(this, 'ZEISS')">ZEISS</button>
+            </div>
+            <div class="balanco-campos">
+                <div class="campo-grau"><label>Esf.</label><select id="esfBalanco" onchange="buscarQtdBalanco()"></select></div>
+                <div class="campo-grau"><label>Cil.</label><select id="cilBalanco" onchange="buscarQtdBalanco()"></select></div>
+            </div>
+            <div class="contador-container">
+                <button class="btn-count" onclick="ajustarQtd(-1)">-</button>
+                <input type="number" id="qtdEstoque" value="0" readonly>
+                <button class="btn-count" onclick="ajustarQtd(1)">+</button>
+            </div>
+            <button class="btn-salvar" onclick="salvarEstoqueManual()">SALVAR ALTERAÇÃO</button>
+        </div>
+    </div>
+
+    <script src="script-painel.js"></script>
+    <script src="script-lentes.js"></script>
+</body>
+</html>

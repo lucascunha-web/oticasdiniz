@@ -1,0 +1,269 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --diniz-red: #c62828;
+    --diniz-red-dark: #a51d1d;
+    --diniz-white: #ffffff;
+    --text-dark: #333;
+    --text-light: #f0f0f0;
+    --input-bg: #f8f8f8;
+    --input-border: #e0e0e0;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    /* Gradiente Vermelho Diniz (Diagonal) */
+    background: linear-gradient(135deg, #e53935 30%, #c62828 40%, #8e0000 100%);
+    background-attachment: fixed;
+}
+.login-page-container {
+    display: flex;
+    width: 900px; /* Largura total da tela de login */
+    height: 550px; /* Altura total da tela de login */
+    border-radius: 20px;
+    overflow: hidden; /* Garante que os cantos arredondados funcionem */
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+}
+
+/* Lado Esquerdo: Formulário de Login */
+.login-form-section {
+    flex: 1; /* Ocupa metade da largura */
+    background: linear-gradient(135deg, var(--diniz-red), var(--diniz-red-dark));
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 30px;
+    position: relative;
+    color: var(--diniz-white);
+}
+
+.form-content {
+    width: 100%;
+    max-width: 320px;
+    text-align: center;
+}
+
+.logo {
+    width: 180px; /* Tamanho da logo */
+    margin-bottom: 25px;
+    filter: brightness(0) invert(1); /* Deixa a logo branca para o fundo vermelho */
+}
+
+h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 40px;
+    letter-spacing: 1px;
+}
+
+.input-field {
+    background: var(--diniz-white);
+    border-radius: 70px;
+    margin-bottom: 20px;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.input-field i {
+    color: var(--diniz-red);
+    margin-right: 10px;
+    font-size: 1.1rem;
+}
+
+.input-field input {
+    border: none;
+    outline: none;
+    background: transparent;
+    flex-grow: 1;
+    font-size: 1rem;
+    color: var(--text-dark);
+    padding: 5px 0;
+}
+
+.input-field input::placeholder {
+    color: #aaa;
+    font-weight: 300;
+}
+
+.options-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    margin-bottom: 30px;
+}
+
+.checkbox-container {
+    display: block;
+    position: relative;
+    padding-left: 25px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    user-select: none;
+    color: var(--text-light);
+}
+
+.checkbox-container input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+.checkmark {
+    position: absolute;
+    top: 2px;
+    left: 0;
+    height: 16px;
+    width: 16px;
+    background-color: var(--diniz-white);
+    border-radius: 3px;
+}
+
+.checkbox-container input:checked ~ .checkmark {
+    background-color: var(--diniz-red-dark);
+}
+
+.checkmark:after {
+    content: "";
+    position: absolute;
+    display: none;
+}
+
+.checkbox-container input:checked ~ .checkmark:after {
+    display: block;
+}
+
+.checkbox-container .checkmark:after {
+    left: 5px;
+    top: 2px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.forgot-password {
+    color: var(--text-light);
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.forgot-password:hover {
+    color: var(--diniz-white);
+    text-decoration: underline;
+}
+
+button {
+    width: 100%;
+    padding: 15px 0;
+    background: var(--diniz-white);
+    color: var(--diniz-red);
+    border: none;
+    border-radius: 50px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+}
+
+button:hover {
+    background: #f0f0f0;
+    transform: translateY(-3px);
+    box-shadow: 0 12px 25px rgba(0,0,0,0.3);
+}
+
+.message-text {
+    margin-top: 20px;
+    font-size: 0.9rem;
+    color: var(--text-light);
+    font-weight: 500;
+    min-height: 20px;
+}
+
+/* Lado Direito: Ilustração */
+.login-illustration-section {
+    flex: 1; /* Ocupa metade da largura */
+    background-color: var(--diniz-white);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 30px;
+    text-align: center;
+}
+
+.illustration-content {
+    max-width: 400px;
+    width: 100%;
+}
+
+.main-illustration {
+    width: 100%;
+    max-width: 350px; /* Ajuste o tamanho da ilustração */
+    height: auto;
+    margin-bottom: 25px;
+}
+
+.illustration-text h2 {
+    font-size: 1.8rem;
+    color: var(--text-dark);
+    margin-bottom: 10px;
+}
+
+.illustration-text p {
+    font-size: 1rem;
+    color: #666;
+    line-height: 1.5;
+}
+
+/* Responsividade para telas menores */
+@media (max-width: 800px) {
+    .login-page-container {
+        flex-direction: column;
+        width: 90%;
+        height: auto;
+        max-height: 95vh;
+        overflow-y: auto; /* Permite rolar se o conteúdo for grande */
+    }
+
+    .login-illustration-section {
+        display: none; /* Esconde a ilustração em telas muito pequenas */
+    }
+
+    .login-form-section {
+        border-radius: 20px; /* Arredonda os cantos quando a ilustração some */
+        min-height: 500px;
+        padding: 20px;
+    }
+
+    .form-content {
+        max-width: 90%;
+    }
+
+    h1 {
+        font-size: 1.8rem;
+        margin-bottom: 30px;
+    }
+
+    .logo {
+        width: 150px;
+    }
+}

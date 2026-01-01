@@ -1,0 +1,941 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --diniz-red: #c62828;
+    --diniz-red-dark: #a52323;
+    --bg-gray: #f4f7f6;
+    --gold: #FFD700;
+    --silver: #C0C0C0;
+    --bronze: #CD7F32;
+    --white: #ffffff;
+    --text-dark: #333333;
+    --text-light: #888888;
+    --shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+
+/* --- RESET E BASE --- */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { 
+    font-family: 'Poppins', sans-serif; 
+    background-color: var(--bg-gray); 
+    display: flex; 
+    color: var(--text-dark);
+}
+
+/* --- SIDEBAR --- */
+.sidebar { 
+    width: 260px; 
+    height: 100vh; 
+    background: var(--diniz-red); 
+    padding: 30px 20px; 
+    position: fixed; 
+    z-index: 100; 
+}
+
+.logo-side { 
+    width: 130px; 
+    display: block; 
+    margin: 0 auto 30px auto; 
+    filter: brightness(0) invert(1); 
+}
+
+.sidebar nav hr { 
+    border: 0; 
+    border-top: 1px solid rgba(255,255,255,0.2); 
+    margin: 15px 0; 
+}
+
+.sidebar nav a { 
+    display: flex; 
+    align-items: center; 
+    color: rgba(255,255,255,0.7); 
+    text-decoration: none; 
+    padding: 12px 15px; 
+    border-radius: 12px; 
+    margin-bottom: 5px; 
+    font-size: 0.9rem; 
+    transition: 0.3s; 
+}
+
+.sidebar nav a i { margin-right: 12px; width: 20px; text-align: center; }
+
+.sidebar nav a:hover, 
+.sidebar nav a.active { 
+    background: rgba(255,255,255,0.15); 
+    color: #fff; 
+    font-weight: 500; 
+}
+
+/* --- LAYOUT PRINCIPAL --- */
+.main-content { 
+    margin-left: 260px; 
+    padding: 40px; 
+    flex: 1; 
+}
+
+.content-section { display: none; }
+.content-section.active { display: block; }
+
+header { margin-bottom: 40px; }
+header h2 { font-size: 1.8rem; color: #333; }
+header h2 span { color: var(--diniz-red); }
+
+/* --- GRID DE PERFORMANCE --- */
+.stats-grid { 
+    display: grid; 
+    grid-template-columns: repeat(4, 1fr); 
+    gap: 15px; 
+    margin-bottom: 30px; 
+}
+
+.stat-card { 
+    background: #fff; 
+    padding: 18px; 
+    border-radius: 18px; 
+    box-shadow: var(--shadow); 
+    display: flex; 
+    align-items: center; 
+    gap: 12px; 
+    position: relative; 
+}
+
+.stat-info h3 { font-size: 0.7rem; color: var(--text-light); text-transform: uppercase; }
+.stat-info p { font-size: 1.1rem; font-weight: 700; }
+
+.rank-badge { 
+    position: absolute; 
+    top: 10px; 
+    right: 12px; 
+    font-size: 0.65rem; 
+    font-weight: 800; 
+    color: #ccc; 
+}
+
+.icon-faturamento { color: #1e88e5; }
+.icon-ticket { color: #ffa000; }
+.icon-desconto { color: #e53935; }
+.icon-vendas { color: #43a047; }
+
+/* --- RANKING --- */
+.ranking-card { 
+    background: #fff; 
+    border-radius: 20px; 
+    padding: 25px; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.03); 
+}
+
+.ranking-header { margin-bottom: 45px; } 
+
+.ranking-item { margin-bottom: 18px; }
+
+.rank-label { 
+    display: flex; 
+    justify-content: space-between; 
+    margin-bottom: 6px; 
+    font-size: 0.9rem; 
+    font-weight: 600; 
+}
+
+.progress-bg { background: #f1f2f6; height: 14px; border-radius: 20px; overflow: hidden; }
+.progress-bar { height: 100%; border-radius: 20px; transition: width 1s ease-in-out; width: 0; }
+
+.rank-1 .progress-bar { background: linear-gradient(90deg, var(--gold), #fff176); }
+.rank-2 .progress-bar { background: linear-gradient(90deg, var(--silver), #e0e0e0); }
+.rank-3 .progress-bar { background: linear-gradient(90deg, var(--bronze), #d7ccc8); }
+.rank-others .progress-bar { background: linear-gradient(90deg, #90a4ae, #cfd8dc); }
+
+/* --- SEÇÃO LENTES DE ESTOQUE (CORRIGIDA) --- */
+.header-lentes {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 30px;
+}
+
+/* Isso mata o fundo cinza bizarro de uma vez por todas */
+.btn-balanco{
+    all: unset !important;
+    display: none !important;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    
+    /* Cores e Fundo Premium */
+    background: linear-gradient(145deg, #ffffff, #f8f9fa) !important;
+    color: #212529 !important;
+    
+    /* Espaçamento e Bordas */
+    padding: 12px 24px !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    
+    /* Tipografia */
+    font-weight: 700 !important;
+    font-size: 0.7rem !important;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    
+    /* Efeitos de Sombra (Depth) */
+    box-shadow: 
+        0 4px 6px rgba(0, 0, 0, 0.02),
+        0 1px 3px rgba(0, 0, 0, 0.08) !important;
+    
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-balanco:hover, .btn-balanco-premium:hover {
+    background: #ffffff !important;
+    transform: translateY(-2px);
+    box-shadow: 
+        0 10px 20px rgba(0, 0, 0, 0.05),
+        0 6px 6px rgba(0, 0, 0, 0.02) !important;
+    border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+.btn-balanco:active, .btn-balanco-premium:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Ícone com cor sutil */
+.btn-balanco i, .btn-balanco-premium i {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+/* Garante que o input do modal não tenha borda de sistema */
+#qtdEstoque {
+    all: unset !important;
+    appearance: none;
+    -moz-appearance: textfield; /* Remove setas no Firefox */
+    font-size: 4.5rem !important;
+    font-weight: 800 !important;
+    color: #000 !important;
+    width: 120px !important;
+    text-align: center !important;
+    display: block !important;
+    margin: 0 auto;
+}
+
+.lentes-grid { 
+    display: grid; 
+    grid-template-columns: 1fr 1fr; 
+    gap: 20px; 
+    margin-bottom: 25px; 
+}
+
+.olho-card { 
+    background: #fff; 
+    border-radius: 25px; 
+    overflow: hidden; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05); 
+}
+
+.olho-header { 
+    padding: 15px; 
+    color: #fff; 
+    text-align: center;
+    font-weight: 800;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+
+.olho-header.blue { background: #1e88e5; }
+.olho-header.purple { background: #8e24aa; }
+
+.olho-body { padding: 30px; }
+
+.campo-grau {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.campo-grau select {
+    appearance: none; /* Remove a seta padrão feia */
+    -webkit-appearance: none;
+    background-color: #fff;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding: 8px 32px 8px 12px;
+    border-radius: 10px;
+    border: 1.5px solid #eee;
+    font-weight: 700;
+    font-family: 'Poppins', sans-serif;
+    outline: none;
+    cursor: pointer;
+}
+
+.btn-consultar {
+    width: 100%;
+    padding: 20px;
+    background: #c62828;
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 1rem;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(198, 40, 40, 0.3);
+    transition: 0.3s;
+}
+
+.btn-consultar:hover {
+    background: #b71c1c;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(198, 40, 40, 0.4);
+}
+/* ============================================================
+   --- CONTAINER DE RESULTADOS (CARDS PREMIUM) --- 
+   ============================================================ */
+#resultadosLentes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-top: 30px;
+}
+
+.card-resultado {
+    background: #fff;
+    border-radius: 24px;
+    padding: 25px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    border-top: 6px solid #ddd; /* Cor padrão */
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.card-resultado:hover { transform: translateY(-5px); }
+
+/* Cores por Marca */
+.card-ar { border-top-color: #4caf50; }
+.card-filtro { border-top-color: #03a9f4; }
+.card-zeiss { border-top-color: #003087; }
+
+.card-resultado h3 {
+    font-size: 1rem;
+    font-weight: 800;
+    margin-bottom: 20px;
+    color: #111;
+    text-transform: uppercase;
+}
+
+.resultado-linha {
+    display: flex;
+    justify-content: space-between; /* Mantém os itens nas extremidades */
+    align-items: center;           /* Alinha verticalmente o texto e o badge */
+    padding: 12px 0;
+    border-bottom: 1px solid #f8f8f8;
+    gap: 10px;                     /* Espaçamento mínimo entre os elementos */
+}
+
+/* Para garantir que o texto do grau fique sempre no meio se houver espaço */
+.grau-info {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #333;
+    flex: 1;                       /* Faz o elemento ocupar o espaço central */
+    text-align: center;            /* Centraliza o texto do grau */
+}
+
+.label-olho {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #999;
+    width: 90px;                   /* Define uma largura fixa para alinhar os graus */
+    text-align: left;
+}
+
+.qtd-badge {
+    background: #f0f0f0;
+    padding: 5px 12px;
+    border-radius: 10px;
+    font-weight: 800;
+    font-size: 0.8rem;
+    min-width: 65px;               /* Garante que os badges tenham o mesmo tamanho */
+    text-align: center;
+}
+
+/* Rodapé do Card */
+.footer-card {
+    margin-top: auto;
+    padding-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.status-entrega { font-size: 0.75rem; font-weight: 800; }
+
+.btn-reservar {
+    all: unset;
+    background: #111;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s;
+    text-align: center;
+}
+
+.btn-reservar:hover { background: #000; transform: scale(1.05); }
+
+.btn-reservar-p:hover { background: #000; transform: scale(1.05); }
+
+/* ============================================================
+   --- MODAL DE BALANÇO (FIX DEFINITIVO) --- 
+   ============================================================ */
+
+.modal {
+    background: rgba(0, 0, 0, 0.6) !important; /* Fundo mais escuro para foco total */
+    backdrop-filter: blur(8px);
+    display: none; 
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: #fff;
+    width: 90%;
+    max-width: 450px;
+    padding: 40px;
+    border-radius: 40px !important;
+    border: none !important;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+    text-align: center;
+    position: relative;
+    margin: auto;
+}
+
+/* O Título do Modal */
+.modal-content h3 {
+    font-weight: 700;
+    margin-bottom: 25px;
+    color: #111;
+}
+
+/* --- SELETOR DE ABAS (Acrílica, Filtro Azul, Zeiss) --- */
+.aba-selector {
+    background: #f0f0f0; /* Fundo cinza da pílula */
+    padding: 5px;
+    border-radius: 20px;
+    display: flex;
+    gap: 5px;
+    margin-bottom: 30px;
+}
+
+.aba-selector button {
+    all: unset; /* Mata o estilo bizarro de botão cinza */
+    flex: 1;
+    padding: 10px;
+    border-radius: 15px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #888;
+    cursor: pointer;
+    transition: 0.3s;
+    text-align: center;
+}
+
+.aba-selector button.active {
+    background: #ffffff;
+    color: var(--diniz-red);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+/* --- CAMPOS DE GRAU DENTRO DO MODAL --- */
+/* --- ALINHAMENTO ESF E CIL (CENTRALIZADO E BONITO) --- */
+.balanco-campos {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    max-width: 320px; /* Mantém os campos compactos e centralizados */
+    margin: 0 auto 30px auto;
+}
+
+.balanco-campos .campo-grau {
+    display: flex;
+    justify-content: space-between; /* Nome na esquerda, Select na direita */
+    align-items: center;
+    width: 100%;
+    padding: 0 10px;
+}
+
+.balanco-campos label {
+    font-weight: 600;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.balanco-campos select {
+    all: unset; /* Limpa o estilo do navegador */
+    appearance: none;
+    width: 100px;
+    background-color: #fff;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding: 10px 30px 10px 15px;
+    border-radius: 12px;
+    border: 1.5px solid #f0f0f0;
+    font-weight: 800;
+    font-family: 'Poppins', sans-serif;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.balanco-campos select:focus {
+    border-color: #ddd;
+}
+
+/* --- CORES PERSONALIZADAS PARA CADA ABA --- */
+
+/* 1. Acrílica AR (Verde) */
+.aba-ar.active {
+    background: #4caf50 !important; /* Verde AR */
+    color: #fff !important;
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3) !important;
+}
+
+/* 2. Filtro Azul (Azul Claro) */
+.aba-filtro.active {
+    background: #03a9f4 !important; /* Azul Filtro */
+    color: #fff !important;
+    box-shadow: 0 4px 12px rgba(3, 169, 244, 0.3) !important;
+}
+
+/* 3. Zeiss (Azul Escuro Premium) */
+.aba-zeiss.active {
+    background: #003087 !important; /* Azul Marinha Zeiss */
+    color: #fff !important;
+    box-shadow: 0 4px 12px rgba(0, 48, 135, 0.3) !important;
+}
+
+/* Ajuste das abas desativadas */
+.aba-selector button {
+    all: unset;
+    flex: 1;
+    padding: 10px 5px;
+    border-radius: 15px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #999;
+    cursor: pointer;
+    transition: 0.3s;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+/* --- CONTAINER DO CONTADOR (+ E - NAS PONTAS) --- */
+.contador-container {
+    display: flex;
+    justify-content: space-between; /* Empurra os botões para as pontas */
+    align-items: center; /* Alinha tudo verticalmente no meio */
+    width: 100%;
+    max-width: 300px; /* Ajusta a largura para não espalhar demais */
+    margin: 40px auto; /* Centraliza o container no modal */
+}
+
+/* --- BOTÕES REDONDOS (+ e -) --- */
+.btn-count {
+    all: unset !important;
+    width: 60px !important;
+    height: 60px !important;
+    border-radius: 50% !important;
+    background: #ffffff !important;
+    border: 1px solid #eee !important;
+    color: #333 !important;
+    font-size: 1.8rem !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    cursor: pointer !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+    transition: 0.2s;
+}
+
+.btn-count:hover {
+    background: #f8f8f8 !important;
+    transform: scale(1.1);
+}
+
+/* --- O NÚMERO CENTRAL (SUMIR COM A CAIXA BRANCA) --- */
+#qtdEstoque {
+    all: unset !important;
+    appearance: none !important;
+    -moz-appearance: textfield !important; /* Remove setas no Firefox */
+    font-size: 5.5rem !important; /* Número bem grande e imponente */
+    font-weight: 800 !important;
+    color: #111 !important;
+    width: 100px !important;
+    text-align: center !important;
+    background: transparent !important;
+    border: none !important;
+}
+
+/* Remove as setinhas chatas que o Chrome coloca em input number */
+#qtdEstoque::-webkit-outer-spin-button,
+#qtdEstoque::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* --- BOTÃO SALVAR (O TOQUE FINAL) --- */
+.btn-salvar {
+    all: unset !important;
+    display: block !important;
+    width: 100% !important;
+    background: #111 !important;
+    color: #fff !important;
+    padding: 22px 0 !important;
+    border-radius: 20px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    cursor: pointer !important;
+    transition: 0.3s !important;
+}
+
+.btn-salvar:hover {
+    background: #000 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+/* X de fechar */
+.close {
+    position: absolute;
+    top: 25px;
+    right: 30px;
+    font-size: 1.5rem;
+    color: #ccc;
+    cursor: pointer;
+}
+
+/* --- OUTROS --- */
+.comunicados-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+.com-card { background: #fff; padding: 20px; border-radius: 15px; border-left: 5px solid var(--diniz-red); box-shadow: var(--shadow); }
+.placeholder-card { background: #fff; padding: 40px; border-radius: 20px; text-align: center; color: #aaa; border: 2px dashed #eee; }
+.sub-nav-link {
+    display: block;
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    padding: 8px 15px;
+    font-size: 0.8rem;
+    font-weight: 400;
+    transition: 0.3s;
+}
+
+.sub-nav-link:hover {
+    color: #fff;
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+}
+
+/* Rotação do ícone quando aberto */
+.rotate-chevron {
+    transform: rotate(180deg);
+}
+.submenu {
+    display: none;
+    flex-direction: column;
+    padding-left: 20px;
+    background: rgba(0,0,0,0.1);
+    border-radius: 10px;
+    margin-top: 5px;
+    transition: all 0.3s ease;
+}
+
+.sub-nav-link {
+    display: block;
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    padding: 10px 15px;
+    font-size: 0.85rem;
+    transition: 0.3s;
+}
+
+.sub-nav-link:hover {
+    color: #fff;
+    background: rgba(255,255,255,0.05);
+}
+/* Container do seletor no cabeçalho */
+#filtroAdminRanking {
+    margin-left: auto; /* Empurra para a direita no flexbox */
+}
+
+/* Estilização do Select */
+#selectIndicador {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 2px solid #e0e0e0;
+    background-color: #fff;
+    color: #333;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.3s ease;
+    font-family: 'Poppins', sans-serif; /* Ou a fonte que você estiver usando */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* Efeito ao passar o mouse ou focar */
+#selectIndicador:hover, #selectIndicador:focus {
+    border-color: #004691; /* Cor azul Diniz */
+    box-shadow: 0 4px 8px rgba(0, 70, 145, 0.1);
+}
+
+/* Estilização das opções (depende do navegador, mas ajuda no mobile) */
+#selectIndicador option {
+    font-weight: 500;
+    padding: 10px;
+}
+
+/* Ajuste no Ranking Header para alinhar os itens */
+.ranking-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #f0f0f0;
+    margin-bottom: 20px;
+}
+
+.ranking-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Responsividade: em telas pequenas, o seletor vai para baixo */
+@media (max-width: 600px) {
+    .ranking-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    #filtroAdminRanking {
+        width: 100%;
+        margin-left: 0;
+    }
+    
+    #selectIndicador {
+        width: 100%;
+    }
+}
+:root {
+    --diniz-red: #B71C1C;
+    --diniz-black: #1a1a1a;
+    --diniz-white: #ffffff;
+    --diniz-bg: #F5F5F5;
+}
+
+/* --- RESET E ESTRUTURA TELA CHEIA --- */
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow-x: hidden;
+    background-color: #f8f9fa; /* Fundo leve para destacar os cards */
+}
+
+.calc-container { 
+    width: 100%; 
+    min-height: 100vh; /* Ocupa no mínimo a altura da tela toda */
+    margin: 0; 
+    padding: 15px; 
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+/* --- TABS (MENU SUPERIOR) --- */
+.calc-tabs { 
+    display: flex; 
+    gap: 8px; 
+    margin-bottom: 20px; 
+    background: #ebebeb; 
+    padding: 6px; 
+    border-radius: 16px; 
+    position: sticky; /* Fica fixo no topo ao rolar */
+    top: 10px;
+    z-index: 10;
+}
+
+.calc-tab-btn {
+    flex: 1; 
+    border: none; 
+    padding: 12px 5px; 
+    border-radius: 12px; 
+    cursor: pointer;
+    font-weight: 800; 
+    font-size: 12px; 
+    background: transparent; 
+    transition: all 0.3s ease;
+    color: #666;
+    text-transform: uppercase;
+}
+
+.calc-tab-btn.active { 
+    background: var(--diniz-red); 
+    color: white; 
+    box-shadow: 0 4px 12px rgba(183, 28, 28, 0.2);
+}
+
+/* --- CARDS DE ENTRADA --- */
+.calc-card {
+    background: white; 
+    padding: 20px; 
+    border-radius: 24px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.05); 
+    margin-bottom: 20px;
+    border: 1px solid rgba(0,0,0,0.02);
+}
+
+.calc-card h3 { 
+    font-size: 13px; 
+    color: #333; 
+    margin-bottom: 20px; 
+    margin-top: 0;
+    border-left: 5px solid var(--diniz-red); 
+    padding-left: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* --- INPUTS E SELETORES --- */
+.input-group-row { 
+    display: flex; 
+    align-items: center; 
+    gap: 12px; 
+    margin-bottom: 15px; 
+}
+
+.eye-label { 
+    background: rgba(183, 28, 28, 0.08); 
+    color: var(--diniz-red);
+    width: 40px; 
+    height: 40px; 
+    border-radius: 14px; /* Estilo levemente quadrado/arredondado moderno */
+    display: flex;
+    align-items: center; 
+    justify-content: center; 
+    font-weight: 900; 
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.input-group-row select {
+    flex: 1; 
+    height: 45px; /* Mais alto para facilitar o toque no celular */
+    padding: 0 12px; 
+    border-radius: 12px; 
+    border: 1px solid #edf0f2;
+    background: #fcfcfc; 
+    font-size: 15px; 
+    font-weight: 700;
+    color: #333;
+    appearance: none; /* Remove seta padrão para estilo customizado se quiser */
+}
+
+/* --- BOTÃO DE AÇÃO PRINCIPAL --- */
+.btn-primary-calc {
+    width: 100%; 
+    background: var(--diniz-red); 
+    color: white; 
+    border: none;
+    padding: 18px; 
+    border-radius: 18px; 
+    font-weight: 900; 
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 10px; 
+    transition: 0.3s; 
+    box-shadow: 0 10px 20px rgba(183, 28, 28, 0.25);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn-primary-calc:active {
+    transform: scale(0.98);
+}
+
+/* --- BOX DE RESULTADOS (MODERNO) --- */
+.result-box {
+    background: #1a1a1a; /* Preto Diniz */
+    color: white; 
+    padding: 25px;
+    border-radius: 28px; 
+    margin-top: 10px;
+    animation: scaleUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes scaleUp { 
+    from { transform: scale(0.95); opacity: 0; } 
+    to { transform: scale(1); opacity: 1; } 
+}
+
+.res-row { 
+    display: flex; 
+    gap: 12px; 
+    margin-top: 15px; 
+    align-items: flex-end; 
+}
+
+.res-item { 
+    flex: 1; 
+    text-align: center; 
+}
+
+.res-item label { 
+    display: block; 
+    font-size: 10px; 
+    color: #aaa; 
+    margin-bottom: 6px; 
+    font-weight: bold;
+}
+
+.res-val { 
+    background: rgba(255,255,255,0.08); 
+    padding: 12px 5px; 
+    border-radius: 14px; 
+    font-weight: 800; 
+    font-size: 14px;
+    border: 1px solid rgba(255,255,255,0.1); 
+    color: #fff;
+}
+
+/* --- EXIBIÇÃO DE ABAS --- */
+.calc-tab-content { display: none; width: 100%; }
+.calc-tab-content.active { display: block; }
+
+/* Ajuste para o grid de resultados não ficar apertado */
+#resultadosLentes {
+    display: grid;
+    grid-template-columns: 1fr; /* Um card por linha no celular */
+    gap: 15px;
+    width: 100%;
+}
+
+@media (min-width: 768px) {
+    #resultadosLentes {
+        grid-template-columns: 1fr 1fr; /* Dois cards por linha no tablet/PC */
+    }
+}

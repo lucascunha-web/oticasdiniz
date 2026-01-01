@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Painel Diniz</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="login-page-container">
+        
+        <div class="login-form-section">
+            <div class="form-content">
+                <img src="logodiniz.png" alt="Logo Diniz" class="logo">
+                <h1>BEM-VINDO</h1>
+                
+                <div class="input-field">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="user" placeholder="Usuário">
+                </div>
+                
+                <div class="input-field">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="pass" placeholder="Senha">
+                </div>
+                
+                <div class="options-row">
+                    <label class="checkbox-container">Lembrar-me
+                        <input type="checkbox">
+                        <span class="checkmark"></span>
+                    </label>
+                </div>
+                
+                <button onclick="fazerLogin()" id="btnLogin">ENTRAR</button>
+                <p id="mensagem" class="message-text"></p>
+            </div>
+        </div>
+        
+        <div class="login-illustration-section">
+            <div class="illustration-content">
+                <img src="https://cdni.iconscout.com/illustration/premium/thumb/management-information-system-illustration-svg-download-png-6137057.png" alt="Ilustração" class="main-illustration">
+                <div class="illustration-text">
+                    <h2>Óticas Diniz Guarulhos</h2>
+                    <p>Acesse o Painel Oficial de gerenciamento de nossa empresa</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
