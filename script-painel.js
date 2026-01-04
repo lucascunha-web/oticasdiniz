@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btnBalanco) btnBalanco.remove();
     }
 
-    if (nivelUsuario === "admin") {
+    if (nivelUsuario === "admin" || nivelUsuario === "gerente") {
         if (filtroAdmin) filtroAdmin.style.display = "block";
     } else {
         if (filtroAdmin) filtroAdmin.remove();

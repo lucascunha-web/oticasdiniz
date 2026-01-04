@@ -939,3 +939,142 @@ body, html {
         grid-template-columns: 1fr 1fr; /* Dois cards por linha no tablet/PC */
     }
 }
+/* --- ESTILO DO RANKING DE LOJAS (ADMIN/GERENTE) --- */
+
+.area-ranking-lojas {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 2px dashed #e0e0e0;
+}
+
+.area-ranking-lojas h3 {
+    font-size: 1.1rem;
+    color: #c62828; /* Vermelho Diniz */
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Container de cada linha da loja */
+.ranking-item-loja {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 15px;
+    background: #fff;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    border-left: 4px solid #c62828;
+    transition: transform 0.2s;
+}
+
+.ranking-item-loja:hover {
+    transform: translateX(5px);
+}
+
+.loja-rank-pos {
+    font-weight: 900;
+    color: #333;
+    width: 35px;
+    font-size: 1rem;
+}
+
+.loja-info-principal {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.loja-nome {
+    font-weight: bold;
+    font-size: 0.95rem;
+    color: #1a1a1a;
+}
+
+.loja-faturamento {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+/* Lado direito do card com projeção e status */
+.loja-stats-extra {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.loja-projecao {
+    font-size: 0.75rem;
+    color: #888;
+    font-style: italic;
+}
+
+/* Badges de Status da Comissão */
+.badge-status {
+    font-size: 0.7rem;
+    font-weight: bold;
+    padding: 3px 8px;
+    border-radius: 12px;
+    text-transform: uppercase;
+}
+
+.status-meta {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.status-normal {
+    background-color: #f48c8c;
+    color: #444;
+    border: 1px solid #ddd;
+}
+
+/* Ajuste de responsividade */
+@media (max-width: 480px) {
+    .ranking-item-loja {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    .loja-stats-extra {
+        align-items: flex-start;
+        text-align: left;
+        width: 100%;
+        border-top: 1px solid #eee;
+        padding-top: 5px;
+    }
+}
+.card-totais-gerais {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    background: #222;
+    color: white;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    text-align: center;
+    border: 2px solid #c62828;
+}
+
+.total-item span {
+    display: block;
+    font-size: 0.65rem;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+    color: #aaa;
+}
+
+.total-item strong {
+    font-size: 1.1rem;
+    display: block;
+}
+
+@media (max-width: 480px) {
+    .card-totais-gerais { grid-template-columns: 1fr; }
+}
