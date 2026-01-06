@@ -1,5 +1,8 @@
-// URL da sua API do Google Apps Script
+// URL da sua API de Ranking de Lojas
 const URL_API_LOJAS = "https://script.google.com/macros/s/AKfycbwUtgz7OEUMNqmctX0I7uWh8dy-jw7RhihH1rtOZP3IrEeVKYhxDOdYA0cPiAIo6EiH1g/exec";
+
+// URL da sua API de Totais da Rede (I1 e I2)
+const URL_API_TOTAIS_REDE = "https://script.google.com/macros/s/AKfycbxBtChCeNfo9y7x-8M1f0J8ByG1FnKAMjqcaUhUF92Y1gIpjnLk0d_3HDwrl3S3XpTE/exec";
 
 async function carregarRankingLojas() {
     console.log("Iniciando carga do ranking de lojas e totais...");
@@ -7,18 +10,12 @@ async function carregarRankingLojas() {
     const rankingLojasContainer = document.getElementById('rankingLojasContainer');
     const areaRankingLojas = document.getElementById('areaRankingLojas');
     
-    // Busca dados de login (sessionStorage é prioridade conforme seu script de login)
     let usuarioRaw = sessionStorage.getItem('usuarioLogado') || localStorage.getItem('usuarioLogado');
-    
-    if (!usuarioRaw) {
-        console.error("Erro: Usuário não identificado.");
-        return;
-    }
+    if (!usuarioRaw) return;
 
     const usuarioLogado = JSON.parse(usuarioRaw);
     const nivelAcesso = usuarioLogado.nivel ? usuarioLogado.nivel.toLowerCase().trim() : "";
 
-    // Validação de acesso para Admin ou Gerente
     if (nivelAcesso === "admin" || nivelAcesso === "gerente") {
         if (areaRankingLojas) areaRankingLojas.style.display = "block";
     } else {
@@ -27,14 +24,28 @@ async function carregarRankingLojas() {
     }
 
     try {
-        // Fetch com timestamp para evitar cache
-        const response = await fetch(URL_API_LOJAS + "?t=" + new Date().getTime());
-        const data = await response.json(); 
+        // Tenta buscar os dados das duas APIs
+        // Adicionamos redirect: 'follow' para lidar com o comportamento do Google Scripts
+        const [resLojas, resTotais] = await Promise.allSettled([
+            fetch(URL_API_LOJAS + "?t=" + Date.now()),
+            fetch(URL_API_TOTAIS_REDE + "?t=" + Date.now())
+        ]);
+
+        // Processa dados da API de Lojas (Obrigatória)
+        if (resLojas.status === "rejected") throw new Error("Falha na API Principal");
+        const data = await resLojas.value.json();
+
+        // Processa dados da API de Totais (Opcional - se falhar mostra "...")
+        let dadosRede = { redeTotalVendas: "...", redeTicketMedio: "..." };
+        if (resTotais.status === "fulfilled") {
+            try {
+                dadosRede = await resTotais.value.json();
+            } catch (e) { console.error("Erro ao converter JSON de totais"); }
+        }
         
-        // Limpa o container antes de renderizar
         rankingLojasContainer.innerHTML = "";
 
-        // 1. RENDERIZA O CARD DE TOTAIS GERAIS (C9 e D9 da planilha)
+        // 1. RENDERIZA O CARD DE TOTAIS GERAIS (Card Preto)
         const resumoHtml = `
             <div class="card-totais-gerais">
                 <div class="total-item">
@@ -42,7 +53,15 @@ async function carregarRankingLojas() {
                     <strong>${Number(data.totalFaturado).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
                 </div>
                 <div class="total-item">
-                    <span>PROJEÇÃO TOTAL DO MÊS</span>
+                    <span>Nº DE VENDAS</span>
+                    <strong>${dadosRede.redeTotalVendas || "0"}</strong>
+                </div>
+                <div class="total-item">
+                    <span>TICKET MÉDIO</span>
+                    <strong>${dadosRede.redeTicketMedio || "R$ 0,00"}</strong>
+                </div>
+                <div class="total-item">
+                    <span>PROJEÇÃO TOTAL</span>
                     <strong style="color: #2ecc71;">${Number(data.totalProjecao).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
                 </div>
             </div>
@@ -55,14 +74,12 @@ async function carregarRankingLojas() {
             return;
         }
 
-        // Ordena a lista de lojas por faturamento (maior para menor)
         data.lojas.sort((a, b) => b.faturado - a.faturado);
 
         data.lojas.forEach((loja, index) => {
             const faturadoFormatado = Number(loja.faturado).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
             const projecaoFormatada = Number(loja.projecao).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
             
-            // Define cor do status (Verde se a comissão estiver ativada/meta batida)
             let statusClass = "status-normal";
             if(loja.statusComissao && !loja.statusComissao.toUpperCase().includes("NÃO")) {
                 statusClass = "status-meta";
@@ -85,12 +102,9 @@ async function carregarRankingLojas() {
         });
 
     } catch (error) {
-        console.error("Erro ao carregar dados da API:", error);
-        if (rankingLojasContainer) {
-            rankingLojasContainer.innerHTML = `<p style="color:red; text-align:center;">Erro ao conectar com a planilha de lojas.</p>`;
-        }
+        console.error("Erro ao carregar dados:", error);
+        rankingLojasContainer.innerHTML = `<p style="color:red; text-align:center;">Erro ao conectar com as planilhas. Verifique a publicação do Script.</p>`;
     }
 }
 
-// Inicia o processo
 window.addEventListener('load', carregarRankingLojas);

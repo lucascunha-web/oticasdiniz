@@ -83,7 +83,7 @@ header h2 span { color: var(--diniz-red); }
 /* --- GRID DE PERFORMANCE --- */
 .stats-grid { 
     display: grid; 
-    grid-template-columns: repeat(4, 1fr); 
+    grid-template-columns: repeat(5, 1fr); /* 5 colunas iguais */
     gap: 15px; 
     margin-bottom: 30px; 
 }
@@ -99,8 +99,8 @@ header h2 span { color: var(--diniz-red); }
     position: relative; 
 }
 
-.stat-info h3 { font-size: 0.7rem; color: var(--text-light); text-transform: uppercase; }
-.stat-info p { font-size: 1.1rem; font-weight: 700; }
+.stat-info h3 { font-size: 0.7rem; color: var(--text-light); text-transform: uppercase; margin: 0; }
+.stat-info p { font-size: 1.1rem; font-weight: 700; margin: 0; }
 
 .rank-badge { 
     position: absolute; 
@@ -108,14 +108,22 @@ header h2 span { color: var(--diniz-red); }
     right: 12px; 
     font-size: 0.65rem; 
     font-weight: 800; 
-    color: #ccc; 
+    color: #000000; 
 }
 
 .icon-faturamento { color: #1e88e5; }
 .icon-ticket { color: #ffa000; }
 .icon-desconto { color: #e53935; }
 .icon-vendas { color: #43a047; }
+.icon-avaliacoes { color: #fbc02d; } /* Cor amarela para o ícone de estrela lateral */
 
+/* Ajuste para telas menores não quebrarem o layout */
+@media (max-width: 1200px) {
+    .stats-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 768px) {
+    .stats-grid { grid-template-columns: repeat(1, 1fr); }
+}
 /* --- RANKING --- */
 .ranking-card { 
     background: #fff; 
@@ -144,7 +152,10 @@ header h2 span { color: var(--diniz-red); }
 .rank-3 .progress-bar { background: linear-gradient(90deg, var(--bronze), #d7ccc8); }
 .rank-others .progress-bar { background: linear-gradient(90deg, #90a4ae, #cfd8dc); }
 
-/* --- SEÇÃO LENTES DE ESTOQUE (CORRIGIDA) --- */
+/* ============================================================
+   --- SEÇÃO LENTES DE ESTOQUE (LIMPA E CORRIGIDA) --- 
+   ============================================================ */
+
 .header-lentes {
     display: flex;
     justify-content: space-between;
@@ -153,68 +164,63 @@ header h2 span { color: var(--diniz-red); }
     margin-bottom: 30px;
 }
 
-/* Isso mata o fundo cinza bizarro de uma vez por todas */
-.btn-balanco{
-    all: unset !important;
-    display: none !important;
+.buttons-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Estilo Base Unificado para os botões do topo */
+.btn-historico, .btn-balanco {
+    display: flex !important;
     align-items: center;
     justify-content: center;
     gap: 10px;
-    
-    /* Cores e Fundo Premium */
-    background: linear-gradient(145deg, #ffffff, #f8f9fa) !important;
-    color: #212529 !important;
-    
-    /* Espaçamento e Bordas */
+    background: #f1f4f8 !important; /* Cor cinza clara do Reservas */
+    color: #4a5568 !important;
     padding: 12px 24px !important;
     border-radius: 14px !important;
     border: 1px solid rgba(0, 0, 0, 0.08) !important;
-    
-    /* Tipografia */
     font-weight: 700 !important;
     font-size: 0.7rem !important;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    
-    /* Efeitos de Sombra (Depth) */
-    box-shadow: 
-        0 4px 6px rgba(0, 0, 0, 0.02),
-        0 1px 3px rgba(0, 0, 0, 0.08) !important;
-    
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    box-shadow: none !important; /* Remove sombras pesadas */
 }
 
-.btn-balanco:hover, .btn-balanco-premium:hover {
-    background: #ffffff !important;
-    transform: translateY(-2px);
-    box-shadow: 
-        0 10px 20px rgba(0, 0, 0, 0.05),
-        0 6px 6px rgba(0, 0, 0, 0.02) !important;
-    border-color: rgba(0, 0, 0, 0.15) !important;
+/* Mantém o Balanço oculto conforme solicitado */
+.btn-balanco {
+    display: none !important;
 }
 
-.btn-balanco:active, .btn-balanco-premium:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+/* Hover idêntico para ambos */
+.btn-historico:hover, .btn-balanco:hover {
+    background: #e2e8f0 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02) !important;
 }
 
-/* Ícone com cor sutil */
-.btn-balanco i, .btn-balanco-premium i {
+/* Ajuste dos ícones */
+.btn-historico i, .btn-balanco i {
     font-size: 0.85rem;
     color: #666;
 }
 
-/* Garante que o input do modal não tenha borda de sistema */
+/* --- CORREÇÃO DO INPUT DA CALCULADORA/MODAL --- */
+/* Removi o 'all: unset' que quebrava o layout */
 #qtdEstoque {
-    all: unset !important;
     appearance: none;
-    -moz-appearance: textfield; /* Remove setas no Firefox */
+    -moz-appearance: textfield;
     font-size: 4.5rem !important;
     font-weight: 800 !important;
     color: #000 !important;
-    width: 120px !important;
+    width: 150px !important;
     text-align: center !important;
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
     display: block !important;
     margin: 0 auto;
 }
@@ -756,17 +762,15 @@ body, html {
     background-color: #f8f9fa; /* Fundo leve para destacar os cards */
 }
 
+/* --- CALCULADORA ÓPTICA (VERSÃO CORRIGIDA) --- */
 .calc-container { 
     width: 100%; 
-    min-height: 100vh; /* Ocupa no mínimo a altura da tela toda */
-    margin: 0; 
-    padding: 15px; 
+    background: #f8f9fa;
+    border-radius: 24px;
+    padding: 20px; 
     box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
 }
 
-/* --- TABS (MENU SUPERIOR) --- */
 .calc-tabs { 
     display: flex; 
     gap: 8px; 
@@ -774,9 +778,6 @@ body, html {
     background: #ebebeb; 
     padding: 6px; 
     border-radius: 16px; 
-    position: sticky; /* Fica fixo no topo ao rolar */
-    top: 10px;
-    z-index: 10;
 }
 
 .calc-tab-btn {
@@ -788,7 +789,6 @@ body, html {
     font-weight: 800; 
     font-size: 12px; 
     background: transparent; 
-    transition: all 0.3s ease;
     color: #666;
     text-transform: uppercase;
 }
@@ -796,28 +796,56 @@ body, html {
 .calc-tab-btn.active { 
     background: var(--diniz-red); 
     color: white; 
-    box-shadow: 0 4px 12px rgba(183, 28, 28, 0.2);
 }
 
-/* --- CARDS DE ENTRADA --- */
+/* Cards da Calculadora */
 .calc-card {
     background: white; 
     padding: 20px; 
     border-radius: 24px;
     box-shadow: 0 8px 30px rgba(0,0,0,0.05); 
     margin-bottom: 20px;
-    border: 1px solid rgba(0,0,0,0.02);
 }
 
-.calc-card h3 { 
-    font-size: 13px; 
-    color: #333; 
-    margin-bottom: 20px; 
-    margin-top: 0;
-    border-left: 5px solid var(--diniz-red); 
-    padding-left: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+.input-group-row { 
+    display: flex; 
+    align-items: center; 
+    gap: 12px; 
+    margin-bottom: 15px; 
+}
+
+/* Estilo dos Selects da Calculadora - PARA NÃO BUGAR */
+.input-group-row select {
+    flex: 1; 
+    height: 45px; 
+    padding: 0 10px; 
+    border-radius: 10px; 
+    border: 1px solid #ddd;
+    background: #fff; 
+    font-size: 14px; 
+    font-weight: 700;
+    color: #333;
+    display: block !important; /* Garante que apareça */
+}
+
+.btn-primary-calc {
+    width: 100%; 
+    background: var(--diniz-red); 
+    color: white; 
+    border: none;
+    padding: 18px; 
+    border-radius: 18px; 
+    font-weight: 900; 
+    cursor: pointer;
+}
+
+/* --- RESULTADOS --- */
+.result-box {
+    background: #1a1a1a; 
+    color: white; 
+    padding: 20px;
+    border-radius: 20px; 
+    margin-top: 15px;
 }
 
 /* --- INPUTS E SELETORES --- */
@@ -1050,31 +1078,198 @@ body, html {
     }
 }
 .card-totais-gerais {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-    background: #222;
-    color: white;
-    padding: 15px;
+    background-color: #1a1a1a;
     border-radius: 12px;
+    padding: 20px;
+    display: flex; /* Alinha os itens em linha */
+    justify-content: space-between; /* Distribui o espaço entre eles */
+    align-items: center;
     margin-bottom: 20px;
+    border: 1px solid #ff0000; /* Borda vermelha conforme sua imagem */
+}
+
+.total-item {
     text-align: center;
-    border: 2px solid #c62828;
+    flex: 1; /* Faz cada item ocupar o mesmo espaço */
 }
 
 .total-item span {
     display: block;
-    font-size: 0.65rem;
-    letter-spacing: 1px;
+    color: #888;
+    font-size: 0.75rem;
+    text-transform: uppercase;
     margin-bottom: 5px;
-    color: #aaa;
+    letter-spacing: 1px;
 }
 
 .total-item strong {
-    font-size: 1.1rem;
     display: block;
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+/* --- MODAL DE HISTÓRICO --- */
+#modalHistorico .modal-content {
+    max-width: 480px;
+    background: #f8f9fa; /* Fundo levemente cinza para destacar os cards brancos */
+    padding: 0;
+    overflow: hidden;
+    border-radius: 15px;
 }
 
-@media (max-width: 480px) {
-    .card-totais-gerais { grid-template-columns: 1fr; }
+.modal-header-hist {
+    background: #ffffff;
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header-hist h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.historico-container {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: 15px;
+}
+
+/* --- CARDS DE RESERVA INDIVIDUAL --- */
+.card-historico {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    transition: transform 0.2s;
+    border-left: 6px solid #ccc; /* Cor padrão */
+}
+
+/* Cores de Status para a Borda Lateral */
+.card-historico.status-aguardando { border-left-color: #1976d2; }
+.card-historico.status-concluido { border-left-color: #2e7d32; }
+.card-historico.status-cancelado { border-left-color: #d32f2f; }
+
+.card-historico:hover {
+    transform: translateY(-2px);
+}
+
+.reserva-topo {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.reserva-info-lente {
+    display: flex;
+    flex-direction: column;
+}
+
+.reserva-lente-nome {
+    font-weight: 800;
+    color: #1a1a1a;
+    font-size: 1rem;
+    text-transform: uppercase;
+}
+
+.reserva-data {
+    font-size: 0.75rem;
+    color: #888;
+    margin-top: 2px;
+}
+
+/* --- BADGES DE STATUS --- */
+.status-badge {
+    font-size: 0.65rem;
+    font-weight: 900;
+    padding: 4px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.aguardando { background: #e3f2fd; color: #1976d2; }
+
+/* --- ÁREA DE GRAUS (GRID 2X2 CORRIGIDO) --- */
+.reserva-graus-box {
+    background: #f1f4f8;
+    border-radius: 8px;
+    padding: 10px;
+    margin: 12px 0;
+    
+    /* Configuração do Grid 2x2 */
+    display: grid;
+    grid-template-columns: 1fr 1fr; 
+    gap: 8px;
+}
+
+.grau-item {
+    text-align: center;
+    background: #ffffff;
+    padding: 6px;
+    border-radius: 4px;
+    border: 1px solid #e0e6ed;
+}
+
+.grau-item b {
+    display: block;
+    font-size: 0.55rem;
+    color: #1976d2;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+}
+
+.grau-item span {
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
+    color: #333;
+    font-size: 0.85rem;
+}
+
+/* --- BOTÕES DE AÇÃO --- */
+.btn-acao-reserva {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border: none;
+    transition: 0.2s;
+}
+
+.btn-baixar {
+    background: #2e7d32;
+    color: white;
+}
+
+.btn-baixar:hover {
+    background: #1b5e20;
+}
+
+.btn-cancelar-res {
+    background: transparent;
+    color: #d32f2f;
+    border: 1px solid #d32f2f;
+}
+
+.btn-cancelar-res:hover {
+    background: #ffebee;
+}
+
+/* Barra de rolagem */
+.historico-container::-webkit-scrollbar {
+    width: 6px;
+}
+.historico-container::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 10px;
 }

@@ -135,14 +135,22 @@ const parseNum = (val) => {
     return parseFloat(s) || 0;
 };
 
+// Função atualizada para carregar os indicadores, incluindo o número de avaliações
 function carregarMeusIndicadores(vendasGerais, nomeBusca) {
     if(!vendasGerais) return;
     const meusDados = vendasGerais.find(v => v.usuario === nomeBusca);
+    
     if (meusDados) {
         document.getElementById("totalFaturamento").innerText = meusDados.faturamento;
         document.getElementById("totalVendas").innerText = meusDados.vendas;
         document.getElementById("ticketMedio").innerText = meusDados.ticket;
         document.getElementById("totalDesconto").innerText = meusDados.desconto + "%";
+        
+        // Exibe a nota de avaliações como número (Coluna F da planilha)
+        const elementAvaliacoes = document.getElementById("totalAvaliacoes");
+        if(elementAvaliacoes) {
+            elementAvaliacoes.innerText = meusDados.avaliacoes || "0.0";
+        }
 
         document.getElementById("rankFaturamento").innerText = `#${getPosicaoRanking(vendasGerais, 'faturamento', nomeBusca)}º`;
         document.getElementById("rankTicket").innerText = `#${getPosicaoRanking(vendasGerais, 'ticket', nomeBusca)}º`;
@@ -211,15 +219,34 @@ function toggleTabelas(e) {
     if(chevron) chevron.style.transform = (submenu.style.display === "flex") ? "rotate(180deg)" : "rotate(0deg)";
 }
 
+// --- 1. INICIALIZAÇÃO ---
+document.addEventListener('DOMContentLoaded', () => {
+    popularEscalas();
+    configurarReplicacao();
+});
+
+// Controle de Abas
+function switchCalcTab(event, tabId) {
+    const contents = document.querySelectorAll('.calc-tab-content');
+    contents.forEach(c => c.classList.remove('active'));
+    const tabs = document.querySelectorAll('.calc-tab-btn');
+    tabs.forEach(t => t.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    event.currentTarget.classList.add('active');
+}
+
+// --- 2. POPULAR CAMPOS (Garante que os números apareçam) ---
 function popularEscalas() {
     const gerar = (min, max) => {
         let options = "";
         for (let i = min; i <= max; i += 0.25) {
             let v = i.toFixed(2);
-            options += `<option value="${v}">${i > 0 ? "+" + v : v}</option>`;
+            let label = i > 0 ? "+" + v : v;
+            options += `<option value="${v}">${label}</option>`;
         }
         return options;
     };
+
     const esf = gerar(-10, 10);
     const cilNeg = gerar(-6, 0);
     const cilPos = gerar(0, 6);
@@ -227,79 +254,285 @@ function popularEscalas() {
     let eixo = "";
     for(let i=0; i<=180; i++) eixo += `<option value="${i}">${i}°</option>`;
 
-    const IDs = ["pEsfOd","pEsfOe","pCilOd","pCilOe","pAddOd","pAddOe","aLongeEsfOd","aLongeEsfOe","aLongeCilOd","aLongeCilOe","aPertoEsfOd","aPertoEsfOe","aPertoCilOd","aPertoCilOe","tEsfOd","tEsfOe","tCilOd","tCilOe","tEixoOd","tEixoOe"];
+    const IDs = [
+        "pEsfOd","pEsfOe","pCilOd","pCilOe","pAddOd","pAddOe","pEixoOd","pEixoOe",
+        "aLongeEsfOd","aLongeEsfOe","aLongeCilOd","aLongeCilOe","aLongeEixoOd","aLongeEixoOe",
+        "aPertoEsfOd","aPertoEsfOe","aPertoCilOd","aPertoCilOe","aPertoEixoOd","aPertoEixoOe",
+        "tEsfOd","tEsfOe","tCilOd","tCilOe","tEixoOd","tEixoOe",
+        "esfOD", "cilOD", "esfOE", "cilOE", "esfBalanco", "cilBalanco"
+    ];
     
     IDs.forEach(id => {
         const el = document.getElementById(id);
         if(!el) return;
-        if(id.includes("Esf")) el.innerHTML = esf;
-        else if(id.includes("Cil")) el.innerHTML = id.startsWith('t') ? cilPos : cilNeg;
+        if(id.includes("Esf") || id.includes("esf")) el.innerHTML = esf;
+        else if(id.includes("Cil") || id.includes("cil")) el.innerHTML = id.startsWith('t') ? cilPos : cilNeg;
         else if(id.includes("Add")) el.innerHTML = add;
         else if(id.includes("Eixo")) el.innerHTML = eixo;
+        el.value = id.includes("Eixo") ? "0" : "0.00";
     });
 }
 
-function switchCalcTab(event, tabId) {
-    document.querySelectorAll('.calc-tab-content').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.calc-tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-    event.currentTarget.classList.add('active');
-}
-
+// --- 3. FUNÇÕES DE CÁLCULO (O CORAÇÃO DA CALCULADORA) ---
 function calcularPerto() {
-    const od = parseFloat(document.getElementById("pEsfOd").value) + parseFloat(document.getElementById("pAddOd").value);
-    const oe = parseFloat(document.getElementById("pEsfOe").value) + parseFloat(document.getElementById("pAddOe").value);
-    const res = document.getElementById("resPerto");
-    res.style.display = "block";
-    res.innerHTML = `
-        <div style="text-align:center; font-weight:900; font-size:12px; margin-bottom:15px">RESULTADO PERTO</div>
-        <div class="res-row">
-            <span style="color:#B71C1C; font-weight:900; width:30px">OD</span>
-            <div class="res-item"><label>ESF</label><div class="res-val">${od > 0 ? '+'+od.toFixed(2) : od.toFixed(2)}</div></div>
-            <div class="res-item"><label>CIL</label><div class="res-val">${document.getElementById("pCilOd").value}</div></div>
+    const pegarTexto = (id) => {
+        const el = document.getElementById(id);
+        if (!el) return "--";
+        return el.options[el.selectedIndex]?.text || "--";
+    };
+
+    const limpar = (t) => parseFloat(t.replace('+', '').replace('°', '')) || 0;
+
+    // Dados OD
+    const odEsf = pegarTexto("pEsfOd");
+    const odCil = pegarTexto("pCilOd");
+    const odEixo = pegarTexto("pEixoOd");
+    const odAdd = pegarTexto("pAddOd");
+
+    // Dados OE
+    const oeEsf = pegarTexto("pEsfOe");
+    const oeCil = pegarTexto("pCilOe");
+    const oeEixo = pegarTexto("pEixoOe");
+    const oeAdd = pegarTexto("pAddOe");
+
+    // Cálculos
+    const odFinal = (limpar(odEsf) + limpar(odAdd)).toFixed(2);
+    const oeFinal = (limpar(oeEsf) + limpar(oeAdd)).toFixed(2);
+
+    const formatar = (n) => n > 0 ? '+' + n : n;
+
+    let html = `
+        <div style="text-align:center; margin-bottom:20px;">
+            <h3 style="color:#B71C1C; margin:0; font-size:1.2rem; text-transform:uppercase; letter-spacing:1px;">Receita de Perto Completa</h3>
+            <div style="width:50px; hright:3px; background:#B71C1C; margin:8px auto; border-radius:10px;"></div>
         </div>
-        <div class="res-row">
-            <span style="color:#B71C1C; font-weight:900; width:30px">OE</span>
-            <div class="res-item"><label>ESF</label><div class="res-val">${oe > 0 ? '+'+oe.toFixed(2) : oe.toFixed(2)}</div></div>
-            <div class="res-item"><label>CIL</label><div class="res-val">${document.getElementById("pCilOe").value}</div></div>
-        </div>`;
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; font-family: sans-serif;">
+            
+            <div style="grid-column: span 3; color: #666; font-size: 0.75rem; font-weight: bold; margin-top: 5px; display:flex; align-items:center;">
+                OLHO DIREITO (OD) <div style="flex:1; height:1px; background:#eee; margin-left:10px;"></div>
+            </div>
+            
+            <div style="background:#fdfdfd; padding:15px 5px; border-radius:8px; text-align:center; border: 1px solid #eee; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                <span style="display:block; color:#999; font-size:10px; font-weight:bold; margin-bottom:5px;">ESFÉRICO</span>
+                <strong style="font-size:1.3rem; color:#2E7D32;">${formatar(odFinal)}</strong>
+            </div>
+            
+            <div style="background:#fdfdfd; padding:15px 5px; border-radius:8px; text-align:center; border: 1px solid #eee; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                <span style="display:block; color:#999; font-size:10px; font-weight:bold; margin-bottom:5px;">CILÍNDRICO</span>
+                <strong style="font-size:1.3rem; color:#333;">${odCil}</strong>
+            </div>
+            
+            <div style="background:#fdfdfd; padding:15px 5px; border-radius:8px; text-align:center; border: 1px solid #eee; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                <span style="display:block; color:#999; font-size:10px; font-weight:bold; margin-bottom:5px;">EIXO</span>
+                <strong style="font-size:1.3rem; color:#333;">${odEixo}</strong>
+            </div>
+
+            <div style="grid-column: span 3; color: #666; font-size: 0.75rem; font-weight: bold; margin-top: 15px; display:flex; align-items:center;">
+                OLHO ESQUERDO (OE) <div style="flex:1; height:1px; background:#eee; margin-left:10px;"></div>
+            </div>
+            
+            <div style="background:#fdfdfd; padding:15px 5px; border-radius:8px; text-align:center; border: 1px solid #eee; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                <span style="display:block; color:#999; font-size:10px; font-weight:bold; margin-bottom:5px;">ESFÉRICO</span>
+                <strong style="font-size:1.3rem; color:#2E7D32;">${formatar(oeFinal)}</strong>
+            </div>
+            
+            <div style="background:#fdfdfd; padding:15px 5px; border-radius:8px; text-align:center; border: 1px solid #eee; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                <span style="display:block; color:#999; font-size:10px; font-weight:bold; margin-bottom:5px;">CILÍNDRICO</span>
+                <strong style="font-size:1.3rem; color:#333;">${oeCil}</strong>
+            </div>
+            
+            <div style="background:#fdfdfd; padding:15px 5px; border-radius:8px; text-align:center; border: 1px solid #eee; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                <span style="display:block; color:#999; font-size:10px; font-weight:bold; margin-bottom:5px;">EIXO</span>
+                <strong style="font-size:1.3rem; color:#333;">${oeEixo}</strong>
+            </div>
+        </div>
+    `;
+
+    exibirResultado("resPerto", html);
+}
+// --- 2. REPLICAÇÃO AUTOMÁTICA (OD e OE) ---
+function configurarReplicacao() {
+    const pares = [
+        // Olho Direito
+        { l: "aLongeCilOd", p: "aPertoCilOd" },
+        { l: "aLongeEixoOd", p: "aPertoEixoOd" },
+        // Olho Esquerdo (Adicionado agora)
+        { l: "aLongeCilOe", p: "aPertoCilOe" },
+        { l: "aLongeEixoOe", p: "aPertoEixoOe" }
+    ];
+
+    pares.forEach(pair => {
+        const elLonge = document.getElementById(pair.l);
+        const elPerto = document.getElementById(pair.p);
+        if (elLonge && elPerto) {
+            elLonge.addEventListener('change', () => {
+                elPerto.value = elLonge.value;
+            });
+        }
+    });
 }
 
+// --- 3. CÁLCULO DE ADIÇÃO (OD e OE) ---
 function calcularAdicao() {
-    const od = parseFloat(document.getElementById("aPertoEsfOd").value) - parseFloat(document.getElementById("aLongeEsfOd").value);
-    const oe = parseFloat(document.getElementById("aPertoEsfOe").value) - parseFloat(document.getElementById("aLongeEsfOe").value);
-    const res = document.getElementById("resAdicao");
-    res.style.display = "block";
-    res.innerHTML = `
-        <div style="text-align:center; font-weight:900; font-size:12px; margin-bottom:15px">VALOR DE ADIÇÃO</div>
-        <div class="res-row">
-            <div class="res-item"><label>OD</label><div class="res-val">${od > 0 ? '+'+od.toFixed(2) : od.toFixed(2)}</div></div>
-            <div class="res-item"><label>OE</label><div class="res-val">${oe > 0 ? '+'+oe.toFixed(2) : oe.toFixed(2)}</div></div>
-        </div>`;
+    const calcular = (pertoId, longeId) => {
+        const p = document.getElementById(pertoId);
+        const l = document.getElementById(longeId);
+        return (p && l) ? (parseFloat(p.value) - parseFloat(l.value)).toFixed(2) : null;
+    };
+
+    const addOd = calcular("aPertoEsfOd", "aLongeEsfOd");
+    const addOe = calcular("aPertoEsfOe", "aLongeEsfOe");
+
+    let html = `<div style="text-align:center; font-weight:bold; margin-bottom:10px; color:#B71C1C">ADIÇÃO CALCULADA</div>`;
+    
+    html += `<div style="display:flex; justify-content:space-around; gap: 10px;">`;
+    if (addOd !== null) {
+        html += `<div style="background:#fff; padding:8px; border-radius:5px; flex:1; text-align:center">
+                    <small>OD</small><br><b style="color:#2ecc71">${addOd > 0 ? '+' + addOd : addOd}</b>
+                 </div>`;
+    }
+    if (addOe !== null) {
+        html += `<div style="background:#fff; padding:8px; border-radius:5px; flex:1; text-align:center">
+                    <small>OE</small><br><b style="color:#2ecc71">${addOe > 0 ? '+' + addOe : addOe}</b>
+                 </div>`;
+    }
+    html += `</div>`;
+    
+    exibirResultado("resAdicao", html);
 }
 
 function calcularTransp() {
-    const t = (eId, cId, exId) => {
-        let e = parseFloat(document.getElementById(eId).value), c = parseFloat(document.getElementById(cId).value), ex = parseInt(document.getElementById(exId).value);
-        return { esf: e + c, cil: c * -1, eixo: ex <= 90 ? ex + 90 : ex - 90 };
+    // 1. Função de captura segura (lendo o texto visível)
+    const pegarTexto = (id) => {
+        const el = document.getElementById(id);
+        if (!el) return "--";
+        return el.options[el.selectedIndex]?.text || "--";
     };
-    const od = t("tEsfOd", "tCilOd", "tEixoOd"), oe = t("tEsfOe", "tCilOe", "tEixoOe");
-    const res = document.getElementById("resTransp");
-    res.style.display = "block";
-    res.innerHTML = `
-        <div style="text-align:center; font-weight:900; font-size:12px; margin-bottom:15px">TRANSPOSIÇÃO NEGATIVA</div>
-        <div class="res-row">
-             <span style="color:#B71C1C; font-weight:900; width:30px">OD</span>
-             <div class="res-item"><label>ESF</label><div class="res-val">${od.esf > 0 ? '+'+od.esf.toFixed(2) : od.esf.toFixed(2)}</div></div>
-             <div class="res-item"><label>CIL</label><div class="res-val">${od.cil.toFixed(2)}</div></div>
-             <div class="res-item"><label>EIXO</label><div class="res-val">${od.eixo}°</div></div>
+
+    // 2. Função para converter o texto em número para a conta
+    const limpar = (t) => parseFloat(t.replace('+', '').replace('°', '')) || 0;
+
+    const transporOlho = (esfId, cilId, eixoId) => {
+        const esfTxt = pegarTexto(esfId);
+        const cilTxt = pegarTexto(cilId);
+        const eixoTxt = pegarTexto(eixoId);
+
+        if (esfTxt === "--") return null;
+
+        let e = limpar(esfTxt);
+        let c = limpar(cilTxt);
+        let ex = limpar(eixoTxt);
+
+        // A REGRA DA TRANSPOSIÇÃO:
+        // Novo Esférico = Esférico + Cilíndrico
+        // Novo Cilíndrico = Cilíndrico com sinal invertido
+        // Novo Eixo = Se <= 90 soma 90, se > 90 subtrai 90
+        let nEsf = (e + c).toFixed(2);
+        let nCil = (c * -1).toFixed(2);
+        let nEixo = ex <= 90 ? ex + 90 : ex - 90;
+
+        return {
+            esf: nEsf > 0 ? '+' + nEsf : nEsf,
+            cil: nCil > 0 ? '+' + nCil : nCil,
+            eixo: nEixo + "°"
+        };
+    };
+
+    const od = transporOlho("tEsfOd", "tCilOd", "tEixoOd");
+    const oe = transporOlho("tEsfOe", "tCilOe", "tEixoOe");
+
+    let html = `
+        <div style="text-align:center; margin-bottom:20px;">
+            <h3 style="color:#B71C1C; margin:0; font-size:1.2rem; text-transform:uppercase; letter-spacing:1px;">Transposição Realizada</h3>
+            <div style="width:50px; height:3px; background:#B71C1C; margin:8px auto; border-radius:10px;"></div>
         </div>
-        <div class="res-row" style="margin-top:20px">
-             <span style="color:#B71C1C; font-weight:900; width:30px">OE</span>
-             <div class="res-item"><label>ESF</label><div class="res-val">${oe.esf > 0 ? '+'+oe.esf.toFixed(2) : oe.esf.toFixed(2)}</div></div>
-             <div class="res-item"><label>CIL</label><div class="res-val">${oe.cil.toFixed(2)}</div></div>
-             <div class="res-item"><label>EIXO</label><div class="res-val">${oe.eixo}°</div></div>
-        </div>`;
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+            
+            <div style="grid-column: span 3; color: #666; font-size: 0.75rem; font-weight: bold; margin-top: 5px; display:flex; align-items:center;">
+                OLHO DIREITO (OD) <div style="flex:1; height:1px; background:#eee; margin-left:10px;"></div>
+            </div>
+            ${od ? `
+                <div style="background:#fdfdfd; padding:15px 5px; border-radius:8px; text-align:center; border: 1px solid #eee; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                    <span style="display:block; color:#999; font-size:10px; font-weight:bold; margin-bottom:5px;">NOVO ESF.</span>
+                    <strong style="font-size:1.3rem; color:#2E7D32;">${od.esf}</strong>
+                </div>
+                <div style="background:#fdfdfd; padding:15px 5px; border-radius:8px; text-align:center; border: 1px solid #eee; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                    <span style="display:block; color:#999; font-size:10px; font-weight:bold; margin-bottom:5px;">NOVO CIL.</span>
+                    <strong style="font-size:1.3rem; color:#B71C1C;">${od.cil}</strong>
+                </div>
+                <div style="background:#fdfdfd; padding:15px 5px; border-radius:8px; text-align:center; border: 1px solid #eee; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                    <span style="display:block; color:#999; font-size:10px; font-weight:bold; margin-bottom:5px;">NOVO EIXO</span>
+                    <strong style="font-size:1.3rem; color:#333;">${od.eixo}</strong>
+                </div>
+            ` : '<div style="grid-column: span 3; text-align:center; color:#999;">Sem dados OD</div>'}
+
+            <div style="grid-column: span 3; color: #666; font-size: 0.75rem; font-weight: bold; margin-top: 15px; display:flex; align-items:center;">
+                OLHO ESQUERDO (OE) <div style="flex:1; height:1px; background:#eee; margin-left:10px;"></div>
+            </div>
+            ${oe ? `
+                <div style="background:#fdfdfd; padding:15px 5px; border-radius:8px; text-align:center; border: 1px solid #eee; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                    <span style="display:block; color:#999; font-size:10px; font-weight:bold; margin-bottom:5px;">NOVO ESF.</span>
+                    <strong style="font-size:1.3rem; color:#2E7D32;">${oe.esf}</strong>
+                </div>
+                <div style="background:#fdfdfd; padding:15px 5px; border-radius:8px; text-align:center; border: 1px solid #eee; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                    <span style="display:block; color:#999; font-size:10px; font-weight:bold; margin-bottom:5px;">NOVO CIL.</span>
+                    <strong style="font-size:1.3rem; color:#B71C1C;">${oe.cil}</strong>
+                </div>
+                <div style="background:#fdfdfd; padding:15px 5px; border-radius:8px; text-align:center; border: 1px solid #eee; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                    <span style="display:block; color:#999; font-size:10px; font-weight:bold; margin-bottom:5px;">NOVO EIXO</span>
+                    <strong style="font-size:1.3rem; color:#333;">${oe.eixo}</strong>
+                </div>
+            ` : '<div style="grid-column: span 3; text-align:center; color:#999;">Sem dados OE</div>'}
+        </div>
+    `;
+
+    exibirResultado("resTransp", html);
 }
+
+// --- FUNÇÕES AUXILIARES ---
+function exibirResultado(id, html) {
+    const el = document.getElementById(id);
+    if(el) {
+        el.style.display = "block";
+        el.style.marginTop = "15px";
+        el.style.padding = "15px";
+        el.style.background = "#f1f1f1";
+        el.style.borderRadius = "8px";
+        el.style.borderLeft = "5px solid #B71C1C";
+        el.innerHTML = html;
+    }
+}
+
+function handleReplication(event) {
+    const longeId = event.target.id;
+    // Mapeia o ID de longe para o de perto
+    const pertoId = longeId.replace("Longe", "Perto");
+    const elPerto = document.getElementById(pertoId);
+    if (elPerto) {
+        elPerto.value = event.target.value;
+    }
+}
+// --- CONTROLE DE ABAS ---
+function switchCalcTab(evt, tabName) {
+    let i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("calc-tab-content");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].classList.remove("active");
+    }
+    tablinks = document.getElementsByClassName("calc-tab-btn");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].classList.remove("active");
+    }
+    document.getElementById(tabName).classList.add("active");
+    evt.currentTarget.classList.add("active");
+}
+
+// INICIALIZAÇÃO
+document.addEventListener("DOMContentLoaded", () => {
+    popularEscalas();
+    configurarReplicacao();
+});
 
 function logout() { sessionStorage.clear(); window.location.href = "index.html"; }

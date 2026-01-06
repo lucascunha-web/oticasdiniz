@@ -6,13 +6,6 @@
     <title>Dashboard Óticas Diniz</title>
     <link rel="stylesheet" href="style-painel.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        /* Estilos rápidos para o novo ranking de lojas */
-        .area-ranking-lojas { margin-top: 25px; border-top: 2px dashed #ddd; padding-top: 20px; }
-        .badge-status { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: #eee; }
-        .status-meta { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .rank-extra { text-align: right; display: flex; flex-direction: column; }
-    </style>
 </head>
 <body>
 
@@ -78,23 +71,16 @@
                     <i class="fas fa-shopping-bag icon-vendas"></i>
                     <div class="stat-info"><h3>Nº de Vendas</h3><p id="totalVendas">0</p></div>
                 </div>
+                <div class="stat-card card-avaliacoes">
+                    <i class="fas fa-star icon-avaliacoes"></i>
+                    <div class="stat-info">
+                        <h3>Avaliações</h3>
+                        <p id="totalAvaliacoes" class="estrelas-display">--</p>
+                    </div>
+                </div>
             </div>
 
             <div class="ranking-card">
-                <div class="ranking-header">
-                    <h3><i class="fas fa-medal"></i> <span id="tituloRanking">Ranking de Faturamento</span></h3>
-                    
-                    <div id="filtroAdminRanking" style="display: none;">
-                        <select id="selectIndicador" onchange="atualizarRankingPorFiltro()">
-                            <option value="faturamento">Faturamento</option>
-                            <option value="ticket">Ticket Médio</option>
-                            <option value="vendas">Nº de Vendas</option>
-                            <option value="desconto">Desconto</option>
-                        </select>
-                    </div>
-                </div>
-                <div id="rankingContainer"></div>
-
                 <div id="areaRankingLojas" class="area-ranking-lojas" style="display: none;">
                     <div class="ranking-header">
                         <h3 style="color: #c62828;"><i class="fas fa-store"></i> DESEMPENHO DAS LOJAS</h3>
@@ -102,6 +88,21 @@
                     <div id="rankingLojasContainer">
                         <p>Carregando dados das lojas...</p>
                     </div>
+                </div>
+
+                <div class="area-ranking-individual">
+                    <div class="ranking-header">
+                        <h3><i class="fas fa-medal"></i> <span id="tituloRanking">Ranking de Faturamento</span></h3>
+                        <div id="filtroAdminRanking" style="display: none;">
+                            <select id="selectIndicador" onchange="atualizarRankingPorFiltro()">
+                                <option value="faturamento">Faturamento</option>
+                                <option value="ticket">Ticket Médio</option>
+                                <option value="vendas">Nº de Vendas</option>
+                                <option value="desconto">Desconto</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="rankingContainer"></div>
                 </div>
             </div>
         </section>
@@ -115,8 +116,17 @@
 
         <section id="aba-lentes" class="content-section">
             <header class="header-lentes">
-                <h2>Lentes de Estoque</h2>
-                <button class="btn-balanco" onclick="abrirBalanco()">Balanço</button>
+                <div class="title-group">
+                    <h2>Lentes de Estoque</h2>
+                </div>
+                <div class="buttons-group">
+                    <button class="btn-historico" onclick="abrirHistorico()">
+                        <i class="fas fa-history"></i> RESERVAS
+                    </button>
+                    <button class="btn-balanco" onclick="abrirBalanco()" style="display: none;">
+                        <i class="fas fa-boxes"></i> BALANÇO
+                    </button>
+                </div>
             </header>
             <div class="lentes-grid">
                 <div class="olho-card">
@@ -134,13 +144,12 @@
                     </div>
                 </div>
             </div>
-            <button class="btn-consultar" id="btnConsultar" onclick="consultarEstoque()">CONSULTAR</button>
+            <button class="btn-consultar" id="btnConsultar" onclick="consultarEstoque()">CONSULTAR DISPONIBILIDADE</button>
             <div id="resultadosLentes" class="resultados-lentes"></div>
         </section>
 
         <section id="aba-calculadora" class="content-section">
             <header><h2>Calculadora Óptica</h2></header>
-            
             <div class="calc-container">
                 <div class="calc-tabs">
                     <button class="calc-tab-btn active" onclick="switchCalcTab(event, 'calc-perto')">PERTO</button>
@@ -153,15 +162,17 @@
                         <h3>PRESCRIÇÃO LONGE + ADIÇÃO</h3>
                         <div class="input-group-row">
                             <span class="eye-label">OD</span>
-                            <select id="pEsfOd"></select>
-                            <select id="pCilOd"></select>
-                            <select id="pAddOd"></select>
+                            <select id="pEsfOd" title="Esférico"></select>
+                            <select id="pCilOd" title="Cilíndrico"></select>
+                            <select id="pEixoOd" title="Eixo"></select>
+                            <select id="pAddOd" title="Adição"></select>
                         </div>
                         <div class="input-group-row">
                             <span class="eye-label">OE</span>
-                            <select id="pEsfOe"></select>
-                            <select id="pCilOe"></select>
-                            <select id="pAddOe"></select>
+                            <select id="pEsfOe" title="Esférico"></select>
+                            <select id="pCilOe" title="Cilíndrico"></select>
+                            <select id="pEixoOe" title="Eixo"></select>
+                            <select id="pAddOe" title="Adição"></select>
                         </div>
                         <button class="btn-primary-calc" onclick="calcularPerto()">CALCULAR GRAU DE PERTO</button>
                     </div>
@@ -170,29 +181,36 @@
 
                 <div id="calc-adicao" class="calc-tab-content">
                     <div class="calc-card">
-                        <h3>VALORES DE LONGE</h3>
+                        <h3>VALORES DE LONGE / PERTO</h3>
+                        
                         <div class="input-group-row">
-                            <span class="eye-label">OD</span>
+                            <span class="eye-label" style="color: #B71C1C;">OD L</span>
                             <select id="aLongeEsfOd"></select>
                             <select id="aLongeCilOd"></select>
+                            <select id="aLongeEixoOd"></select>
                         </div>
                         <div class="input-group-row">
-                            <span class="eye-label">OE</span>
+                            <span class="eye-label" style="color: #B71C1C;">OE L</span>
                             <select id="aLongeEsfOe"></select>
                             <select id="aLongeCilOe"></select>
+                            <select id="aLongeEixoOe"></select>
                         </div>
-                        <hr style="margin: 15px 0; border: 0; border-top: 1px solid #eee;">
-                        <h3>VALORES DE PERTO</h3>
+
+                        <hr style="margin: 15px 0; border: 0; border-top: 1px solid #ddd;">
+
                         <div class="input-group-row">
-                            <span class="eye-label">OD</span>
+                            <span class="eye-label" style="color: #2E7D32;">OD P</span>
                             <select id="aPertoEsfOd"></select>
                             <select id="aPertoCilOd"></select>
+                            <select id="aPertoEixoOd"></select>
                         </div>
                         <div class="input-group-row">
-                            <span class="eye-label">OE</span>
+                            <span class="eye-label" style="color: #2E7D32;">OE P</span>
                             <select id="aPertoEsfOe"></select>
                             <select id="aPertoCilOe"></select>
+                            <select id="aPertoEixoOe"></select>
                         </div>
+                        
                         <button class="btn-primary-calc" onclick="calcularAdicao()">CALCULAR ADIÇÃO</button>
                     </div>
                     <div id="resAdicao" class="result-box" style="display:none"></div>
@@ -226,9 +244,9 @@
             <span class="close" onclick="fecharBalanco()">&times;</span>
             <h3>Balanço de Estoque</h3>
             <div class="aba-selector" id="abaSelector">
-                <button id="btnAbaACRILICA" class="aba-ar active" onclick="mudarAbaBalanco(this, 'ACRILICA AR')">ACRILICA AR</button>
-                <button id="btnAbaFILTRO" class="aba-filtro" onclick="mudarAbaBalanco(this, 'FILTRO AZUL')">FILTRO AZUL</button>
-                <button id="btnAbaZEISS" class="aba-zeiss" onclick="mudarAbaBalanco(this, 'ZEISS')">ZEISS</button>
+                <button class="active" onclick="mudarAbaBalanco(this, 'ACRILICA AR')">ACRÍLICA</button>
+                <button onclick="mudarAbaBalanco(this, 'FILTRO AZUL')">BLUE</button>
+                <button onclick="mudarAbaBalanco(this, 'ZEISS')">ZEISS</button>
             </div>
             <div class="balanco-campos">
                 <div class="campo-grau"><label>Esf.</label><select id="esfBalanco" onchange="buscarQtdBalanco()"></select></div>
@@ -239,7 +257,17 @@
                 <input type="number" id="qtdEstoque" value="0" readonly>
                 <button class="btn-count" onclick="ajustarQtd(1)">+</button>
             </div>
-            <button class="btn-salvar" onclick="salvarEstoqueManual()">SALVAR ALTERAÇÃO</button>
+            <button class="btn-salvar" onclick="salvarEstoqueManual()">ATUALIZAR ESTOQUE</button>
+        </div>
+    </div>
+
+    <div id="modalHistorico" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header-hist">
+                <h3><i class="fas fa-history"></i> Reservas Pendentes</h3>
+                <span class="close" onclick="fecharHistorico()">&times;</span>
+            </div>
+            <div id="listaHistorico" class="historico-container"></div>
         </div>
     </div>
 
