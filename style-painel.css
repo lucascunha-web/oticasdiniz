@@ -972,13 +972,14 @@ body, html {
 .area-ranking-lojas {
     margin-top: 30px;
     padding-top: 20px;
+    margin-bottom: 60px !important;
     border-top: 2px dashed #e0e0e0;
 }
 
 .area-ranking-lojas h3 {
     font-size: 1.1rem;
     color: #c62828; /* Vermelho Diniz */
-    margin-bottom: 15px;
+    margin-bottom: 30px;
     display: flex;
     align-items: center;
     gap: 10px;
