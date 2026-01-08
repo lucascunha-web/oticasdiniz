@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Óticas Diniz</title>
+    <link rel="icon" type="image/png" href="ICON.png">
     <link rel="stylesheet" href="style-painel.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
@@ -76,7 +77,9 @@
                     <div class="stat-info">
                         <h3>Avaliações</h3>
                         <p id="totalAvaliacoes" class="estrelas-display">--</p>
+                        <span id="statusComissao" style="font-size: 0.6rem; font-weight: bold; display: block; margin-top: 4px; text-transform: uppercase;"></span>
                     </div>
+                    <span id="rankAvaliacoes" class="rank-badge">--</span>
                 </div>
             </div>
 
@@ -99,6 +102,7 @@
                                 <option value="ticket">Ticket Médio</option>
                                 <option value="vendas">Nº de Vendas</option>
                                 <option value="desconto">Desconto</option>
+                                <option value="avaliacoes">Avaliações</option> </select>
                             </select>
                         </div>
                     </div>

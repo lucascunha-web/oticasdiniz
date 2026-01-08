@@ -145,11 +145,34 @@ function carregarMeusIndicadores(vendasGerais, nomeBusca) {
         document.getElementById("totalVendas").innerText = meusDados.vendas;
         document.getElementById("ticketMedio").innerText = meusDados.ticket;
         document.getElementById("totalDesconto").innerText = meusDados.desconto + "%";
+
+        // --- LÓGICA DE AVALIAÇÕES E COMISSÃO ---
+        const valorAvaliacoes = parseNum(meusDados.avaliacoes); // Usa sua função parseNum
+        const elementAvaliacoe = document.getElementById("totalAvaliacoes");
+        const elementStatus = document.getElementById("statusComissao");
+
+        if(elementAvaliacoe) {
+            elementAvaliacoe.innerText = meusDados.avaliacoes || "0";
+        }
+
+        if(elementStatus) {
+            if (valorAvaliacoes >= 10) {
+        elementStatus.innerText = "COMISSÃO ATIVADA"; // Palavra curta
+        elementStatus.className = "comissao-ativa";} 
+        else {
+        elementStatus.innerText = "COMISSÃO INATIVA"; // Palavra curta
+        elementStatus.className = "comissao-inativa";
+    }
+}
         
         // Exibe a nota de avaliações como número (Coluna F da planilha)
         const elementAvaliacoes = document.getElementById("totalAvaliacoes");
         if(elementAvaliacoes) {
             elementAvaliacoes.innerText = meusDados.avaliacoes || "0.0";
+        }
+        const rankAval = document.getElementById("rankAvaliacoes");
+        if(rankAval) {
+            rankAval.innerText = `#${getPosicaoRanking(vendasGerais, 'avaliacoes', nomeBusca)}º`;
         }
 
         document.getElementById("rankFaturamento").innerText = `#${getPosicaoRanking(vendasGerais, 'faturamento', nomeBusca)}º`;
@@ -173,7 +196,7 @@ function atualizarRankingPorFiltro() {
     const vendasGerais = JSON.parse(sessionStorage.getItem("vendas"));
     const usuario = JSON.parse(sessionStorage.getItem("usuarioLogado"));
     const nomeBusca = usuario.nome.toUpperCase().trim();
-    const titulos = {'faturamento': 'Ranking de Faturamento','ticket': 'Ranking de Ticket Médio','vendas': 'Ranking de Vendas','desconto': 'Ranking de Desconto'};
+    const titulos = {'faturamento': 'Ranking de Faturamento','ticket': 'Ranking de Ticket Médio','vendas': 'Ranking de Vendas','desconto': 'Ranking de Desconto', 'avaliacoes': 'Ranking de Avaliações'};
     document.getElementById("tituloRanking").innerText = titulos[indicador];
     gerarRanking(vendasGerais, indicador, nomeBusca, (indicador === 'desconto'));
 }

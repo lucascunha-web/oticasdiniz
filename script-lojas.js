@@ -77,21 +77,34 @@ async function carregarRankingLojas() {
         data.lojas.sort((a, b) => b.faturado - a.faturado);
 
         data.lojas.forEach((loja, index) => {
+            // 1. Formata todos os valores numéricos para Moeda BRL
             const faturadoFormatado = Number(loja.faturado).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
             const projecaoFormatada = Number(loja.projecao).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            const metaFormatada = Number(loja.meta).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            const peFormatado = Number(loja.pe).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
             
+            // 2. Define a cor da badge de comissão
             let statusClass = "status-normal";
             if(loja.statusComissao && !loja.statusComissao.toUpperCase().includes("NÃO")) {
                 statusClass = "status-meta";
             }
 
+            // 3. Monta o HTML com os novos campos META: e P.E:
             const itemHtml = `
                 <div class="ranking-item-loja">
                     <div class="loja-rank-pos">${index + 1}º</div>
                     <div class="loja-info-principal">
                         <span class="loja-nome">LOJA ${loja.loja}</span>
-                        <span class="loja-faturamento">Faturado: ${faturadoFormatado}</span>
+                        
+                        <div style="display: flex; flex-direction: column; font-size: 0.75rem; margin-top: 4px; gap: 1px;">
+                            <span style="color: #555;"><strong>META:</strong> ${metaFormatada}</span>
+                            <span style="color: #555;"><strong>P.E:</strong> ${peFormatado}</span>
+                            <span class="loja-faturamento" style="margin-top: 2px; font-size: 0.85rem; color: #1a1a1a;">
+                                <strong>FATURADO:</strong> ${faturadoFormatado}
+                            </span>
+                        </div>
                     </div>
+                    
                     <div class="loja-stats-extra">
                         <span class="loja-projecao">Proj: ${projecaoFormatada}</span>
                         <span class="badge-status ${statusClass}">${loja.statusComissao}</span>
