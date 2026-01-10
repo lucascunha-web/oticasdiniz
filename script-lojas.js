@@ -24,7 +24,7 @@ async function carregarRankingLojas() {
     }
 
     try {
-        // Tenta buscar os dados das duas APIs
+        // Tenta buscar os dados das duas
         // Adicionamos redirect: 'follow' para lidar com o comportamento do Google Scripts
         const [resLojas, resTotais] = await Promise.allSettled([
             fetch(URL_API_LOJAS + "?t=" + Date.now()),
@@ -36,7 +36,7 @@ async function carregarRankingLojas() {
         const data = await resLojas.value.json();
 
         // Processa dados da API de Totais (Opcional - se falhar mostra "...")
-        let dadosRede = { redeTotalVendas: "...", redeTicketMedio: "..." };
+        let dadosRede = { redeTotalVendas: "...", redeTicketMedio: "..." , rededesconto: ".."};
         if (resTotais.status === "fulfilled") {
             try {
                 dadosRede = await resTotais.value.json();
@@ -55,6 +55,10 @@ async function carregarRankingLojas() {
                 <div class="total-item">
                     <span>Nº DE VENDAS</span>
                     <strong>${dadosRede.redeTotalVendas || "0"}</strong>
+                </div>
+                <div class="total-item">
+                    <span>DESCONTO</span>
+                    <strong>${dadosRede.rededesconto || "0"}</strong>
                 </div>
                 <div class="total-item">
                     <span>TICKET MÉDIO</span>
