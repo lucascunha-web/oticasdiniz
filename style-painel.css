@@ -191,7 +191,7 @@ header h2 span { color: var(--diniz-red); }
 .rank-1 .progress-bar { background: linear-gradient(90deg, var(--gold), #fff176); }
 .rank-2 .progress-bar { background: linear-gradient(90deg, var(--silver), #e0e0e0); }
 .rank-3 .progress-bar { background: linear-gradient(90deg, var(--bronze), #d7ccc8); }
-.rank-others .progress-bar { background: linear-gradient(90deg, #90a4ae, #cfd8dc); }
+.rank-others .progress-bar { background: linear-gradient(90deg, #cfd3d7, #e4e8e9); }
 
 /* ============================================================
    --- SEÇÃO LENTES DE ESTOQUE (LIMPA E CORRIGIDA) --- 

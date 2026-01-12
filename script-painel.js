@@ -146,6 +146,21 @@ function carregarMeusIndicadores(vendasGerais, nomeBusca) {
         document.getElementById("ticketMedio").innerText = meusDados.ticket;
         document.getElementById("totalDesconto").innerText = meusDados.desconto + "%";
 
+        const faturamentoReal = parseNum(meusDados.faturamento);
+        const metaParaAtivar = parseNum(meusDados.ativar_meta); // Novo campo da Coluna G
+        const elementStatus2 = document.getElementById("statusComissao");
+
+        if(elementStatus2) {
+            // Se o faturamento for maior ou igual ao valor da Coluna G (P.E.)
+            if (faturamentoReal >= metaParaAtivar && metaParaAtivar > 0) {
+                elementStatus2.innerText = "COMISSÃO ATIVADA";
+                elementStatus2.className = "comissao-ativa";
+            } else {
+                elementStatus2.innerText = "COMISSÃO INATIVA";
+                elementStatus2.className = "comissao-inativa";
+            }
+        }
+
         // --- LÓGICA DE AVALIAÇÕES E COMISSÃO ---
         const valorAvaliacoes = parseNum(meusDados.avaliacoes); // Usa sua função parseNum
         const elementAvaliacoe = document.getElementById("totalAvaliacoes");
@@ -220,13 +235,39 @@ function gerarRanking(vendas, campo, nomeBusca, inverter = false) {
         const isMe = v.usuario === nomeBusca;
         let medal = pos === 1 ? "🥇" : (pos === 2 ? "🥈" : (pos === 3 ? "🥉" : pos + "º"));
 
-        container.innerHTML += `
+        // Lógica para a Badge de comissão no ranking
+        let badgeComissaoHtml = "";
+        if (campo === 'faturamento') {
+            const faturado = parseNum(v.faturamento);
+            const meta = parseNum(v.ativar_meta);
+            const ativa = (faturado >= meta && meta > 0);
+            
+            badgeComissaoHtml = ativa 
+                ? `<span style="font-size: 0.65rem; background: #2ecc71; color: white; padding: 2px 6px; border-radius: 4px; margin-left: 10px;">COMISSÃO ATIVADA</span>`
+                : `<span style="font-size: 0.65rem; background: #e74c3c; color: white; padding: 2px 6px; border-radius: 4px; margin-left: 10px;">COMISSÃO NÃO ATIVADA</span>`;
+        }
+
+// ... (código anterior da função se mantém)
+
+container.innerHTML += `
             <div class="ranking-item ${pos <= 3 ? 'rank-'+pos : 'rank-others'} ${isMe ? 'is-me' : ''}">
-                <div class="rank-label">
-                    <span>${medal} ${v.usuario} ${isMe ? '<strong>(VOCÊ)</strong>' : ''}</span>
-                    <span>${v[campo]}${campo === 'desconto' ? '%' : ''}</span>
+                <div class="rank-label" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
+                    
+                    <div style="display: flex; align-items: center;">
+                        <span>${medal} ${v.usuario} ${isMe ? '<strong>(VOCÊ)</strong>' : ''}</span>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+                        <span style="font-weight: bold; font-size: 0.95rem;">
+                            ${v[campo]}${campo === 'desconto' ? '%' : ''}
+                        </span>
+                        ${badgeComissaoHtml}
+                    </div>
+
                 </div>
-                <div class="progress-bg"><div class="progress-bar" style="width: ${perc}%"></div></div>
+                <div class="progress-bg">
+                    <div class="progress-bar" style="width: ${perc}%"></div>
+                </div>
             </div>`;
     });
 }
