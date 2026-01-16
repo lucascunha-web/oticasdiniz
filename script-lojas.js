@@ -61,6 +61,10 @@ async function carregarRankingLojas() {
                     <strong>${dadosRede.rededesconto || "0"}</strong>
                 </div>
                 <div class="total-item">
+                    <span>CMV</span>
+                    <strong>${dadosRede.cmvred || "0"}</strong>
+                </div>
+                <div class="total-item">
                     <span>TICKET MÉDIO</span>
                     <strong>${dadosRede.redeTicketMedio || "R$ 0,00"}</strong>
                 </div>
