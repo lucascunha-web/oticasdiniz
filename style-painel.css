@@ -1315,3 +1315,168 @@ body, html {
     background: #ccc;
     border-radius: 10px;
 }
+/* ============================================================
+   ESTILOS DA ABA DE TREINAMENTO (DINIZ)
+   ============================================================ */
+
+/* Garante que a seção apareça quando estiver ativa */
+#aba-treinamento.content-section.active {
+    display: block !important;
+}
+
+/* Container dos botões de módulos */
+.modulos-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 25px;
+    padding-bottom: 30px;
+}
+
+/* Cartão de cada Módulo */
+.modulo-card {
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-left: 6px solid #B71C1C; /* Vermelho Diniz */
+    border-radius: 10px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    text-align: left;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.modulo-card:hover {
+    transform: translateY(-3px);
+    background: #fffafa;
+    border-color: #B71C1C;
+    box-shadow: 0 8px 15px rgba(183, 28, 28, 0.1);
+}
+
+/* Círculo com o número do módulo */
+.modulo-num {
+    background: #B71C1C;
+    color: white;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin-right: 15px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.modulo-txt h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: #333;
+    font-weight: 700;
+}
+
+.modulo-txt p {
+    margin: 3px 0 0;
+    font-size: 0.8rem;
+    color: #777;
+}
+
+/* Área do Vídeo e Player */
+#areaVideo {
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    margin-top: 10px;
+}
+
+/* Título da Aula dentro do Player */
+#tituloAula {
+    margin: 0 0 15px 0;
+    color: #B71C1C;
+    font-size: 1.2rem;
+    border-left: 4px solid #B71C1C;
+    padding-left: 10px;
+}
+
+/* Container Responsivo para o Iframe (Vídeo) */
+.video-wrapper {
+    width: 100%;
+    background: #f9f9f9;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* Ajuste para telas menores */
+@media (max-width: 600px) {
+    .modulos-container {
+        grid-template-columns: 1fr;
+    }
+}
+.modulo-num i {
+    font-size: 0.8rem;
+    margin-left: 2px; /* Ajuste para o triângulo do play ficar centralizado */
+}
+/* Estilo do botão Apostila (Menor e Alinhado) */
+.btn-apostila {
+    background: #333;
+    color: white;
+    text-decoration: none;
+    padding: 8px 15px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    display: inline-flex; 
+    align-items: center;
+    justify-content: center; /* Centraliza o conteúdo internamente */
+    gap: 8px;
+    transition: background 0.2s;
+    width: fit-content; 
+    
+    /* ADICIONE ESTAS LINHAS PARA CORRIGIR O ALINHAMENTO */
+    height: 38px;           /* Define uma altura fixa igual à do botão Voltar */
+    box-sizing: border-box; /* Garante que o padding não aumente o tamanho final */
+    vertical-align: middle; /* Alinha com elementos na mesma linha */
+}
+
+.btn-apostila:hover {
+    background: #000;
+    color: #fff;
+}
+
+.btn-apostila i {
+    color: #ff4d4d;
+}
+/* Botão Voltar (Ajustado para alinhar com a Apostila) */
+.btn-voltar {
+    background: #444;
+    color: white;
+    border: none;
+    padding: 8px 15px;      /* IGUAL ao btn-apostila */
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;     /* IGUAL ao btn-apostila */
+    display: inline-flex;   /* IGUAL ao btn-apostila */
+    align-items: center;
+    justify-content: center;
+    gap: 8px;               /* IGUAL ao btn-apostila */
+    transition: background 0.2s;
+    
+    height: 38px;           /* MESMA altura fixa */
+    box-sizing: border-box;
+    margin: 0;              /* Removido o margin-bottom para não entortar o flex */
+}
+
+.btn-voltar:hover {
+    background: #B71C1C;
+}
+
+/* Opcional: Garante que os ícones tenham o mesmo tamanho */
+.btn-voltar i, .btn-apostila i {
+    font-size: 1rem;
+}

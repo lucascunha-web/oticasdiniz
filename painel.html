@@ -19,6 +19,9 @@
             <a href="#" class="nav-link" data-target="aba-comunicados">
                 <i class="fas fa-bullhorn"></i> <span>Comunicados</span>
             </a>
+            <a href="#" class="nav-link" data-target="aba-treinamento">
+                <i class="fas fa-graduation-cap"></i> <span>Treinamentos</span>
+            </a>
             <a href="#" class="nav-link" data-target="aba-lentes">
                 <i class="fas fa-glasses"></i> <span>Lentes Estoque</span>
             </a>
@@ -240,7 +243,56 @@
                     <div id="resTransp" class="result-box" style="display:none"></div>
                 </div>
             </div>
-        </section>
+            </section>
+            <section id="aba-treinamento" class="content-section">
+            <header>
+                <h2><i class="fas fa-graduation-cap"></i> Central de Treinamentos</h2>
+                <p>Curso de Óptica Básica</p>
+            </header>
+
+            <div id="menuModulos" class="modulos-container">
+                <button class="modulo-card" onclick="verModulo('modulo1')">
+                    <span class="modulo-num">I</span>
+                    <div class="modulo-txt"><h3>Óptica Geométrica</h3><p>Clique para ver as aulas</p></div>
+                </button>
+                <button class="modulo-card" onclick="verModulo('modulo2')">
+                    <span class="modulo-num">II</span>
+                    <div class="modulo-txt"><h3>Anatomia e Fisiologia Ocular</h3><p>Clique para ver as aulas</p></div>
+                </button>
+                <button class="modulo-card" onclick="verModulo('modulo3')">
+                    <span class="modulo-num">III</span>
+                    <div class="modulo-txt"><h3>Óptica Oftálmica</h3><p>Clique para ver as aulas</p></div>
+                </button>
+                <button class="modulo-card" onclick="verModulo('modulo4')">
+                    <span class="modulo-num">IV</span>
+                    <div class="modulo-txt"><h3>Laboratório e Montagem</h3><p>Clique para ver as aulas</p></div>
+                </button>
+                <button class="modulo-card" onclick="verModulo('modulo5')">
+                    <span class="modulo-num">V</span>
+                    <div class="modulo-txt"><h3>Técnicas em Vendas</h3><p>Clique para ver as aulas</p></div>
+                </button>
+            </div>
+            <div id="areaVideo" style="display: none;">
+                
+                <div class="botoes-controle-treinamento" style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center;">
+                    <button class="btn-voltar" onclick="voltarAosModulos()">
+                        <i class="fas fa-arrow-left"></i> Voltar aos Módulos
+                    </button>
+
+                    <a id="btnApostila" href="#" target="_blank" class="btn-apostila">
+                        <i class="fas fa-file-pdf"></i> Baixar Apostila
+                    </a>
+                </div> 
+                <div id="listaAulasModulo" class="modulos-container" style="margin-bottom: 20px;"></div>
+                
+                <div id="containerPlayer" style="display: none;">
+                    <h3 id="tituloAula" style="margin-bottom: 15px; color: #B71C1C;">Nome da Aula</h3>
+                    <div class="video-wrapper">
+                        <div id="playerVideo"></div>
+                    </div>
+                </div>
+
+            </div> </section>
     </div>
 
     <div id="modalBalanco" class="modal">

@@ -592,6 +592,92 @@ function switchCalcTab(evt, tabName) {
     document.getElementById(tabName).classList.add("active");
     evt.currentTarget.classList.add("active");
 }
+// ============================================================
+// --- SISTEMA DE TREINAMENTOS ---
+// ============================================================
+
+function verModulo(moduloId) {
+    const menu = document.getElementById('menuModulos');
+    const area = document.getElementById('areaVideo');
+    const listaAulas = document.getElementById('listaAulasModulo');
+    const containerPlayer = document.getElementById('containerPlayer');
+    const btnApostila = document.getElementById('btnApostila'); // Seleciona o novo botão
+
+    if(!menu || !area || !listaAulas) return;
+
+    // Reseta visualização
+    menu.style.display = 'none';
+    area.style.display = 'block';
+    listaAulas.style.display = 'grid'; 
+    containerPlayer.style.display = 'none'; 
+    listaAulas.innerHTML = ''; 
+    
+    // Mostra o botão de apostila por padrão (será escondido se não houver PDF)
+    if(btnApostila) btnApostila.style.display = 'flex';
+
+    if (moduloId === 'modulo1') {
+        // Define o link da apostila do Módulo 1
+        if(btnApostila) btnApostila.href = "APOSTILA DE ÓPTICA GEOMÉTRICA.pdf";
+        
+        adicionarAula("Módulo I: Aula 1 - Óptica Geométrica", "10Wb2lQbOtNgYUuF2TU3lRq0cbqHhL-kQ");
+        // adicionarAula("Módulo I: Aula 2 - Exemplo", "ID_VIDEO");
+    } 
+    else {
+        // Se não houver conteúdo, esconde o botão da apostila
+        if(btnApostila) btnApostila.style.display = 'none';
+        
+        listaAulas.innerHTML = `
+            <div style="padding:40px; text-align:center; background:#f9f9f9; border-radius:10px; grid-column: 1/-1;">
+                <i class="fas fa-clock fa-3x" style="color:#ccc"></i>
+                <p style="margin-top:10px; color:#666;">Conteúdo em breve para este módulo.</p>
+            </div>`;
+    }
+}
+
+// Função para criar o botão da aula na lista
+function adicionarAula(titulo, idVideo) {
+    const listaAulas = document.getElementById('listaAulasModulo');
+    const card = document.createElement('button');
+    card.className = 'modulo-card';
+    card.innerHTML = `
+        <span class="modulo-num"><i class="fas fa-play" style="font-size:0.8rem"></i></span>
+        <div class="modulo-txt">
+            <h3>${titulo}</h3>
+            <p>Clique para assistir agora</p>
+        </div>
+    `;
+    card.onclick = () => carregarVideo(titulo, idVideo);
+    listaAulas.appendChild(card);
+}
+
+// Função que realmente carrega o iframe
+function carregarVideo(titulo, idVideo) {
+    const listaAulas = document.getElementById('listaAulasModulo');
+    const containerPlayer = document.getElementById('containerPlayer');
+    const player = document.getElementById('playerVideo');
+    const tituloDisplay = document.getElementById('tituloAula');
+
+    listaAulas.style.display = 'none'; // Esconde a lista de aulas
+    containerPlayer.style.display = 'block'; // Mostra o player
+    
+    tituloDisplay.innerText = titulo;
+    player.innerHTML = `
+        <iframe src="https://drive.google.com/file/d/${idVideo}/preview" 
+                width="100%" height="450" frameborder="0" allow="autoplay"></iframe>
+    `;
+}
+
+function voltarAosModulos() {
+    const menu = document.getElementById('menuModulos');
+    const area = document.getElementById('areaVideo');
+    const player = document.getElementById('playerVideo');
+    const containerPlayer = document.getElementById('containerPlayer');
+
+    if(menu) menu.style.display = 'grid';
+    if(area) area.style.display = 'none';
+    if(containerPlayer) containerPlayer.style.display = 'none';
+    if(player) player.innerHTML = ''; 
+}
 
 // INICIALIZAÇÃO
 document.addEventListener("DOMContentLoaded", () => {
