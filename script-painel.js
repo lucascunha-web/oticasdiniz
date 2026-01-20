@@ -620,6 +620,9 @@ function verModulo(moduloId) {
         if(btnApostila) btnApostila.href = "APOSTILA DE ÓPTICA GEOMÉTRICA.pdf";
         
         adicionarAula("Módulo I: Aula 1 - Óptica Geométrica", "10Wb2lQbOtNgYUuF2TU3lRq0cbqHhL-kQ");
+        adicionarAula("Módulo I: Aula 2 - Ópitica Geométrica",
+        "1_n0DraC48T4sogFxR3NPngtGQNz7IOki");
+        
         // adicionarAula("Módulo I: Aula 2 - Exemplo", "ID_VIDEO");
     } 
     else {
