@@ -84,18 +84,31 @@
                     </div>
                     <span id="rankAvaliacoes" class="rank-badge">--</span>
                 </div>
-            </div>
-
-            <div class="ranking-card">
+             </div>
+             <div class="ranking-card">
                 <div id="areaRankingLojas" class="area-ranking-lojas" style="display: none;">
-                    <div class="ranking-header">
-                        <h3 style="color: #c62828;"><i class="fas fa-store"></i> DESEMPENHO DAS LOJAS</h3>
+                    
+                    <div class="ranking-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="color: #c62828; margin: 0;">
+                            <i class="fas fa-store"></i> DESEMPENHO DAS LOJAS
+                        </h3>
+
+                        <select id="filtroLojaRanking" onchange="atualizarCardTotais()" >
+                            <option value="geral">Empresa</option>
+                            <option value="1">Loja 1</option>
+                            <option value="3">Loja 3</option>
+                            <option value="4">Loja 4</option>
+                            <option value="5">Loja 5</option>
+                            <option value="6">Loja 6</option>
+                            <option value="7">Loja 7</option>
+                        </select>
                     </div>
+
                     <div id="rankingLojasContainer">
                         <p>Carregando dados das lojas...</p>
                     </div>
-                </div>
 
+                </div>
                 <div class="area-ranking-individual">
                     <div class="ranking-header">
                         <h3><i class="fas fa-medal"></i> <span id="tituloRanking">Ranking de Faturamento</span></h3>

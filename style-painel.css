@@ -1480,3 +1480,29 @@ body, html {
 .btn-voltar i, .btn-apostila i {
     font-size: 1rem;
 }
+#filtroLojaRanking {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 2px solid #e0e0e0;
+    background-color: #fff;
+    color: #333;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.3s ease;
+    font-family: 'Poppins', sans-serif; /* Ou a fonte que você estiver usando */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* Efeito ao passar o mouse ou focar */
+#filtroLojaRanking:hover, #filtroLojaRanking:focus {
+    border-color: #004691; /* Cor azul Diniz */
+    box-shadow: 0 4px 8px rgba(0, 70, 145, 0.1);
+}
+
+/* Estilização das opções (depende do navegador, mas ajuda no mobile) */
+#filtroLojaRanking option {
+    font-weight: 500;
+    padding: 10px;
+}
