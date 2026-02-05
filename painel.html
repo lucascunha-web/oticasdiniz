@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,13 +9,17 @@
     <link rel="stylesheet" href="style-painel.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
+
 <body>
 
     <div class="sidebar">
         <img src="logodiniz.png" class="logo-side" alt="Diniz">
         <nav>
+            <a href="#" class="nav-link" data-target="aba-stats" id="nav-dashboard">
+                <i class="fas fa-chart-bar"></i> <span>Dashboard</span>
+            </a>
             <a href="#" class="nav-link active" data-target="aba-ranking">
-                <i class="fas fa-chart-line"></i> <span>Dashboard</span>
+                <i class="fas fa-chart-line"></i> <span>KPIs</span>
             </a>
             <a href="#" class="nav-link" data-target="aba-comunicados">
                 <i class="fas fa-bullhorn"></i> <span>Comunicados</span>
@@ -28,7 +33,7 @@
 
             <div class="sidebar-item">
                 <a href="#" class="nav-link" id="btnTabelas" onclick="toggleTabelas(event)">
-                    <i class="fas fa-table"></i> <span>Tabelas</span> 
+                    <i class="fas fa-table"></i> <span>Tabelas</span>
                     <i class="fas fa-chevron-down" style="margin-left: auto; font-size: 0.7rem;"></i>
                 </a>
                 <div id="submenuTabelas" class="submenu">
@@ -49,7 +54,16 @@
     </div>
 
     <div class="main-content">
-        
+
+        <section id="aba-stats" class="content-section">
+                <div id="meuNovoDashboardContainer">
+                    <div class="loader-container">
+                        <i class="fas fa-circle-notch fa spin"></i>
+                        <p>Carregando métricas avançadas...</p>
+                </div>
+            </div>
+        </section>
+
         <section id="aba-ranking" class="content-section active">
             <header>
                 <h2>Olá, <span id="nomeUsuario">...</span></h2>
@@ -59,22 +73,34 @@
                 <div class="stat-card">
                     <span class="rank-badge" id="rankFaturamento">#--º</span>
                     <i class="fas fa-dollar-sign icon-faturamento"></i>
-                    <div class="stat-info"><h3>Faturamento</h3><p id="totalFaturamento">R$ 0,00</p></div>
+                    <div class="stat-info">
+                        <h3>Faturamento</h3>
+                        <p id="totalFaturamento">R$ 0,00</p>
+                    </div>
                 </div>
                 <div class="stat-card">
                     <span class="rank-badge" id="rankTicket">#--º</span>
                     <i class="fas fa-ticket-alt icon-ticket"></i>
-                    <div class="stat-info"><h3>Ticket Médio</h3><p id="ticketMedio">R$ 0,00</p></div>
+                    <div class="stat-info">
+                        <h3>Ticket Médio</h3>
+                        <p id="ticketMedio">R$ 0,00</p>
+                    </div>
                 </div>
                 <div class="stat-card">
                     <span class="rank-badge" id="rankDesconto">#--º</span>
                     <i class="fas fa-percentage icon-desconto"></i>
-                    <div class="stat-info"><h3>Desconto</h3><p id="totalDesconto">0%</p></div>
+                    <div class="stat-info">
+                        <h3>Desconto</h3>
+                        <p id="totalDesconto">0%</p>
+                    </div>
                 </div>
                 <div class="stat-card">
                     <span class="rank-badge" id="rankVendas">#--º</span>
                     <i class="fas fa-shopping-bag icon-vendas"></i>
-                    <div class="stat-info"><h3>Nº de Vendas</h3><p id="totalVendas">0</p></div>
+                    <div class="stat-info">
+                        <h3>Nº de Vendas</h3>
+                        <p id="totalVendas">0</p>
+                    </div>
                 </div>
                 <div class="stat-card card-avaliacoes">
                     <i class="fas fa-star icon-avaliacoes"></i>
@@ -85,16 +111,15 @@
                     </div>
                     <span id="rankAvaliacoes" class="rank-badge">--</span>
                 </div>
-             </div>
-             <div class="ranking-card">
+            </div>
+
+            <div class="ranking-card">
                 <div id="areaRankingLojas" class="area-ranking-lojas" style="display: none;">
-                    
                     <div class="ranking-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <h3 style="color: #c62828; margin: 0;">
                             <i class="fas fa-store"></i> DESEMPENHO DAS LOJAS
                         </h3>
-
-                        <select id="filtroLojaRanking" onchange="atualizarCardTotais()" >
+                        <select id="filtroLojaRanking" onchange="atualizarCardTotais()">
                             <option value="geral">Empresa</option>
                             <option value="1">Loja 1</option>
                             <option value="3">Loja 3</option>
@@ -104,12 +129,11 @@
                             <option value="7">Loja 7</option>
                         </select>
                     </div>
-
                     <div id="rankingLojasContainer">
                         <p>Carregando dados das lojas...</p>
                     </div>
-
                 </div>
+
                 <div class="area-ranking-individual">
                     <div class="ranking-header">
                         <h3><i class="fas fa-medal"></i> <span id="tituloRanking">Ranking de Faturamento</span></h3>
@@ -119,7 +143,7 @@
                                 <option value="ticket">Ticket Médio</option>
                                 <option value="vendas">Nº de Vendas</option>
                                 <option value="desconto">Desconto</option>
-                                <option value="avaliacoes">Avaliações</option> </select>
+                                <option value="avaliacoes">Avaliações</option>
                             </select>
                         </div>
                     </div>
@@ -129,7 +153,9 @@
         </section>
 
         <section id="aba-comunicados" class="content-section">
-            <header><h2>Comunicados Internos</h2></header>
+            <header>
+                <h2>Comunicados Internos</h2>
+            </header>
             <div id="listaComunicados" class="comunicados-grid">
                 <p>Carregando comunicados...</p>
             </div>
@@ -170,7 +196,9 @@
         </section>
 
         <section id="aba-calculadora" class="content-section">
-            <header><h2>Calculadora Óptica</h2></header>
+            <header>
+                <h2>Calculadora Óptica</h2>
+            </header>
             <div class="calc-container">
                 <div class="calc-tabs">
                     <button class="calc-tab-btn active" onclick="switchCalcTab(event, 'calc-perto')">PERTO</button>
@@ -203,7 +231,6 @@
                 <div id="calc-adicao" class="calc-tab-content">
                     <div class="calc-card">
                         <h3>GRAU DE LONGE</h3>
-                        
                         <div class="input-group-row">
                             <span class="eye-label" style="color: #B71C1C;">OD </span>
                             <select id="aLongeEsfOd"></select>
@@ -216,7 +243,6 @@
                             <select id="aLongeCilOe"></select>
                             <select id="aLongeEixoOe"></select>
                         </div>
-
                         <hr style="margin: 15px 0; border: 0; border-top: 1px solid #ddd;">
                         <h3>GRAU DE PERTO</h3>
                         <div class="input-group-row">
@@ -231,7 +257,6 @@
                             <select id="aPertoCilOe"></select>
                             <select id="aPertoEixoOe"></select>
                         </div>
-                        
                         <button class="btn-primary-calc" onclick="calcularAdicao()">CALCULAR ADIÇÃO</button>
                     </div>
                     <div id="resAdicao" class="result-box" style="display:none"></div>
@@ -257,8 +282,9 @@
                     <div id="resTransp" class="result-box" style="display:none"></div>
                 </div>
             </div>
-            </section>
-            <section id="aba-treinamento" class="content-section">
+        </section>
+
+        <section id="aba-treinamento" class="content-section">
             <header>
                 <h2><i class="fas fa-graduation-cap"></i> Central de Treinamentos</h2>
                 <p>Curso de Óptica Básica</p>
@@ -286,30 +312,27 @@
                     <div class="modulo-txt"><h3>Técnicas em Vendas</h3><p>Clique para ver as aulas</p></div>
                 </button>
             </div>
+
             <div id="areaVideo" style="display: none;">
-                
                 <div class="botoes-controle-treinamento" style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center;">
                     <button class="btn-voltar" onclick="voltarAosModulos()">
                         <i class="fas fa-arrow-left"></i> Voltar aos Módulos
                     </button>
-
                     <a id="btnApostila" href="#" target="_blank" class="btn-apostila">
                         <i class="fas fa-file-pdf"></i> Baixar Apostila
                     </a>
-                </div> 
+                </div>
                 <div id="listaAulasModulo" class="modulos-container" style="margin-bottom: 20px;"></div>
-                
                 <div id="containerPlayer" style="display: none;">
                     <h3 id="tituloAula" style="margin-bottom: 15px; color: #B71C1C;">Nome da Aula</h3>
                     <div class="video-wrapper">
                         <div id="playerVideo"></div>
                     </div>
                 </div>
+            </div>
+        </section>
 
-            </div> </section>
-    </div>
-
-    <div id="modalBalanco" class="modal">
+    </div> <div id="modalBalanco" class="modal">
         <div class="modal-content">
             <span class="close" onclick="fecharBalanco()">&times;</span>
             <h3>Balanço de Estoque</h3>
@@ -344,5 +367,7 @@
     <script src="script-painel.js"></script>
     <script src="script-lentes.js"></script>
     <script src="script-lojas.js"></script>
+    <script src="script-dashboard-admin.js"></script>
 </body>
+
 </html>

@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ============================================================
     const btnBalanco = document.querySelector('.btn-balanco');
     const filtroAdmin = document.getElementById("filtroAdminRanking");
+    const btnDashboard = document.getElementById('nav-dashboard');
 
     if (nivelUsuario !== "vendedor") {
         if (btnBalanco) btnBalanco.setAttribute('style', 'display: inline-flex !important');
@@ -32,6 +33,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if(areaInd) areaInd.style.display = "grid";
         carregarMeusIndicadores(vendasGerais, nomeBusca);
     }
+
+    if (nivelUsuario !== "admin") {
+        if (btnDashboard) {
+                btnDashboard.style.setProperty('display', 'none', 'important');
+            }
+    }
+
+    
 
     // ============================================================
     // --- INICIALIZAÇÃO ---

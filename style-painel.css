@@ -1506,3 +1506,180 @@ body, html {
     font-weight: 500;
     padding: 10px;
 }
+/* RESET PARA PREENCHIMENTO TOTAL */
+body, html {
+    margin: 0;
+    padding: 0;
+    background-color: #ffffff; /* Fundo geral da página */
+}
+
+/* CONTAINER PRINCIPAL DINIZ - PREENCHIMENTO TOTAL */
+#meuNovoDashboardContainer {
+    --diniz-red: #e53935;
+    --black-absolute: #000000;
+    --card-bg: #121212;
+    --border-glass: rgba(255, 255, 255, 0.05);
+    --text-silver: #cfd8dc;
+    
+    background-color: #ffffff; /* Garante o preto em tudo */
+    color: var(--text-silver);
+    font-family: 'Inter', -apple-system, sans-serif;
+    padding: 20px;
+    min-height: 100vh; /* Ocupa a altura toda da tela */
+    box-sizing: border-box;
+}
+
+/* CABEÇALHO PRETO ABSOLUTO */
+.adm-header {
+    background: var(--black-absolute);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 30px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    border: 1px solid var(--border-glass);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+}
+
+.adm-header h2 {
+    color: #ffffff;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin: 0;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.adm-header h2 i { color: var(--diniz-red); }
+
+.adm-select {
+    background: #1a1a1a;
+    color: white;
+    border: 1px solid var(--diniz-red);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    outline: none;
+    transition: 0.3s;
+}
+
+.adm-select:hover { background: var(--diniz-red); }
+
+/* TABELA ESTILO PLANILHA PREMIUM */
+.adm-table-wrapper {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 10px;
+    border: 1px solid var(--border-glass);
+    margin-bottom: 30px;
+    overflow-x: auto; /* Permite scroll se a tela for pequena */
+}
+
+.adm-table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    text-align: left; 
+}
+
+.adm-table th {
+    padding: 18px;
+    color: var(--diniz-red);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid rgba(255,255,255,0.02);
+}
+
+.adm-table td {
+    padding: 15px 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    font-size: 0.9rem;
+    color: #eee;
+}
+
+/* DESTAQUE PARA A LINHA TOTAL/EMPRESA */
+.adm-row-total {
+    background: linear-gradient(90deg, #1a0808 0%, #000 100%);
+    font-weight: bold;
+}
+
+.adm-row-total td { 
+    border-top: 2px solid var(--diniz-red); 
+    color: #fff !important; 
+}
+
+/* GRID DE RANKINGS 1x4 */
+.adm-rank-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+/* RESPONSIVIDADE */
+@media (max-width: 1200px) { .adm-rank-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 768px) { .adm-rank-grid { grid-template-columns: 1fr; } }
+
+.adm-rank-card {
+    background: var(--card-bg);
+    padding: 22px;
+    border-radius: 16px;
+    border: 1px solid var(--border-glass);
+    transition: 0.3s ease;
+}
+
+.adm-rank-card:hover {
+    border-color: var(--diniz-red);
+    transform: translateY(-5px);
+}
+
+.adm-rank-card h4 {
+    font-size: 0.8rem;
+    color: #888;
+    margin-bottom: 1.5rem;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border-glass);
+    padding-bottom: 10px;
+}
+
+/* BARRAS DE PROGRESSO */
+.adm-rank-item { margin-bottom: 14px; }
+
+.adm-rank-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    margin-bottom: 6px;
+}
+
+.adm-rank-bar-bg {
+    background: #252525;
+    height: 4px;
+    border-radius: 10px;
+}
+
+.adm-rank-bar-fill {
+    background: linear-gradient(90deg, var(--diniz-red), #ff5252);
+    height: 100%;
+    border-radius: 10px;
+    transition: width 1.5s ease-out;
+    box-shadow: 0 0 10px rgba(229, 57, 53, 0.4);
+}
+
+/* ANIMAÇÃO SKELETON LOADING */
+.skeleton {
+    background: linear-gradient(90deg, #121212 25%, #1d1d1d 50%, #121212 75%);
+    background-size: 200% 100%;
+    animation: skeleton-load 1.5s infinite;
+}
+
+@keyframes skeleton-load {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
