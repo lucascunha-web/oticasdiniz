@@ -1614,10 +1614,10 @@ body, html {
     color: #fff !important; 
 }
 
-/* GRID DE RANKINGS 1x4 */
+/* GRID DE RANKINGS 1x5 */
 .adm-rank-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 15px;
     margin-bottom: 20px;
 }
@@ -1682,4 +1682,18 @@ body, html {
 @keyframes skeleton-load {
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
+}
+/* Estilo para a bolinha de notificação no botão histórico */
+.btn-historico { position: relative; }
+.badge-notificacao {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #ff0000;
+    color: white;
+    border-radius: 50%;
+    padding: 2px 6px;
+    font-size: 10px;
+    font-weight: bold;
+    display: none; /* Sumirá quando não houver AGUARDANDO */
 }

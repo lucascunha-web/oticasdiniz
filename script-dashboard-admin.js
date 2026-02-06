@@ -10,7 +10,7 @@ function mostrarLoading(container) {
         <div class="adm-header skeleton" style="height: 70px; margin-bottom: 20px;"></div>
         <div class="adm-table-wrapper skeleton" style="height: 350px; width: 100%; margin-bottom: 20px;"></div>
         <div class="adm-rank-grid">
-            ${Array(4).fill('<div class="adm-rank-card skeleton" style="height: 250px;"></div>').join('')}
+            ${Array(5).fill('<div class="adm-rank-card skeleton" style="height: 250px;"></div>').join('')}
         </div>
     `;
 }
@@ -23,7 +23,6 @@ async function carregarDashboard(ano) {
         const response = await fetch(`${URL_GAS_ADMIN}?ano=${ano}`);
         const dados = await response.json();
 
-        // Identifica a linha da Empresa e as Lojas individuais
         const empresa = dados.find(d => d.loja.toString().toUpperCase() === "EMPRESA");
         const lojas = dados.filter(d => d.loja.toString().toUpperCase() !== "EMPRESA");
 
@@ -55,7 +54,7 @@ async function carregarDashboard(ano) {
                                 <td>${l.vendas}</td>
                                 <td>R$ ${l.ticket.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                                 <td>${l.desconto.toFixed(2)}%</td>
-                                <td>${l.cmv || '---'}</td>
+                                <td>${l.cmv ? l.cmv.toFixed(2) + '%' : '---'}</td>
                                 <td>R$ ${l.faturamento.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                             </tr>
                         `).join('')}
@@ -64,7 +63,7 @@ async function carregarDashboard(ano) {
                             <td>${empresa.vendas}</td>
                             <td>R$ ${empresa.ticket.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                             <td>${empresa.desconto.toFixed(2)}%</td>
-                            <td>${empresa.cmv || '---'}</td>
+                            <td>${empresa.cmv ? empresa.cmv.toFixed(2) + '%' : '---'}</td>
                             <td>R$ ${empresa.faturamento.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                         </tr>
                     </tbody>
@@ -72,10 +71,11 @@ async function carregarDashboard(ano) {
             </div>
 
             <div class="adm-rank-grid">
-                ${gerarRankHTML("Faturamento", lojas, "faturamento", "R$ ")}
-                ${gerarRankHTML("Nº Vendas", lojas, "vendas", "")}
-                ${gerarRankHTML("Ticket Médio", lojas, "ticket", "R$ ")}
-                ${gerarRankHTML("Desconto", lojas, "desconto", "", "%")}
+                ${gerarRankHTML("Faturamento", lojas, "faturamento", "R$ ", "", false)}
+                ${gerarRankHTML("Nº Vendas", lojas, "vendas", "", "", false)}
+                ${gerarRankHTML("Ticket Médio", lojas, "ticket", "R$ ", "", false)}
+                ${gerarRankHTML("Desconto", lojas, "desconto", "", "%", true)}
+                ${gerarRankHTML("CMV", lojas, "cmv", "", "%", true)}
             </div>
         `;
     } catch (e) {
@@ -83,24 +83,38 @@ async function carregarDashboard(ano) {
     }
 }
 
-function gerarRankHTML(titulo, dados, chave, pre = "", suf = "") {
-    const ordenado = [...dados].sort((a, b) => b[chave] - a[chave]);
-    const max = Math.max(...dados.map(d => d[chave])) || 1;
+function gerarRankHTML(titulo, dados, chave, pre = "", suf = "", ordemCrescente = false) {
+    // Filtra dados válidos para não quebrar o cálculo de porcentagem
+    const dadosValidos = dados.filter(d => d[chave] !== null && d[chave] !== undefined);
+    
+    // Se for crescente (Desconto/CMV), o menor valor ganha. Caso contrário, o maior ganha.
+    const ordenado = [...dadosValidos].sort((a, b) => ordemCrescente ? a[chave] - b[chave] : b[chave] - a[chave]);
+    
+    // Para a barra de progresso: no ranking de "Menor é melhor", o 1º lugar (menor valor) deve ter a barra cheia.
+    // Usamos o maior valor da lista como base 100% para o cálculo inverso se necessário.
+    const maxVal = Math.max(...dadosValidos.map(d => d[chave])) || 1;
+    const minVal = Math.min(...dadosValidos.map(d => d[chave])) || 0.1;
 
     return `
         <div class="adm-rank-card">
             <h4>${titulo}</h4>
-            ${ordenado.slice(0, 7).map((l, i) => `
+            ${ordenado.slice(0, 7).map((l, i) => {
+                // Cálculo da barra: se for "Menor Melhor", invertemos a proporção
+                const pctBarra = ordemCrescente 
+                    ? (minVal / (l[chave] || 0.1)) * 100 
+                    : (l[chave] / maxVal) * 100;
+
+                return `
                 <div class="adm-rank-item">
                     <div class="adm-rank-info">
                         <span>${i+1}º Loja ${l.loja}</span>
                         <span>${pre}${l[chave].toLocaleString('pt-BR')}${suf}</span>
                     </div>
                     <div class="adm-rank-bar-bg">
-                        <div class="adm-rank-bar-fill" style="width: ${(l[chave]/max)*100}%"></div>
+                        <div class="adm-rank-bar-fill" style="width: ${pctBarra}%"></div>
                     </div>
-                </div>
-            `).join('')}
+                </div>`;
+            }).join('')}
         </div>
     `;
 }
