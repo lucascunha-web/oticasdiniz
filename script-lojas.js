@@ -78,20 +78,20 @@ function atualizarCardTotais() {
 
         faturamento = lojaRanking ? Number(lojaRanking.faturado).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : "R$ 0,00";
         vendas = lojaRede ? lojaRede.vendas : "0"; // Puxa da coluna B
-        desconto = lojaRede ? lojaRede.desconto : "0%"; // Puxa da coluna C
+        desconto = lojaRede ? lojaRede.desconto + "%" : "0,00%";
+        cmv = lojaRede ? lojaRede.cmvloja + "%" : "0,00%";
         ticket = lojaRede ? lojaRede.ticket : "R$ 0,00"; // Puxa da coluna D
         projecao = lojaRanking ? Number(lojaRanking.projecao).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : "R$ 0,00";
-        
-        cmv = null; // Definimos como null para a lógica do HTML abaixo
+    
     }
 
     // Geramos o bloco do CMV apenas se o filtro for "geral"
-    const htmlCMV = (filtro === "geral") ? `
+    const htmlCMV = `
         <div class="total-item">
             <span>CMV</span>
             <strong>${cmv}</strong>
         </div>
-    ` : ""; 
+    ` ; 
 
     const cardHtml = `
         <div class="card-totais-gerais" id="cardPretoDinamico">
