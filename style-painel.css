@@ -1697,3 +1697,54 @@ body, html {
     font-weight: bold;
     display: none; /* Sumirá quando não houver AGUARDANDO */
 }
+/* --- ESTILO DO SUBMENU DE ORÇAMENTOS --- */
+
+/* 1. Esconde o submenu por padrão */
+.submenu {
+    display: none; /* Deixa invisível */
+    background-color: rgba(0, 0, 0, 0.05); /* Um fundo levemente escurecido para dar profundidade */
+    flex-direction: column;
+    padding-left: 15px; /* Recuo para parecer hierárquico */
+    transition: all 0.3s ease;
+}
+
+/* 2. Classe que o JavaScript vai "ligar" e "desligar" */
+.submenu.open {
+    display: flex; /* Torna visível quando clicado */
+}
+
+/* 3. Estilo dos links dentro do submenu */
+.sub-nav-link {
+    padding: 12px 20px;
+    font-size: 0.85rem;
+    color: #555;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    transition: 0.2s;
+    border-left: 2px solid transparent;
+}
+
+.sub-nav-link:hover {
+    color: #B71C1C; /* Vermelho Diniz */
+    background-color: #eee;
+    border-left: 2px solid #B71C1C;
+}
+
+/* 4. Ajuste da setinha (Chevron) */
+#btnOrcamentos {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+#btnOrcamentos i.fa-chevron-down {
+    transition: transform 0.3s ease; /* Faz a seta girar suavemente */
+}
+
+/* Estilo para quando o link estiver ativo (selecionado) */
+.sub-nav-link.active {
+    background-color: #fff;
+    color: #B71C1C;
+    font-weight: bold;
+}

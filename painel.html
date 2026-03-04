@@ -21,6 +21,18 @@
             <a href="#" class="nav-link active" data-target="aba-ranking">
                 <i class="fas fa-chart-line"></i> <span>KPIs</span>
             </a>
+            
+            <div class="sidebar-item" id="containerOrcamentos" style="display: none;">
+                <a href="#" class="nav-link" id="btnOrcamentos" onclick="toggleOrcamentos(event)">
+                    <i class="fas fa-file-invoice-dollar"></i> <span>Orçamentos</span>
+                    <i class="fas fa-chevron-down" style="margin-left: auto; font-size: 0.7rem;"></i>
+                </a>
+                <div id="submenuOrcamentos" class="submenu">
+                    <a href="#" class="sub-nav-link" data-target="aba-orc-mes">Gestão</a>
+                    <a href="#" class="sub-nav-link" data-target="aba-orc-stats">Estatísticas</a>
+                </div>
+            </div>
+
             <div class="sidebar-item">
                 <a href="#" class="nav-link" id="btnTabelas" onclick="toggleTabelas(event)">
                     <i class="fas fa-table"></i> <span>Tabelas</span>
@@ -34,6 +46,7 @@
                     <a href="#" id="link-FESTIVAL" target="_blank" class="sub-nav-link">Festival</a>
                 </div>
             </div>
+
             <a href="#" class="nav-link" data-target="aba-comunicados">
                 <i class="fas fa-bullhorn"></i> <span>Comunicados</span>
             </a>
@@ -54,10 +67,10 @@
     <div class="main-content">
 
         <section id="aba-stats" class="content-section">
-                <div id="meuNovoDashboardContainer">
-                    <div class="loader-container">
-                        <i class="fas fa-circle-notch fa spin"></i>
-                        <p>Carregando métricas avançadas...</p>
+            <div id="meuNovoDashboardContainer">
+                <div class="loader-container">
+                    <i class="fas fa-circle-notch fa-spin"></i>
+                    <p>Carregando métricas avançadas...</p>
                 </div>
             </div>
         </section>
@@ -149,6 +162,10 @@
                 </div>
             </div>
         </section>
+
+        <section id="aba-orc-mes" class="content-section"></section>
+
+        <section id="aba-orc-stats" class="content-section"></section>
 
         <section id="aba-comunicados" class="content-section">
             <header>
@@ -330,7 +347,9 @@
             </div>
         </section>
 
-    </div> <div id="modalBalanco" class="modal">
+    </div> 
+
+    <div id="modalBalanco" class="modal">
         <div class="modal-content">
             <span class="close" onclick="fecharBalanco()">&times;</span>
             <h3>Balanço de Estoque</h3>
@@ -366,6 +385,6 @@
     <script src="script-lentes.js"></script>
     <script src="script-lojas.js"></script>
     <script src="script-dashboard-admin.js"></script>
+    <script src="orcamento.js"></script>
 </body>
-
 </html>
