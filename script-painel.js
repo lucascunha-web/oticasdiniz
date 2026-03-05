@@ -634,6 +634,7 @@ function verModulo(moduloId) {
         adicionarAula("Módulo I: Aula 4 - Óptica Geométrica", "14LEBDW2SoCoe63LfwFvFHSMVaTOqsCSI");
         adicionarAula("Módulo I: Aula 5 - Óptica Geométrica", "1Hln6uthoX0eUiGeof4Kqbz9WkPeKWLiY");
         adicionarAula("Módulo I: Aula 6 - Óptica Geométrica", "1Pb4auX8EE6TUV7xohO1_FMdAt4MlD7Oq");
+        adicionarAula("Módulo I: Aula 7 - Óptica Geométrica", "1SQmc5ZDnQKArcZt30p8gDfR-lUjkoZsR");
         
         // adicionarAula("Módulo I: Aula 2 - Exemplo", "ID_VIDEO");
     } 
