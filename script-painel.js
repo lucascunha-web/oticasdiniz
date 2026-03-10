@@ -635,6 +635,7 @@ function verModulo(moduloId) {
         adicionarAula("Módulo I: Aula 5 - Óptica Geométrica", "1Hln6uthoX0eUiGeof4Kqbz9WkPeKWLiY");
         adicionarAula("Módulo I: Aula 6 - Óptica Geométrica", "1Pb4auX8EE6TUV7xohO1_FMdAt4MlD7Oq");
         adicionarAula("Módulo I: Aula 7 - Óptica Geométrica", "1SQmc5ZDnQKArcZt30p8gDfR-lUjkoZsR");
+        adicionarAula("Módulo I: Aula 8 - Óptica Geométrica", "19iLIgleT4FrujfYrJ-fC2OzzjNxC1Msn");
         
         // adicionarAula("Módulo I: Aula 2 - Exemplo", "ID_VIDEO");
     } 
@@ -700,5 +701,6 @@ document.addEventListener("DOMContentLoaded", () => {
     popularEscalas();
     configurarReplicacao();
 });
+
 
 function logout() { sessionStorage.clear(); window.location.href = "index.html"; }
