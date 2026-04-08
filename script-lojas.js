@@ -79,7 +79,7 @@ function atualizarCardTotais() {
         faturamento = lojaRanking ? Number(lojaRanking.faturado).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : "R$ 0,00";
         vendas = lojaRede ? lojaRede.vendas : "0"; // Puxa da coluna B
         desconto = lojaRede ? lojaRede.desconto + "%" : "0,00%";
-        cmv = lojaRede ? lojaRede.cmvloja + "%" : "0,00%";
+        cmv = lojaRede ? lojaRede.cmvloja: "0";
         ticket = lojaRede ? lojaRede.ticket : "R$ 0,00"; // Puxa da coluna D
         projecao = lojaRanking ? Number(lojaRanking.projecao).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : "R$ 0,00";
     
@@ -88,7 +88,7 @@ function atualizarCardTotais() {
     // Geramos o bloco do CMV apenas se o filtro for "geral"
     const htmlCMV = `
         <div class="total-item">
-            <span>CMV</span>
+            <span>MKP</span>
             <strong>${cmv}</strong>
         </div>
     ` ; 
