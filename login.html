@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-store">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Portal Institucional | Oticas Diniz</title>
+  <link rel="icon" href="ICON.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=8">
+</head>
+<body>
+  <main class="login-page">
+    <form class="login-card" id="loginForm" aria-label="Formulario de login">
+      <img src="logodiniz.png" alt="Oticas Diniz" class="form-logo">
+
+      <div class="login-heading">
+        <h1>Acesso ao Painel</h1>
+      </div>
+
+      <div class="field">
+        <label for="login">Login</label>
+        <input type="text" id="login" name="login" placeholder="login" autocomplete="username" autocapitalize="characters" required>
+      </div>
+
+      <div class="field">
+        <label for="password">Senha</label>
+        <input type="password" id="password" name="password" placeholder="SENHA" autocomplete="current-password" required>
+      </div>
+
+      <label class="remember">
+        <input type="checkbox" name="remember">
+        <span>Manter conectado</span>
+      </label>
+
+      <button type="submit">Acessar portal</button>
+      <p class="login-message" id="loginMessage" aria-live="polite"></p>
+    </form>
+  </main>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>

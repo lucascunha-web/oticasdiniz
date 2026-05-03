@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-store">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Painel | Oticas Diniz</title>
+  <link rel="icon" href="ICON.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="painel.css?v=6">
+  <style>
+    .header-identity .brand-mark {
+      background: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      width: auto !important;
+      height: auto !important;
+    }
+    .header-identity .brand-mark img {
+      height: 45px; /* Tamanho ajustado para destaque */
+      width: auto !important; /* Garante que não fique amassada */
+      filter: brightness(0) invert(1); /* Torna a logo totalmente branca */
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <header class="panel-header">
+    <div class="header-identity">
+      <a class="brand-mark" href="painel.html" aria-label="Oticas Diniz">
+        <img src="logodiniz.png" alt="Oticas Diniz">
+      </a>
+
+      <h1>Ola, <span id="userName">Usuario</span></h1>
+    </div>
+
+    <nav class="top-nav" aria-label="Menu principal">
+      <a class="top-nav-button active" href="painel.html">Painel</a>
+      <a class="top-nav-button" href="#" id="stockButton">Lentes de Estoque</a>
+      <a class="top-nav-button" href="#" id="trainingsButton">Treinamentos</a>
+      <div class="nav-dropdown">
+        <button class="top-nav-button" id="tabelasToggle">Tabelas</button>
+        <div class="nav-dropdown-content" id="tabelasDropdown">
+          <button type="button" data-type="precos">Preços</button>
+          <button type="button" data-type="codigos">Códigos</button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="header-actions">
+      <button class="hamburger-menu" id="mobileMenuToggle" aria-label="Menu" type="button">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+
+      <button class="gear-button" type="button" id="adminButton" aria-label="Configurações" style="display: none;">
+        <span aria-hidden="true">⚙️</span>
+      </button>
+
+      <button class="megaphone-button" type="button" id="announcementsButton" aria-label="Comunicados" aria-expanded="false">
+        <span aria-hidden="true">📣</span>
+      </button>
+
+      <div class="profile-menu">
+        <button class="avatar" id="profileAvatar" type="button" aria-label="Abrir menu do perfil" aria-expanded="false">
+          <span></span>
+        </button>
+        <div class="profile-dropdown" id="profileDropdown">
+          <div class="profile-item theme-switch-wrapper">
+            <span>Modo Escuro</span>
+            <label class="theme-switch" for="themeCheckbox">
+              <input type="checkbox" id="themeCheckbox">
+              <span class="slider round">
+                <span class="moon-icon">🌙</span>
+                <span class="sun-icon">☀️</span>
+              </span>
+            </label>
+          </div>
+          <hr style="border: 0; border-top: 1px solid var(--line); margin: 4px 0;">
+          <button class="profile-logout" type="button" id="logoutButton">Sair</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="panel-main">
+    <!-- Visão Gerencial: Dash e Ranking de Unidades -->
+    <section class="manager-section" id="managerSection" style="display: none;">
+      <div class="store-selector-wrapper">
+        <div class="store-tabs" id="storeTabs"></div>
+        <div class="horizontal-indicators" id="activeStoreDisplay"></div>
+      </div>
+
+      <div class="ranking-heading" style="margin-top: 40px; margin-bottom: 20px;">
+        <h2>Ranking de Faturamento (Lojas)</h2>
+      </div>
+      <div class="store-ranking-list" id="storeRankingList">
+        <!-- Cards brancos de ranking injetados aqui -->
+      </div>
+    </section>
+
+    <section class="indicator-grid" id="sellerIndicators" aria-label="Indicadores do vendedor">
+      <article class="indicator-card">
+        <strong data-status="faturamento">Carregando</strong>
+        <i class="indicator-icon money" aria-hidden="true">$</i>
+        <span>Faturamento</span>
+        <h2 data-metric="faturamento">--</h2>
+        <p data-rank="faturamento">--</p>
+      </article>
+
+      <article class="indicator-card">
+        <strong data-status="ticketMedio">Carregando</strong>
+        <i class="indicator-icon ticket" aria-hidden="true">▬</i>
+        <span>Ticket Medio</span>
+        <h2 data-metric="ticketMedio">--</h2>
+        <p data-rank="ticketMedio">--</p>
+      </article>
+
+      <article class="indicator-card">
+        <strong data-status="desconto">Carregando</strong>
+        <i class="indicator-icon percent" aria-hidden="true">%</i>
+        <span>Desconto</span>
+        <h2 data-metric="desconto">--</h2>
+        <p data-rank="desconto">--</p>
+      </article>
+
+      <article class="indicator-card">
+        <strong data-status="vendas">Carregando</strong>
+        <i class="indicator-icon sales" aria-hidden="true">▣</i>
+        <span>N de Vendas</span>
+        <h2 data-metric="vendas">--</h2>
+        <p data-rank="vendas">--</p>
+      </article>
+
+      <article class="indicator-card">
+        <strong data-status="avaliacoes">Carregando</strong>
+        <i class="indicator-icon star" aria-hidden="true">★</i>
+        <span>Avaliacoes</span>
+        <h2 data-metric="avaliacoes">--</h2>
+        <p data-rank="avaliacoes">--</p>
+      </article>
+    </section>
+
+    <section class="ranking-panel" aria-labelledby="rankingTitle">
+      <div class="ranking-heading">
+        <div>
+          <span id="monthLabel">--</span>
+          <h2 id="rankingTitle">Ranking de Faturamento</h2>
+        </div>
+
+        <select class="ranking-switch" id="rankingSwitch" aria-label="Alternar ranking">
+          <option value="faturamento">Faturamento</option>
+          <option value="ticketMedio">Ticket Medio</option>
+          <option value="desconto">Desconto</option>
+          <option value="vendas">N de Vendas</option>
+          <option value="avaliacoes">Avaliacoes</option>
+        </select>
+      </div>
+
+      <div class="ranking-table" id="rankingTable">
+        <p class="empty-state">Nenhum dado de ranking carregado ainda.</p>
+      </div>
+    </section>
+  </main>
+
+  <aside class="announcements-panel" id="announcementsPanel" aria-label="Comunicados">
+    <div class="announcements-card">
+      <div class="announcements-heading">
+        <h2>Comunicados</h2>
+        <button type="button" id="closeAnnouncements" aria-label="Fechar comunicados">×</button>
+      </div>
+      <div class="announcements-list" id="announcementsList">
+        <p>Carregando comunicados...</p>
+      </div>
+    </div>
+  </aside>
+
+  <aside class="announcements-panel" id="stockPanel" aria-label="Consulta de Estoque">
+    <div class="announcements-card" id="stockCardContainer">
+      <div class="announcements-heading">
+        <h2 id="stockPanelTitle">Lentes de Estoque</h2>
+        <button type="button" id="closeStock" aria-label="Fechar estoque">×</button>
+      </div>
+      
+      <div class="stock-dual-layout">
+        <!-- Lado Esquerdo: Consulta e Reservas -->
+        <div class="stock-col-main">
+          <div class="stock-form">
+            <div class="stock-eye-row">
+              <div class="eye-section">
+                <h3>Olho Direito (OD)</h3>
+                <div class="input-pair">
+                  <label>Esférico</label>
+                  <select id="odEsferico" class="stock-select"></select>
+                </div>
+                <div class="input-pair">
+                  <label>Cilíndrico</label>
+                  <select id="odCilindrico" class="stock-select"></select>
+                </div>
+              </div>
+              
+              <div class="eye-section">
+                <h3>Olho Esquerdo (OE)</h3>
+                <div class="input-pair">
+                  <label>Esférico</label>
+                  <select id="oeEsferico" class="stock-select"></select>
+                </div>
+                <div class="input-pair">
+                  <label>Cilíndrico</label>
+                  <select id="oeCilindrico" class="stock-select"></select>
+                </div>
+              </div>
+            </div>
+
+            <div class="stock-actions-main">
+              <button id="btnConsultarEstoque" class="btn-consultar">Consultar Disponibilidade</button>
+            </div>
+          </div>
+
+          <div id="stockResults" class="stock-results-container"></div>
+
+          <div class="stock-footer-actions">
+            <button id="btnViewReservas" class="btn-secondary-stock" style="width: 100%;">Visualizar Reservas AGUARDANDO 📋</button>
+          </div>
+        </div>
+
+        <!-- Lado Direito: Gestão (Apenas ADM/Estoquista) -->
+        <div class="stock-col-admin" id="stockAdminSection" style="display: none;">
+          <div class="balanco-container">
+            <div class="balanco-card">
+              <h3>Balanço (Ajuste Rápido)</h3>
+              <div class="balanco-form">
+                <div class="balanco-inputs-row">
+                  <div class="add-input-group">
+                    <label>Marca</label>
+                    <select id="balancoTipo" class="stock-select">
+                      <option value="AR">AR</option>
+                      <option value="FILTRO_AZUL">Filtro Azul</option>
+                      <option value="ZEISS">Zeiss</option>
+                    </select>
+                  </div>
+                  <div class="add-input-group">
+                    <label>Esférico</label>
+                    <select id="balancoEsferico" class="stock-select"></select>
+                  </div>
+                  <div class="add-input-group">
+                    <label>Cilíndrico</label>
+                    <select id="balancoCilindrico" class="stock-select"></select>
+                  </div>
+                  <div class="add-input-group">
+                    <label>Quantidade</label>
+                    <input type="number" id="balancoQty" placeholder="0" class="stock-input">
+                  </div>
+                </div>
+                <button id="btnUpdateBalanco" class="btn-consultar">Atualizar Quantidade</button>
+              </div>
+            </div>
+
+            <div class="balanco-card" style="margin-top: 20px;">
+              <h3>Gerar Relatórios</h3>
+              <div class="report-actions-vertical">
+                <button class="btn-report" onclick="window.generateMatrixReport('AR')">📊 Matriz AR</button>
+                <button class="btn-report" onclick="window.generateMatrixReport('FILTRO_AZUL')">📊 Matriz FILTRO AZUL</button>
+                <button class="btn-report" onclick="window.generateMatrixReport('ZEISS')">📊 Matriz ZEISS</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Modal de Confirmação de OS -->
+  <div id="osModal" class="admin-modal" style="display: none; background: rgba(0,0,0,0.6); z-index: 9999999;">
+    <div class="admin-card" style="max-width: 400px; max-height: fit-content; margin: auto;">
+      <div class="admin-header">
+        <h2>Confirmar Reserva</h2>
+        <button id="closeOSModal" style="background:none; border:none; font-size: 1.5rem;">×</button>
+      </div>
+      <div class="field" style="padding: 20px 0;">
+        <label>Digite o Número da OS</label>
+        <input type="text" id="osNumberInput" placeholder="Ex: 12345" style="width: 100%; height: 45px;">
+      </div>
+      <button id="confirmReserveAction" class="btn-consultar">Confirmar Reserva</button>
+    </div>
+  </div>
+
+  <!-- Painel de Lista de Reservas -->
+  <aside class="announcements-panel" id="reservasListPanel" aria-label="Lista de Reservas">
+    <div class="announcements-card" style="width: min(600px, 100%);">
+      <div class="announcements-heading">
+        <h2>Lista de Reservas</h2>
+        <button type="button" id="closeReservasList">×</button>
+      </div>
+      <div id="reservasItemsContainer" class="announcements-list" style="padding-top: 20px;"></div>
+    </div>
+  </aside>
+
+  <!-- Painel de Treinamentos -->
+  <aside class="announcements-panel" id="trainingsPanel" aria-label="Treinamentos" style="justify-content: center; padding: 2vh;">
+    <div class="announcements-card" style="width: 98%; max-width: 1900px; height: 96vh;">
+      <div class="announcements-heading">
+        <h2>Módulos de Treinamento</h2>
+        <button type="button" id="closeTrainings" aria-label="Fechar treinamentos">×</button>
+      </div>
+      <div id="trainingsContainer" class="trainings-grid-layout">
+        <p class="empty-state">Carregando módulos...</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Modal Flutuante para Vídeo -->
+  <div id="videoModal" class="admin-modal" style="display: none; background: rgba(0,0,0,0.85); z-index: 10000000;">
+    <div class="admin-card" style="max-width: 1000px; padding: 10px; background: #000; border: 2px solid #333;">
+      <div class="admin-header" style="border: none; margin-bottom: 10px; padding: 0 10px;">
+        <h2 id="videoTitle" style="color: #fff; font-size: 1rem;">Vídeo da Aula</h2>
+        <button id="closeVideoModal" style="color: #fff; background: none; border: none; font-size: 2rem; cursor: pointer;">×</button>
+      </div>
+      <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;">
+        <iframe id="videoIframe" src="" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <aside class="announcements-panel" id="tabelasPanel" aria-label="Arquivos de Tabelas">
+    <div class="announcements-card">
+      <div class="announcements-heading">
+        <h2 id="tabelasPanelTitle">Tabelas</h2>
+        <button type="button" id="closeTabelas" aria-label="Fechar tabelas">×</button>
+      </div>
+      <div class="announcements-list" id="tabelasContentList">
+        <p>Carregando arquivos...</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Modal Administrativo (Matriz de Lojas) -->
+  <div class="admin-modal" id="adminModal">
+    <div class="admin-card">
+      <div class="admin-header">
+        <div class="admin-nav">
+          <button class="admin-nav-btn active" id="btnViewLojas">Lojas</button>
+          <button class="admin-nav-btn" id="btnViewVendedores">Vendedores</button>
+          <button class="admin-nav-btn" id="btnViewTabelas">Tabelas</button>
+          <button class="admin-nav-btn" id="btnViewComunicados">Comunicados</button>
+          <button class="admin-nav-btn" id="btnViewTreinamentos">Treinamentos</button>
+        </div>
+        <div class="admin-header-right">
+          <button id="btnSaveAll" class="btn-save-all" title="Salvar todas as alterações">Salvar Tudo 💾</button>
+          <button id="closeAdmin" class="admin-close-x">×</button>
+        </div>
+      </div>
+      
+      <div class="admin-calc-bar">
+        <div class="calc-input">
+          <label>Dias Trabalhados</label>
+          <input type="number" id="calcDiasTrab" value="1">
+        </div>
+        <div class="calc-input">
+          <label>Domingos/Feriados</label>
+          <input type="number" id="calcFeriados" value="4">
+        </div>
+        <div class="calc-info-display">
+          <div class="info-item">
+            <span>Dias no Mês</span>
+            <b id="displayTotalDays">--</b>
+          </div>
+          <div class="info-item">
+            <span>Dias Restantes</span>
+            <b id="displayRemainingDays">--</b>
+          </div>
+        </div>
+        <button id="btnCalcularProjecao">Calcular e Salvar Projeções</button>
+      </div>
+
+      <div class="admin-add-bar" id="adminAddForm" style="display: none;">
+        <div class="add-input-group">
+          <label id="lblNewTitle" for="newTitle">Título / Nome</label>
+          <input type="text" id="newTitle" placeholder="Ex: Tabela de Preços Matriz">
+        </div>
+        <div class="add-input-group">
+          <label id="lblNewURL" for="newURL">Link do Arquivo (URL)</label>
+          <input type="text" id="newURL" placeholder="https://drive.google.com/...">
+        </div>
+        <button id="btnSaveNew">Adicionar Novo</button>
+      </div>
+
+      <div class="admin-add-bar" id="adminAddLessonForm" style="display: none;">
+        <div class="add-input-group">
+          <label>Selecionar Módulo</label>
+          <select id="newLessonModule" class="stock-select" style="height: 40px;"></select>
+        </div>
+        <div class="add-input-group">
+          <label>Nome da Aula</label>
+          <input type="text" id="newLessonName" placeholder="Ex: Aula 01 - Introdução">
+        </div>
+        <div class="add-input-group">
+          <label>URL do Vídeo (Drive)</label>
+          <input type="text" id="newLessonURL" placeholder="https://drive.google.com/...">
+        </div>
+        <button id="btnSaveNewLesson">Adicionar Aula</button>
+      </div>
+
+      <div class="admin-table-wrapper">
+        <table class="admin-matrix">
+          <thead>
+            <tr>
+              <th>Loja</th>
+              <th>Faturamento</th>
+              <th>Vendas</th>
+              <th>Ticket Médio</th>
+              <th>Desconto %</th>
+              <th>MKP</th>
+              <th>Meta Comis.</th>
+              <th>Meta Fatur.</th>
+              <th>Projeção</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="adminTableBody">
+            <!-- Linhas geradas via JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <img class="panel-watermark" src="logodiniz.png" alt="" aria-hidden="true">
+
+  <script type="module" src="painel.js"></script>
+  <script type="module" src="admin.js"></script>
+</body>
+</html>
