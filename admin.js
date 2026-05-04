@@ -14,7 +14,11 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const monthKey = "2026-05"; // Mês de referência
+const monthKey = (() => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+})();
+
 let currentView = "lojas"; // Estado da aba atual
 
 const role = sessionStorage.getItem("usuarioCargo") || "";
@@ -81,6 +85,11 @@ async function openAdminModal() {
   
   modal.style.display = "flex";
   document.body.classList.add("modal-open");
+
+  // Carrega valores salvos anteriormente
+  document.getElementById("calcDiasTrab").value = localStorage.getItem("diasTrab_" + monthKey) || 1;
+  document.getElementById("calcFeriados").value = localStorage.getItem("feriados_" + monthKey) || 4;
+
   updateDaysInfo();
   await loadAdminMatrix();
 }
@@ -88,6 +97,11 @@ async function openAdminModal() {
 function updateDaysInfo() {
   const diasTrab = Number(document.getElementById("calcDiasTrab").value) || 0;
   const feriados = Number(document.getElementById("calcFeriados").value) || 0;
+
+  // Salva os valores para persistência
+  localStorage.setItem("diasTrab_" + monthKey, diasTrab);
+  localStorage.setItem("feriados_" + monthKey, feriados);
+
   const [year, month] = monthKey.split("-").map(Number);
   const totalDays = new Date(year, month, 0).getDate();
   const remaining = totalDays - feriados - diasTrab;
