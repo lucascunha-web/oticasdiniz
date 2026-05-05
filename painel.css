@@ -55,12 +55,12 @@ img {
   position: sticky;
   top: 0;
   z-index: 10;
-  min-height: 84px;
+  min-height: 70px;
   display: grid;
-  grid-template-columns: minmax(230px, 1fr) auto minmax(150px, 1fr);
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 20px;
-  padding: 12px 42px;
+  gap: clamp(10px, 2vw, 30px);
+  padding: 8px min(42px, 3vw);
   background: linear-gradient(180deg, var(--red), #c9141b);
   box-shadow: 0 10px 26px rgba(75, 0, 6, 0.22);
 }
@@ -73,8 +73,8 @@ img {
 }
 
 .brand-mark {
-  width: 70px;
-  height: 58px;
+  width: 58px;
+  height: 48px;
   display: grid;
   flex: 0 0 auto;
   place-items: center;
@@ -111,8 +111,8 @@ img {
 }
 
 .top-nav-button {
-  min-width: 138px;
-  min-height: 46px;
+  min-width: 110px;
+  min-height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -307,8 +307,8 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 
 .megaphone-button,
 .avatar {
-  width: 54px;
-  height: 54px;
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -321,8 +321,8 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 }
 
 .gear-button {
-  width: 54px;
-  height: 54px;
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
   border-radius: 999px;
@@ -721,7 +721,7 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 }
 
 .panel-main {
-  width: min(1600px, 98%);
+  width: min(1600px, 95%);
   margin: 0 auto;
   padding: 28px 0 48px;
   animation: pageEnter 0.45s ease both;
@@ -729,8 +729,8 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 
 .indicator-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(188px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: clamp(10px, 1.5vw, 20px);
   margin-bottom: 30px;
 }
 
@@ -847,7 +847,7 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 .indicator-card h2 {
   margin: 4px 0 0 58px;
   color: var(--ink) !important;
-  font-size: clamp(1.4rem, 2vw, 1.85rem);
+  font-size: clamp(1.2rem, 1.8vw, 1.6rem);
   font-weight: 800;
   line-height: 1;
 }
@@ -906,10 +906,15 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
   display: flex;
   justify-content: flex-start;
   align-items: stretch;
-  flex-wrap: wrap;
-  gap: 15px;
+  flex-wrap: nowrap;
+  gap: clamp(8px, 1vw, 15px);
   margin-top: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 8px;
 }
+.horizontal-indicators::-webkit-scrollbar { display: none; }
 
 .ind-group { 
   display: flex; 
@@ -918,7 +923,7 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
   background: var(--bg-muted);
   padding: 20px;
   border-radius: 16px;
-  min-width: 200px;
+  min-width: 160px; /* Reduzido para garantir encaixe em 1440px */
   border: 1px solid var(--line);
   flex: 1 1 0;
   justify-content: center;
@@ -950,8 +955,8 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 
 .store-ranking-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); /* Grid inteligente que se adapta ao tamanho da tela */
-  gap: 16px;
+  grid-template-columns: repeat(6, 1fr);
+  gap: clamp(10px, 1vw, 15px);
 }
 
 .rank-card-white {
@@ -1125,17 +1130,22 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 }
 
 .ranking-row {
-  min-height: auto;
-  display: grid;
-  grid-template-columns: 62px 58px 1fr 150px;
+  display: flex; /* Flexbox garante que fiquem lado a lado */
   align-items: center;
   gap: 12px;
-  padding: 12px 0;
+  padding: 8px 0;
+  flex-wrap: nowrap; /* Impede a quebra no desktop */
 }
 
 .ranking-row.fat-mode {
-  grid-template-columns: 62px 58px 1fr auto;
+  justify-content: space-between;
   gap: 20px;
+}
+
+.ranking-name {
+  flex: 1;
+  min-width: 100px; /* Permite que o nome encolha antes de quebrar */
+  order: unset; /* Remove a inversão de ordem */
 }
 
 .ranking-info-cols {
@@ -1143,11 +1153,11 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
   gap: clamp(10px, 2vw, 30px);
   align-items: center;
   justify-content: flex-end;
-  flex-wrap: nowrap;
-  flex: 1;
-  order: 4; /* Garante que as colunas fiquem DEPOIS do nome */
+  flex: 0 0 auto; /* Não deixa os valores esmagarem */
   flex-shrink: 0;
+  order: unset; /* Garante que fiquem no final (direita) */
 }
+@media (max-width: 1300px) { .ranking-info-cols { gap: 12px; } }
 
 .ranking-col-item {
   display: flex;
@@ -1158,21 +1168,21 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 }
 
 .ranking-col-item span:first-child {
-  font-size: 0.72rem; 
+  font-size: 0.68rem; 
   color: var(--muted) !important;
   text-transform: uppercase;
   font-weight: 800;
 }
 
 .ranking-col-item strong {
-  font-size: clamp(1rem, 1.4vw, 1.25rem);
+  font-size: clamp(0.85rem, 1.1vw, 1.05rem);
   color: var(--ink) !important;
 }
 
 .r-status-badge {
-  padding: 5px 12px; /* Badge maior */
+  padding: 4px 10px;
   border-radius: 4px;
-  font-size: 0.75rem; /* Texto do status maior */
+  font-size: 0.65rem;
   font-weight: 800;
   color: #fff;
   text-transform: uppercase;
@@ -1184,11 +1194,11 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
   color: var(--ink) !important;
   font-size: 1.28rem;
   font-weight: 800;
-  order: 2;
+  order: unset;
 }
 
 .ranking-photo {
-  order: 1;
+  order: unset;
   width: 54px;
   height: 54px;
   display: grid;
@@ -1753,16 +1763,8 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
   }
 }
 
-@media (max-width: 1440px) {
-  .indicator-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (max-width: 1400px) {
-  .ranking-row.fat-mode {
-    grid-template-columns: 50px 55px 1.2fr 2fr;
-  }
+@media (max-width: 1500px) {
+  /* Removemos as limitações fixas de colunas para 1440px e afins */
 }
 
 @media (max-width: 720px) {
@@ -1797,20 +1799,40 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
     font-size: 0.82rem;
   }
 
+  .horizontal-indicators {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .ind-group {
+    min-width: calc(50% - 4px);
+    flex: 1 1 calc(50% - 4px);
+    padding: 15px;
+  }
+
   .panel-main {
     width: calc(100% - 20px);
     padding-top: 18px;
   }
 
   .indicator-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
   }
   
-  .admin-calc-bar, .admin-add-bar {
-    flex-direction: column;
-    align-items: stretch;
+  .indicator-card {
+    min-height: 120px;
+    padding: 15px;
+    align-items: center;
+    text-align: center;
   }
+
+  .indicator-card h2, .indicator-card span, .indicator-card p, .indicator-card strong {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .indicator-icon { display: none; }
   
   .calc-info-display {
     gap: 10px;
@@ -1832,18 +1854,21 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
   }
 
   .ranking-row {
-    display: grid;
-    grid-template-columns: 45px 45px 1fr;
-    align-items: center;
+    flex-direction: column; /* Empilha os itens verticalmente */
+    align-items: flex-start; /* Alinha os itens à esquerda */
     gap: 10px;
   }
 
-  .ranking-row.fat-mode .ranking-info-cols {
-    grid-column: 1 / -1;
+  .ranking-name {
+    width: 100%; /* Garante que o nome ocupe toda a largura */
+  }
+
+  .ranking-info-cols {
+    width: 100%;
     justify-content: space-between;
-    gap: 15px; /* Mais espaço no mobile */
-    margin-top: 10px;
-    flex-wrap: wrap; /* Evita que os dados saiam da tela em celulares pequenos */
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--line);
   }
 
   .ranking-row.fat-mode .ranking-col-item {
@@ -1855,8 +1880,12 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
     width: 100%;
   }
 
+  .store-ranking-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .ranking-value {
-    grid-column: 1 / -1;
+    /* Removido grid-column, pois o pai é flex */
     width: 100%;
     text-align: left;
   }

@@ -87,8 +87,11 @@ async function openAdminModal() {
   document.body.classList.add("modal-open");
 
   // Carrega valores salvos anteriormente
-  document.getElementById("calcDiasTrab").value = localStorage.getItem("diasTrab_" + monthKey) || 1;
-  document.getElementById("calcFeriados").value = localStorage.getItem("feriados_" + monthKey) || 4;
+  const savedDias = localStorage.getItem("diasTrab_" + monthKey);
+  const savedFeriados = localStorage.getItem("feriados_" + monthKey);
+  
+  document.getElementById("calcDiasTrab").value = savedDias !== null ? savedDias : "1";
+  document.getElementById("calcFeriados").value = savedFeriados !== null ? savedFeriados : "4";
 
   updateDaysInfo();
   await loadAdminMatrix();

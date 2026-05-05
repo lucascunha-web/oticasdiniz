@@ -165,8 +165,18 @@ async function loadTrainings() {
       if (aulasSnap.empty) {
         lessonsHtml = "<p style='font-size:0.75rem; color:var(--muted); text-align:center; padding:20px;'>Módulo indisponível</p>";
       } else {
-        lessonsHtml = aulasSnap.docs.map(aulaDoc => {
-          const aula = aulaDoc.data();
+        // Converte para array e aplica ordenação NATURAL (Aula 1, Aula 2, Aula 10...)
+        const aulas = aulasSnap.docs.map(aulaDoc => ({ id: aulaDoc.id, ...aulaDoc.data() }));
+        
+        aulas.sort((a, b) => {
+          const extractNum = (str) => {
+            const match = str.match(/Aula\s*(\d+)/i);
+            return match ? parseInt(match[1], 10) : 0;
+          };
+          return extractNum(a.nome) - extractNum(b.nome);
+        });
+
+        lessonsHtml = aulas.map(aula => {
           return `
             <div class="lesson-card" onclick="window.openLessonVideo('${aula.nome}', '${aula.url}')">
               ${aula.nome}
