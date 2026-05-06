@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { getFirestore, collection, doc, getDoc, getDocs, updateDoc, collectionGroup, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { getFirestore, collection, doc, getDoc, getDocs, updateDoc, collectionGroup, addDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBwE1WFYWOHBZPXhapa-td7NxA3Ndx-P2w",
@@ -183,22 +183,24 @@ async function loadAdminMatrix() {
       `).join("");
     } else {
       const snapshot = await getDocs(collectionGroup(db, "metricas"));
-      const metricsDocs = snapshot.docs.filter(mDoc => {
-        const path = mDoc.ref.path;
-        return mDoc.id === monthKey && path.startsWith(currentView + "/");
-      });
+      
+      // Se for vendedores, pegamos todas as fotos de uma vez para economizar leituras
+      let profilesMap = {};
+      if (currentView === "vendedores") {
+        const profSnap = await getDocs(collection(db, "vendedores"));
+        profSnap.forEach(p => profilesMap[p.id] = p.data().foto || "");
+      }
 
-      const records = await Promise.all(metricsDocs.map(async mDoc => {
-        const docId = mDoc.ref.parent.parent.id;
-        const data = { id: docId, ...mDoc.data() };
-        if (currentView === "vendedores") {
-          try {
-            const profileSnap = await getDoc(doc(db, "vendedores", docId));
-            if (profileSnap.exists()) data.foto = profileSnap.data().foto || "";
-          } catch (e) {}
-        }
-        return data;
-      }));
+      const records = snapshot.docs
+        .filter(mDoc => mDoc.id === monthKey && mDoc.ref.path.startsWith(currentView + "/"))
+        .map(mDoc => {
+          const docId = mDoc.ref.parent.parent.id;
+          const data = { id: docId, ...mDoc.data() };
+          if (currentView === "vendedores") {
+            data.foto = profilesMap[docId] || "";
+          }
+          return data;
+        });
 
       const sortedRecords = records.sort((a, b) => {
         if (a.id === "GERAL") return -1;
@@ -300,7 +302,7 @@ document.getElementById("btnCalcularProjecao").addEventListener("click", async (
   const diasFaltam = totalDaysInMonth - feriados - diasTrab;
 
   const rows = document.querySelectorAll("#adminTableBody tr");
-  const promises = [];
+  const batch = writeBatch(db);
 
   for (const row of rows) {
     const storeId = row.dataset.id;
@@ -315,11 +317,11 @@ document.getElementById("btnCalcularProjecao").addEventListener("click", async (
     projInput.value = novaProjecao;
     
     const metricRef = doc(db, currentView, storeId, "metricas", monthKey);
-    promises.push(updateDoc(metricRef, { projeção: novaProjecao, atualizadoEm: new Date() }));
+    batch.update(metricRef, { projeção: novaProjecao, atualizadoEm: new Date() });
   }
 
   try {
-    await Promise.all(promises);
+    await batch.commit();
     alert("Projeções calculadas e salvas para todas as lojas!");
   } catch (e) {
     alert("Erro ao salvar projeções.");

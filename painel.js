@@ -480,9 +480,11 @@ document.getElementById("btnConsultarEstoque")?.addEventListener("click", async 
 // Função Global para Relatórios (Matriz)
 window.generateMatrixReport = async (tipo) => {
   try {
-    const snapshot = await getDocs(collection(db, "estoque"));
+    // Otimização: Busca apenas as lentes da marca selecionada (Ex: AR_...)
+    const q = query(collection(db, "estoque"), where("__name__", ">=", tipo + "_"), where("__name__", "<", tipo + "_\uf8ff"));
+    const snapshot = await getDocs(q);
     const data = {};
-    snapshot.docs.forEach(d => { if(d.id.startsWith(tipo)) data[d.id] = d.data().quantidade; });
+    snapshot.docs.forEach(d => { data[d.id] = d.data().quantidade; });
 
     const esfericos = [];
     for (let i = 4; i >= -4; i -= 0.25) esfericos.push(i);
@@ -702,23 +704,26 @@ async function loadPanel() {
 }
 
 async function getAllSellerMetrics() {
+  // Otimização: Busca todos os vendedores de uma vez (1 leitura por lote de 100 docs)
+  // em vez de fazer um getDoc para cada um no loop (N leituras)
+  const sellersSnap = await getDocs(collection(db, "vendedores"));
+  const sellersMap = {};
+  sellersSnap.forEach(doc => sellersMap[doc.id] = doc.data());
+
+  // Otimização: Se você adicionar um campo 'mes' no documento, 
+  // poderá usar query(collectionGroup, where('mes', '==', monthKey)) para economizar leituras
   const snapshot = await getDocs(collectionGroup(db, "metricas"));
 
-  const sellerMetrics = snapshot.docs
+  return snapshot.docs
     .filter((metricDoc) => {
       const sellerRef = metricDoc.ref.parent.parent;
       return metricDoc.id === monthKey && sellerRef?.parent.id === "vendedores";
-    });
-
-  return Promise.all(
-    sellerMetrics.map(async (metricDoc) => {
-      const sellerRef = metricDoc.ref.parent.parent;
-      const sellerSnap = sellerRef ? await getDoc(sellerRef) : null;
-      const sellerData = sellerSnap?.exists() ? sellerSnap.data() : {};
-
-      return normalizeMetricRecord(sellerRef?.id || "Sem nome", metricDoc.data(), sellerData);
     })
-  );
+    .map((metricDoc) => {
+      const sellerId = metricDoc.ref.parent.parent.id;
+      const sellerData = sellersMap[sellerId] || {};
+      return normalizeMetricRecord(sellerId, metricDoc.data(), sellerData);
+    });
 }
 
 async function getSellerMetrics(sellerName) {
@@ -1096,13 +1101,8 @@ async function loadStoreRankingData() {
 
   try {
     const snapshot = await getDocs(collectionGroup(db, "metricas"));
-    
     const allMetrics = snapshot.docs
-      .filter(doc => {
-        const path = doc.ref.path;
-        // Filtra pelo mês atual e garante que pertence a lojas
-        return doc.id === monthKey && path.startsWith("lojas/");
-      })
+      .filter(doc => doc.id === monthKey && doc.ref.path.startsWith("lojas/"))
       .map(doc => ({ id: doc.ref.parent.parent.id, ...doc.data() }));
 
     if (allMetrics.length === 0) return;
