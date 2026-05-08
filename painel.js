@@ -1,5 +1,5 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { collection, collectionGroup, doc, getDoc, getDocs, getFirestore, query, where, addDoc, updateDoc, increment, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { initializeApp, getApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { collection, collectionGroup, doc, getDoc, getDocs, getFirestore, initializeFirestore, persistentLocalCache, query, where, addDoc, updateDoc, increment, serverTimestamp, onSnapshot, FieldPath } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBwE1WFYWOHBZPXhapa-td7NxA3Ndx-P2w",
@@ -11,10 +11,22 @@ const firebaseConfig = {
   measurementId: "G-4HBMBK0GWD"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+// Evita erro de inicialização duplicada
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+
+// Inicializa o Firestore com o novo sistema de cache (evita erros de "already started")
+let db;
+try {
+  db = initializeFirestore(app, { localCache: persistentLocalCache() });
+} catch (e) {
+  db = getFirestore(app);
+}
 
 const user = sessionStorage.getItem("usuarioLogado");
+// Store unsubscribe functions for real-time listeners
+let unsubscribeSellerMetrics = null;
+let unsubscribeStoreMetrics = null;
+
 const role = sessionStorage.getItem("usuarioCargo") || "";
 
 // --- Gerenciamento de Tema (Dark Mode) ---
@@ -124,7 +136,9 @@ document.getElementById("logoutButton").addEventListener("click", () => {
 });
 
 loadPanel();
-loadAnnouncements();
+
+// Escuta comunicados em tempo real (Cache-friendly)
+listenAnnouncements();
 
 // --- Sistema de Treinamentos ---
 const trainingsButton = document.getElementById("trainingsButton");
@@ -670,63 +684,91 @@ document.getElementById("closeTabelas")?.addEventListener("click", () => {
   document.getElementById("tabelasPanel").classList.remove("open");
 });
 
+// Unsubscribe all listeners on logout
+document.getElementById("logoutButton").addEventListener("click", () => {
+  if (unsubscribeSellerMetrics) unsubscribeSellerMetrics();
+  if (unsubscribeStoreMetrics) unsubscribeStoreMetrics();
+  // Add other unsubscribe calls here if more listeners are added
+  sessionStorage.clear();
+  window.location.href = "login.html";
+});
+
 async function loadPanel() {
   setRankingLoading();
 
   try {
-    const [allMetrics, currentSeller] = await Promise.all([
-      getAllSellerMetrics(),
-      getSellerProfile(user)
-    ]);
-
+    // Fetch seller profile once
+    const currentSeller = await getSellerProfile(user);
     setProfilePhoto(currentSeller.photo);
 
-    Object.keys(metrics).forEach((metricKey) => {
-      rankings[metricKey] = buildRanking(allMetrics, metricKey);
+    // Fetch all sellers data once to map names to photos
+    const sellersSnap = await getDocs(collection(db, "vendedores"));
+    const sellersMap = {};
+    sellersSnap.forEach(doc => sellersMap[doc.id] = doc.data());
+
+    // Setup real-time listener for seller metrics
+    if (unsubscribeSellerMetrics) {
+      unsubscribeSellerMetrics(); // Unsubscribe from previous listener if any
+    }
+
+    const qSellerMetrics = query(collectionGroup(db, "metricas"));
+
+    unsubscribeSellerMetrics = onSnapshot(qSellerMetrics, (snapshot) => {
+      const allSellerMetrics = snapshot.docs
+        .filter((metricDoc) => {
+          const sellerRef = metricDoc.ref.parent.parent;
+          // Filter for current month and 'vendedores' collection
+          return metricDoc.id === monthKey && sellerRef?.parent.id === "vendedores";
+        })
+        .map((metricDoc) => {
+          const sellerId = metricDoc.ref.parent.parent.id;
+          const sellerData = sellersMap[sellerId] || {};
+          return normalizeMetricRecord(sellerId, metricDoc.data(), sellerData);
+        });
+
+      Object.keys(metrics).forEach((metricKey) => {
+        rankings[metricKey] = buildRanking(allSellerMetrics, metricKey);
+      });
+
+      if (isSeller) {
+        const sellerMetrics = allSellerMetrics.find(m => normalizeText(m.name) === normalizeText(user));
+        if (sellerMetrics) {
+          renderSellerIndicators(sellerMetrics);
+        } else {
+          console.warn(`No metrics found for current seller ${user} for month ${monthKey}`);
+          // Optionally clear or set default indicators if no metrics found
+          // For example: renderSellerIndicators(normalizeMetricRecord(user, {}));
+        }
+      }
+
+      renderRanking("faturamento"); // Render default ranking
+    }, (error) => {
+      console.error("Erro ao carregar métricas de vendedor em tempo real:", error);
+      document.getElementById("rankingTable").innerHTML = `
+        <p class="empty-state">Nao foi possivel carregar os dados do ranking agora.</p>
+      `;
     });
 
-    if (isSeller) {
-      const sellerMetrics = await getSellerMetrics(user);
-      renderSellerIndicators(sellerMetrics);
-    }
-
-    renderRanking("faturamento");
-
-   if (canSwitchRanking) {
+    // Load store ranking data if applicable
+    if (canSwitchRanking) {
       loadStoreRankingData();
     }
+
   } catch (error) {
-    console.error("Erro ao carregar painel:", error);
+    console.error("Erro ao carregar painel (inicial):", error);
     document.getElementById("rankingTable").innerHTML = `
       <p class="empty-state">Nao foi possivel carregar os dados do ranking agora.</p>
     `;
   }
 }
 
-async function getAllSellerMetrics() {
-  // Otimização: Busca todos os vendedores de uma vez (1 leitura por lote de 100 docs)
-  // em vez de fazer um getDoc para cada um no loop (N leituras)
-  const sellersSnap = await getDocs(collection(db, "vendedores"));
-  const sellersMap = {};
-  sellersSnap.forEach(doc => sellersMap[doc.id] = doc.data());
-
-  // Otimização: Se você adicionar um campo 'mes' no documento, 
-  // poderá usar query(collectionGroup, where('mes', '==', monthKey)) para economizar leituras
-  const snapshot = await getDocs(collectionGroup(db, "metricas"));
-
-  return snapshot.docs
-    .filter((metricDoc) => {
-      const sellerRef = metricDoc.ref.parent.parent;
-      return metricDoc.id === monthKey && sellerRef?.parent.id === "vendedores";
-    })
-    .map((metricDoc) => {
-      const sellerId = metricDoc.ref.parent.parent.id;
-      const sellerData = sellersMap[sellerId] || {};
-      return normalizeMetricRecord(sellerId, metricDoc.data(), sellerData);
-    });
-}
+// Removed getAllSellerMetrics as its logic is now integrated into loadPanel's onSnapshot
+// function processSellerMetrics(snapshot, sellersMap) { ... } // This function is no longer needed
 
 async function getSellerMetrics(sellerName) {
+  // This function is still used by renderSellerIndicators, but now the data comes from the allSellerMetrics array
+  // It's better to get the seller's metrics from the `allSellerMetrics` array that `onSnapshot` provides.
+  // For now, keeping it as getDoc for direct fetch if needed, but it might become redundant.
   const metricRef = doc(db, "vendedores", sellerName, "metricas", monthKey);
   const metricSnap = await getDoc(metricRef);
 
@@ -935,36 +977,31 @@ function setProfilePhoto(photoUrl) {
   document.getElementById("profileAvatar").innerHTML = `<img src="${photoUrl}" alt="">`;
 }
 
-async function loadAnnouncements() {
+function listenAnnouncements() {
   const list = document.getElementById("announcementsList");
-
-  try {
-    const snapshot = await getDocs(collection(db, "comunicados"));
+  
+  // onSnapshot usa o cache local e só gasta leitura se houver mudança real
+  onSnapshot(collection(db, "comunicados"), (snapshot) => {
     const announcements = snapshot.docs
       .map((announcementDoc) => announcementDoc.data())
       .filter((announcement) => announcement.Titulo || announcement.URL);
 
     if (!announcements.length) {
-      list.innerHTML = "<p>Nenhum comunicado disponivel.</p>";
+      list.innerHTML = "<p>Nenhum comunicado disponível.</p>";
       return;
     }
 
-    list.innerHTML = announcements
-      .map((announcement) => {
-        const title = escapeHtml(announcement.Titulo || "Comunicado");
-        const url = String(announcement.URL || "#").trim();
-        return `
-          <a class="announcement-item" href="${url}" target="_blank" rel="noopener noreferrer">
-            <strong>${title}</strong>
-            <span>Abrir comunicado</span>
-          </a>
-        `;
-      })
-      .join("");
-  } catch (error) {
-    console.error("Erro ao carregar comunicados:", error);
-    list.innerHTML = "<p>Nao foi possivel carregar os comunicados agora.</p>";
-  }
+    list.innerHTML = announcements.map((announcement) => {
+      const title = escapeHtml(announcement.Titulo || "Comunicado");
+      const url = String(announcement.URL || "#").trim();
+      return `
+        <a class="announcement-item" href="${url}" target="_blank" rel="noopener noreferrer">
+          <strong>${title}</strong>
+          <span>Abrir comunicado</span>
+        </a>
+      `;
+    }).join("");
+  });
 }
 
 function toggleProfileMenu() {
@@ -1099,13 +1136,21 @@ async function loadStoreRankingData() {
 
   if (!section || !tabs || !rankingList) return;
 
-  try {
-    const snapshot = await getDocs(collectionGroup(db, "metricas"));
+  if (unsubscribeStoreMetrics) {
+    unsubscribeStoreMetrics();
+  }
+
+  const qStoreMetrics = query(collectionGroup(db, "metricas"));
+
+  unsubscribeStoreMetrics = onSnapshot(qStoreMetrics, (snapshot) => {
     const allMetrics = snapshot.docs
       .filter(doc => doc.id === monthKey && doc.ref.path.startsWith("lojas/"))
       .map(doc => ({ id: doc.ref.parent.parent.id, ...doc.data() }));
 
-    if (allMetrics.length === 0) return;
+    if (allMetrics.length === 0) {
+      section.style.display = "none";
+      return;
+    }
 
     // 1. Separar lojas individuais do documento GERAL
     const individualStores = allMetrics.filter(s => s.id !== "GERAL");
@@ -1165,9 +1210,10 @@ async function loadStoreRankingData() {
     window.switchStoreView("GERAL");
 
     section.style.display = "block";
-  } catch (error) {
-    console.error("Erro ao carregar visão gerencial:", error);
-  }
+  }, (error) => {
+    console.error("Erro ao carregar visão gerencial em tempo real:", error);
+    section.style.display = "none";
+  });
 }
 
 window.switchStoreView = (storeId) => {

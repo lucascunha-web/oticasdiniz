@@ -1,5 +1,5 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { getFirestore, collection, doc, getDoc, getDocs, updateDoc, collectionGroup, addDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { initializeApp, getApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { getFirestore, initializeFirestore, persistentLocalCache, collection, doc, getDoc, getDocs, updateDoc, collectionGroup, addDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBwE1WFYWOHBZPXhapa-td7NxA3Ndx-P2w",
@@ -11,8 +11,16 @@ const firebaseConfig = {
   measurementId: "G-4HBMBK0GWD"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+// Evita erro de inicialização duplicada
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+
+// Inicializa o Firestore com o novo sistema de cache (evita erros de "already started")
+let db;
+try {
+  db = initializeFirestore(app, { localCache: persistentLocalCache() });
+} catch (e) {
+  db = getFirestore(app);
+}
 
 const monthKey = (() => {
   const now = new Date();
@@ -21,8 +29,13 @@ const monthKey = (() => {
 
 let currentView = "lojas"; // Estado da aba atual
 
+// Função de normalização para bater com o painel
+const normalize = (val) => String(val || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
 const role = sessionStorage.getItem("usuarioCargo") || "";
-const normalizedRole = role.toLowerCase().trim();
+const normalizedRole = normalize(role);
+
+// Se o gerente também precisar ver esse botão, adicione 'gerente' na lista abaixo
 const isAdmin = ["admin", "administrador"].includes(normalizedRole);
 
 if (isAdmin) {
