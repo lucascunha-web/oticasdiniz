@@ -179,21 +179,46 @@ async function loadAdminMatrix() {
         }
       }
 
-      tbody.innerHTML = records.map(t => `
-        <tr data-id="${t.id}">
-          <td style="font-weight:800; text-transform: uppercase; color: var(--ink);">
-            <input type="text" class="edit-field" data-key="${currentView === 'treinamentos' ? 'titulo' : 'Titulo'}" value="${t.titulo || t.Titulo || t.id}" style="width:100%">
-          </td>
-          <td><input type="text" class="edit-field" data-key="${currentView === 'treinamentos' ? 'apostila' : 'URL'}" id="url-${t.id}" value="${t.apostila || t.URL || ''}" style="width:100%"></td>
-          <td>
-            <div class="admin-btn-group">
-              <button class="btn-row-action" style="background:var(--bg-muted); color:var(--ink)" onclick="window.openPDF('${t.id}')" title="Visualizar Link">👁️</button>
-              <button class="btn-row-action" style="background:var(--ink); color:#fff" onclick="window.saveAdminRow('${t.id}')" title="Salvar">💾</button>
-              <button class="btn-row-action" style="background:var(--red); color:#fff" onclick="window.deleteAdminRow('${t.id}')" title="Excluir">🗑️</button>
-            </div>
-          </td>
-        </tr>
-      `).join("");
+      if (currentView === "treinamentos") {
+        tbody.innerHTML = records.map(t => `
+          <tr data-id="${t.id}">
+            <td style="font-weight:800; text-transform: uppercase; color: var(--ink);">
+              <input type="text" class="edit-field" data-key="titulo" value="${t.titulo || t.id}" style="width:100%">
+            </td>
+            <td><input type="text" class="edit-field" data-key="apostila" id="url-${t.id}" value="${t.apostila || ''}" style="width:100%"></td>
+            <td>
+              <div class="admin-btn-group">
+                <button class="btn-row-action" style="background:var(--bg-muted); color:var(--ink)" onclick="window.toggleLessons('${t.id}')" title="Ver Aulas">📖</button>
+                <button class="btn-row-action" style="background:var(--ink); color:#fff" onclick="window.saveAdminRow('${t.id}')" title="Salvar">💾</button>
+                <button class="btn-row-action" style="background:var(--red); color:#fff" onclick="window.deleteAdminRow('${t.id}')" title="Excluir">🗑️</button>
+              </div>
+            </td>
+          </tr>
+          <tr id="lessons-row-${t.id}" style="display:none; background: var(--bg-muted);">
+            <td colspan="3">
+              <div id="lessons-container-${t.id}" style="padding: 15px; border: 1px solid var(--line); border-radius: 8px; margin: 5px; background: var(--surface);">
+                Carregando aulas...
+              </div>
+            </td>
+          </tr>
+        `).join("");
+      } else {
+        tbody.innerHTML = records.map(t => `
+          <tr data-id="${t.id}">
+            <td style="font-weight:800; text-transform: uppercase; color: var(--ink);">
+              <input type="text" class="edit-field" data-key="Titulo" value="${t.Titulo || t.id}" style="width:100%">
+            </td>
+            <td><input type="text" class="edit-field" data-key="URL" id="url-${t.id}" value="${t.URL || ''}" style="width:100%"></td>
+            <td>
+              <div class="admin-btn-group">
+                <button class="btn-row-action" style="background:var(--bg-muted); color:var(--ink)" onclick="window.openPDF('${t.id}')" title="Visualizar Link">👁️</button>
+                <button class="btn-row-action" style="background:var(--ink); color:#fff" onclick="window.saveAdminRow('${t.id}')" title="Salvar">💾</button>
+                <button class="btn-row-action" style="background:var(--red); color:#fff" onclick="window.deleteAdminRow('${t.id}')" title="Excluir">🗑️</button>
+              </div>
+            </td>
+          </tr>
+        `).join("");
+      }
     } else {
       const snapshot = await getDocs(collectionGroup(db, "metricas"));
       
@@ -436,3 +461,86 @@ async function saveAllModifiedRows() {
     btnSaveAll.textContent = originalText;
   }
 }
+
+window.toggleLessons = async (moduleId) => {
+  const row = document.getElementById(`lessons-row-${moduleId}`);
+  const container = document.getElementById(`lessons-container-${moduleId}`);
+  
+  if (row.style.display === "none") {
+    row.style.display = "table-row";
+    container.innerHTML = "Buscando aulas...";
+    
+    try {
+      const snap = await getDocs(collection(db, "treinamentos", moduleId, "Aulas"));
+      if (snap.empty) {
+        container.innerHTML = "<p style='text-align:center; color:var(--muted); font-size:0.8rem;'>Nenhuma aula cadastrada para este módulo.</p>";
+        return;
+      }
+
+      const lessons = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      lessons.sort((a, b) => {
+        const extractNum = (str) => {
+          const match = String(str).match(/Aula\s*(\d+)/i);
+          return match ? parseInt(match[1], 10) : 0;
+        };
+        return extractNum(a.nome) - extractNum(b.nome);
+      });
+
+      container.innerHTML = `
+        <h4 style="margin: 0 0 15px 0; font-size: 0.8rem; color: var(--red); text-transform: uppercase;">Gerenciar Aulas</h4>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          ${lessons.map(l => `
+            <div style="display:flex; gap:10px; align-items:center; background: var(--bg-muted); padding: 8px; border-radius: 6px;">
+              <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
+                <label style="font-size:0.6rem; font-weight:800; color:var(--muted); text-transform:uppercase;">Nome</label>
+                <input type="text" class="lesson-name-${l.id}" value="${l.nome}" style="width:100%; height:32px; border-radius:4px; border:1px solid var(--line); padding:0 8px; font-weight:600;">
+              </div>
+              <div style="flex:2; display:flex; flex-direction:column; gap:4px;">
+                <label style="font-size:0.6rem; font-weight:800; color:var(--muted); text-transform:uppercase;">URL Vídeo</label>
+                <input type="text" class="lesson-url-${l.id}" value="${l.url}" style="width:100%; height:32px; border-radius:4px; border:1px solid var(--line); padding:0 8px;">
+              </div>
+              <div style="display:flex; gap:5px; align-self: flex-end; padding-bottom:2px;">
+                <button class="btn-row-action" onclick="window.saveLesson('${moduleId}', '${l.id}')" style="background:var(--ink); color:#fff; width:32px; height:32px;" title="Salvar Aula">💾</button>
+                <button class="btn-row-action" onclick="window.deleteLesson('${moduleId}', '${l.id}')" style="background:var(--red); color:#fff; width:32px; height:32px;" title="Excluir Aula">🗑️</button>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    } catch (e) {
+      container.innerHTML = "Erro ao carregar aulas.";
+    }
+  } else {
+    row.style.display = "none";
+  }
+};
+
+window.saveLesson = async (moduleId, lessonId) => {
+  const nome = document.querySelector(`.lesson-name-${lessonId}`).value.trim();
+  const url = document.querySelector(`.lesson-url-${lessonId}`).value.trim();
+  
+  if (!nome || !url) return alert("Nome e URL da aula são obrigatórios.");
+
+  try {
+    await updateDoc(doc(db, "treinamentos", moduleId, "Aulas", lessonId), { 
+      nome, 
+      url,
+      atualizadoEm: new Date() 
+    });
+    alert("Aula atualizada com sucesso!");
+  } catch (e) {
+    alert("Erro ao salvar aula.");
+  }
+};
+
+window.deleteLesson = async (moduleId, lessonId) => {
+  if (!confirm("Deseja realmente excluir esta aula? Esta ação não pode ser desfeita.")) return;
+  try {
+    await deleteDoc(doc(db, "treinamentos", moduleId, "Aulas", lessonId));
+    alert("Aula excluída!");
+    const row = document.getElementById(`lessons-row-${moduleId}`);
+    row.style.display = "none"; // Fecha para forçar reload no próximo clique
+  } catch (e) {
+    alert("Erro ao excluir aula.");
+  }
+};
