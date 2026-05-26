@@ -1,5 +1,5 @@
 import { initializeApp, getApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { getFirestore, initializeFirestore, persistentLocalCache, collection, doc, getDoc, getDocs, updateDoc, collectionGroup, addDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { getFirestore, initializeFirestore, persistentLocalCache, collection, doc, getDoc, getDocs, updateDoc, setDoc, collectionGroup, addDoc, deleteDoc, writeBatch, query, where, FieldPath } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBwE1WFYWOHBZPXhapa-td7NxA3Ndx-P2w",
@@ -309,7 +309,7 @@ window.saveAdminRow = async (id) => {
       const docRef = (["tabelas", "comunicados", "treinamentos"].includes(currentView))
         ? doc(db, currentView, id)
         : doc(db, currentView, id, "metricas", monthKey);
-      await updateDoc(docRef, updateData);
+      await setDoc(docRef, updateData, { merge: true });
     }
 
     // Feedback Visual de Sucesso
@@ -356,7 +356,7 @@ document.getElementById("btnCalcularProjecao").addEventListener("click", async (
     projInput.value = novaProjecao;
     
     const metricRef = doc(db, currentView, storeId, "metricas", monthKey);
-    batch.update(metricRef, { projeção: novaProjecao, atualizadoEm: new Date() });
+    batch.set(metricRef, { projeção: novaProjecao, atualizadoEm: new Date() }, { merge: true });
   }
 
   try {
