@@ -154,8 +154,8 @@ async function loadAdminMatrix() {
     `;
   } else if (currentView === "vendedores") {
     thead.innerHTML = `
-      <th style="width:150px">Vendedor</th><th style="width:250px">Foto Perfil URL</th><th>Faturamento</th><th>Vendas</th>
-      <th>T. Médio</th><th>Desc %</th><th>Avaliações</th><th>Meta Com.</th><th>Projeção</th><th>Ação</th>
+      <th style="width:150px">Vendedor</th><th style="width:250px">Foto Perfil URL</th><th>Faturamento</th><th>Vendas</th><th>T. Médio</th>
+      <th>Desc %</th><th>Avaliações</th><th>Meta Com.</th><th>Meta Fat.</th><th>Projeção</th><th>Ação</th>
     `;
   } else if (currentView === "treinamentos") {
     thead.innerHTML = `<th style="width:250px">Módulo (Título)</th><th>Apostila (URL)</th><th style="width:140px">Ação</th>`;
@@ -249,6 +249,7 @@ async function loadAdminMatrix() {
           <td><input type="number" class="edit-field" data-key="desconto" value="${v.desconto || 0}"></td>
           <td><input type="number" class="edit-field" data-key="avaliacoes" value="${v.avaliacoes || 0}"></td>
           <td><input type="number" class="edit-field" data-key="metaComissao" value="${v.metaComissao || 0}"></td>
+          <td><input type="number" class="edit-field" data-key="metaFaturamento" value="${v.metaFaturamento || 0}"></td>
           <td><input type="number" class="proj-field" value="${v.projeção || 0}" readonly></td>
           <td><button class="btn-row-action" style="background:var(--ink); color:#fff" onclick="window.saveAdminRow('${v.id}')" title="Salvar">💾</button></td>
         </tr>

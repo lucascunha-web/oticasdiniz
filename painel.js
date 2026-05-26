@@ -801,6 +801,7 @@ function normalizeMetricRecord(name, data, sellerData = {}) {
     faturamento: Number(data.faturamento ?? 0),
     projeção: Number(data.projeção ?? 0),
     metaComissao: Number(data.metaComissao ?? 0),
+    metaFaturamento: Number(data.metaFaturamento ?? 0),
     ticketMedio: Number(data.ticketMedio ?? 0),
     vendas: Number(data.vendas ?? 0)
   };
@@ -861,6 +862,7 @@ function renderRanking(metricKey) {
       const active = isStatusActive(metricKey, item);
       const statusText = getStatusText(metricKey, active);
       const current = normalizeText(item.name) === normalizeText(user);
+      const isMetaHit = Number(item.faturamento) >= Number(item.metaFaturamento) && Number(item.metaFaturamento) > 0;
 
       const valueContent = isFat ? `
         <div class="ranking-info-cols">
@@ -874,7 +876,10 @@ function renderRanking(metricKey) {
           </div>
           <div class="ranking-col-item">
             <span>Status</span>
-            <span class="r-status-badge ${active ? 'active' : 'inactive'}">${statusText}</span>
+            ${isMetaHit ? 
+              '<span class="r-status-badge" style="background:#3182ce;">Meta Batida</span>' : 
+              `<span class="r-status-badge ${active ? 'active' : 'inactive'}">${statusText}</span>`
+            }
           </div>
         </div>
       ` : `
@@ -1191,8 +1196,9 @@ async function loadStoreRankingData() {
           <div class="r-sub-info">Comissão: ${formatCurrency(mCom)}</div>
           <div class="r-sub-info">Meta: ${formatCurrency(mFat)}</div>
           <div class="r-footer-badges">
-            ${isCommActive ? '<span class="s-badge green">Comissão Ativa</span>' : '<span class="s-badge red">Comissão não ativa</span>'}
-            ${isMetaHit ? '<span class="s-badge blue">Meta Batida</span>' : ''}
+            ${isMetaHit ? 
+              '<span class="s-badge blue">Meta Batida</span>' : 
+              (isCommActive ? '<span class="s-badge green">Comissão Ativa</span>' : '<span class="s-badge red">Comissão não ativa</span>')}
           </div>
         </div>
       `;
