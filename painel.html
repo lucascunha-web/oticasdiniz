@@ -109,7 +109,10 @@
 
     <section class="indicator-grid" id="sellerIndicators" aria-label="Indicadores do vendedor">
       <article class="indicator-card">
-        <strong data-status="faturamento">Carregando</strong>
+        <div class="indicator-badges">
+          <strong data-status="faturamento">Carregando</strong>
+          <strong data-pct="faturamento" class="pct-badge" hidden>--</strong>
+        </div>
         <i class="indicator-icon money" aria-hidden="true">$</i>
         <span>Faturamento</span>
         <h2 data-metric="faturamento">--</h2>
@@ -117,7 +120,9 @@
       </article>
 
       <article class="indicator-card">
-        <strong data-status="ticketMedio">Carregando</strong>
+        <div class="indicator-badges">
+          <strong data-status="ticketMedio">Carregando</strong>
+        </div>
         <i class="indicator-icon ticket" aria-hidden="true">▬</i>
         <span>Ticket Medio</span>
         <h2 data-metric="ticketMedio">--</h2>
@@ -125,7 +130,9 @@
       </article>
 
       <article class="indicator-card">
-        <strong data-status="desconto">Carregando</strong>
+        <div class="indicator-badges">
+          <strong data-status="desconto">Carregando</strong>
+        </div>
         <i class="indicator-icon percent" aria-hidden="true">%</i>
         <span>Desconto</span>
         <h2 data-metric="desconto">--</h2>
@@ -133,7 +140,9 @@
       </article>
 
       <article class="indicator-card">
-        <strong data-status="vendas">Carregando</strong>
+        <div class="indicator-badges">
+          <strong data-status="vendas">Carregando</strong>
+        </div>
         <i class="indicator-icon sales" aria-hidden="true">▣</i>
         <span>N de Vendas</span>
         <h2 data-metric="vendas">--</h2>
@@ -141,7 +150,9 @@
       </article>
 
       <article class="indicator-card">
-        <strong data-status="avaliacoes">Carregando</strong>
+        <div class="indicator-badges">
+          <strong data-status="avaliacoes">Carregando</strong>
+        </div>
         <i class="indicator-icon star" aria-hidden="true">★</i>
         <span>Avaliacoes</span>
         <h2 data-metric="avaliacoes">--</h2>
@@ -236,17 +247,15 @@
         <div class="stock-col-admin" id="stockAdminSection" style="display: none;">
           <div class="balanco-container">
             <div class="balanco-card">
-              <h3>Balanço (Ajuste Rápido)</h3>
+              <h3>Ajuste de Estoque</h3>
+              <div class="balanco-tabs">
+                <button type="button" class="balanco-tab active" data-value="AR">AR</button>
+                <button type="button" class="balanco-tab" data-value="FILTRO_AZUL">Filtro Azul</button>
+                <button type="button" class="balanco-tab" data-value="ZEISS">Zeiss</button>
+              </div>
               <div class="balanco-form">
-                <div class="balanco-inputs-row">
-                  <div class="add-input-group">
-                    <label>Marca</label>
-                    <select id="balancoTipo" class="stock-select">
-                      <option value="AR">AR</option>
-                      <option value="FILTRO_AZUL">Filtro Azul</option>
-                      <option value="ZEISS">Zeiss</option>
-                    </select>
-                  </div>
+                <input type="hidden" id="balancoTipo" value="AR">
+                <div class="balanco-inputs-row" style="grid-template-columns: 1fr 1fr 1fr;">
                   <div class="add-input-group">
                     <label>Esférico</label>
                     <select id="balancoEsferico" class="stock-select"></select>

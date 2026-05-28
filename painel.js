@@ -325,6 +325,23 @@ closeStock?.addEventListener("click", () => {
   document.body.classList.remove("modal-open");
 });
 
+// --- Lógica de Alternância de Lentes (Barras) ---
+// --- Lógica de Abas do Balanço de Estoque ---
+document.addEventListener("click", (e) => {
+  if (e.target.classList.contains("balanco-tab")) {
+    const btn = e.target;
+    document.querySelectorAll(".balanco-tab").forEach(t => t.classList.remove("active"));
+    btn.classList.add("active");
+
+    const val = btn.dataset.value;
+    const input = document.getElementById("balancoTipo");
+    if (input) {
+      input.value = val;
+      fetchCurrentBalanco();
+    }
+  }
+});
+
 // Fechar painel de reservas
 document.getElementById("closeReservasList")?.addEventListener("click", () => {
   reservasListPanel.classList.remove("open");
@@ -357,12 +374,18 @@ async function fetchCurrentBalanco() {
   const cil = document.getElementById("balancoCilindrico").value;
   const docId = `${tipo}_E${esf}_C${cil}`;
   
+  const container = document.querySelector(".balanco-card");
+  if (container) {
+    container.classList.remove("type-AR", "type-FILTRO_AZUL", "type-ZEISS");
+    container.classList.add(`type-${tipo}`);
+  }
+
   const snap = await getDoc(doc(db, "estoque", docId));
   const qtyInput = document.getElementById("balancoQty");
   if (qtyInput) qtyInput.value = snap.exists() ? snap.data().quantidade : 0;
 }
 
-document.getElementById("balancoTipo")?.addEventListener("change", fetchCurrentBalanco);
+// Listeners para atualizar os dados do balanço ao trocar o grau
 document.getElementById("balancoEsferico")?.addEventListener("change", fetchCurrentBalanco);
 document.getElementById("balancoCilindrico")?.addEventListener("change", fetchCurrentBalanco);
 
@@ -567,7 +590,8 @@ document.getElementById("confirmReserveAction")?.addEventListener("click", async
     // Verificar se OS já existe
     const q = query(collection(db, "reserva"), where("os", "==", os));
     const osSnap = await getDocs(q);
-    if (!osSnap.empty) return alert("Este número de OS já possui uma reserva ativa.");
+    const hasActive = osSnap.docs.some(d => d.data().status !== "CANCELADO");
+    if (hasActive) return alert("Este número de OS já possui uma reserva ativa.");
 
     await addDoc(collection(db, "reserva"), {
       ...pendingReservation,
@@ -762,9 +786,6 @@ async function loadPanel() {
   }
 }
 
-// Removed getAllSellerMetrics as its logic is now integrated into loadPanel's onSnapshot
-// function processSellerMetrics(snapshot, sellersMap) { ... } // This function is no longer needed
-
 async function getSellerMetrics(sellerName) {
   // This function is still used by renderSellerIndicators, but now the data comes from the allSellerMetrics array
   // It's better to get the seller's metrics from the `allSellerMetrics` array that `onSnapshot` provides.
@@ -826,16 +847,46 @@ function renderSellerIndicators(sellerMetrics) {
     const metricElement = document.querySelector(`[data-metric="${metricKey}"]`);
     const rankElement = document.querySelector(`[data-rank="${metricKey}"]`);
     const statusElement = document.querySelector(`[data-status="${metricKey}"]`);
+    const pctElement = document.querySelector(`[data-pct="${metricKey}"]`);
     const rankingItem = rankings[metricKey]?.find((item) => normalizeText(item.name) === normalizeText(user));
 
     metricElement.textContent = config.format(sellerMetrics[metricKey]);
     rankElement.textContent = rankingItem ? `Minha Posição ${rankingItem.position}º` : "Minha Posição --";
 
     const active = isStatusActive(metricKey, sellerMetrics);
-    const statusText = getStatusText(metricKey, active);
-    statusElement.textContent = statusText;
-    statusElement.hidden = !statusText;
-    statusElement.classList.toggle("inactive", Boolean(statusText) && !active);
+    let statusText = getStatusText(metricKey, active);
+
+    if (metricKey === "faturamento") {
+      const fat = Number(sellerMetrics.faturamento);
+      const metaF = Number(sellerMetrics.metaFaturamento);
+      const isMetaHit = fat >= metaF && metaF > 0;
+      const pctMeta = metaF > 0 ? (fat / metaF) * 100 : 0;
+
+      if (isMetaHit) {
+        statusText = "Meta Batida";
+        statusElement.style.background = "#3182ce";
+        statusElement.classList.remove("inactive");
+      } else {
+        statusElement.style.background = ""; 
+        statusElement.classList.toggle("inactive", !active);
+      }
+      statusElement.textContent = statusText;
+      statusElement.hidden = false;
+
+      if (pctElement) {
+        pctElement.textContent = `${pctMeta.toFixed(0)}%`;
+        pctElement.hidden = false;
+      }
+    } else {
+      statusElement.textContent = statusText;
+      statusElement.hidden = !statusText;
+      statusElement.style.background = "";
+      statusElement.classList.toggle("inactive", Boolean(statusText) && !active);
+
+      if (pctElement) {
+        pctElement.hidden = true;
+      }
+    }
   });
 }
 
@@ -862,36 +913,51 @@ function renderRanking(metricKey) {
       const active = isStatusActive(metricKey, item);
       const statusText = getStatusText(metricKey, active);
       const current = normalizeText(item.name) === normalizeText(user);
-      const isMetaHit = Number(item.faturamento) >= Number(item.metaFaturamento) && Number(item.metaFaturamento) > 0;
+      
+      let valueContent = "";
+      let progressHtml = "";
 
-      const valueContent = isFat ? `
-        <div class="ranking-info-cols">
-          <div class="ranking-col-item">
-            <span>Faturamento</span>
-            <strong>${config.format(item.faturamento)}</strong>
-          </div>
-          <div class="ranking-col-item">
-            <span>Projeção</span>
-            <strong>${formatCurrency(item.projeção || 0)}</strong>
-          </div>
-          <div class="ranking-col-item">
-            <span>Status</span>
-            ${isMetaHit ? 
-              '<span class="r-status-badge" style="background:#3182ce;">Meta Batida</span>' : 
-              `<span class="r-status-badge ${active ? 'active' : 'inactive'}">${statusText}</span>`
-            }
-          </div>
-        </div>
-      ` : `
-        <div class="ranking-value">
-          <strong>${config.format(item[metricKey])}</strong>
-          ${statusText ? `<span class="${active ? "active" : "inactive"}">${statusText}</span>` : ""}
-        </div>
-      `;
+      if (isFat) {
+        const fat = Number(item.faturamento);
+        const metaC = Number(item.metaComissao);
+        const metaF = Number(item.metaFaturamento);
+        const isMetaHit = fat >= metaF && metaF > 0;
+        
+        // Lógica da Barra Proporcional à Meta
+        const pctMeta = metaF > 0 ? (fat / metaF) * 100 : 0;
+        const barColorClass = fat >= metaF ? "bar-goal" : (fat >= metaC ? "bar-comm" : "");
+
+        valueContent = `
+          <div class="ranking-info-cols">
+            <div class="ranking-col-item"><span>Faturamento</span><strong>${config.format(fat)}</strong></div>
+            <div class="ranking-col-item"><span>Projeção</span><strong>${formatCurrency(item.projeção || 0)}</strong></div>
+            <div class="ranking-col-item"><span>Status</span>
+              ${isMetaHit ? '<span class="r-status-badge" style="background:#3182ce;">Meta Batida</span>' : `<span class="r-status-badge ${active ? 'active' : 'inactive'}">${statusText}</span>`}
+            </div>
+          </div>`;
+
+        progressHtml = `
+          <div class="ranking-track goal-track">
+            <div class="ranking-progress ${barColorClass}" style="width: ${Math.min(pctMeta, 100)}%"></div>
+            <div class="marker-point progress-point ${barColorClass}" style="left: ${Math.min(pctMeta, 100)}%"></div>
+            <div class="performance-badge" style="left: ${Math.min(pctMeta, 100)}%">${pctMeta.toFixed(0)}%</div>
+          </div>`;
+      } else {
+        valueContent = `
+          <div class="ranking-value">
+            <strong>${config.format(item[metricKey])}</strong>
+            ${statusText ? `<span class="${active ? "active" : "inactive"}">${statusText}</span>` : ""}
+          </div>`;
+        
+        progressHtml = `
+          <div class="ranking-track">
+            <div class="ranking-progress" style="width: ${width}%"></div>
+          </div>`;
+      }
 
       return `
         <article class="ranking-item ${getPodiumClass(item.position)} ${current ? "current-user" : ""}">
-          <div class="ranking-row ${isFat ? 'fat-mode' : ''}">
+          <div class="ranking-row ${isFat ? 'fat-mode' : ''}" style="margin-bottom: 15px;">
             <strong class="ranking-position">${formatPosition(item.position)}</strong>
             <div class="ranking-photo">
               ${item.photo ? `<img src="${item.photo}" alt="">` : "<span></span>"}
@@ -899,9 +965,7 @@ function renderRanking(metricKey) {
             <div class="ranking-name">${formatName(item.name)}${current ? " (Voce)" : ""}</div>
             ${valueContent}
           </div>
-          <div class="ranking-track">
-            <div class="ranking-progress" style="width: ${width}%"></div>
-          </div>
+          ${progressHtml}
         </article>
       `;
     })
