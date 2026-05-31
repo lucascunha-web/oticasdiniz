@@ -1,5 +1,5 @@
 import { initializeApp, getApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { collection, collectionGroup, doc, getDoc, getDocs, getFirestore, initializeFirestore, persistentLocalCache, query, where, addDoc, updateDoc, increment, serverTimestamp, onSnapshot, FieldPath } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { collection, collectionGroup, doc, getDoc, getDocs, getFirestore, initializeFirestore, persistentLocalCache, query, where, addDoc, updateDoc, increment, serverTimestamp, onSnapshot, documentId } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBwE1WFYWOHBZPXhapa-td7NxA3Ndx-P2w",
@@ -735,14 +735,29 @@ async function loadPanel() {
       unsubscribeSellerMetrics(); // Unsubscribe from previous listener if any
     }
 
+    const curMonthKey = getCurrentMonthKey();
+    const prevMonthKey = getPreviousMonthKey();
+
     const qSellerMetrics = query(collectionGroup(db, "metricas"));
 
     unsubscribeSellerMetrics = onSnapshot(qSellerMetrics, (snapshot) => {
+      // Fallback para o mês anterior se não houver dados no mês atual para vendedores
+      const hasCurrentMonthData = snapshot.docs.some(d => d.id === curMonthKey && d.ref.path.includes("vendedores/"));
+      const displayMonth = hasCurrentMonthData ? curMonthKey : prevMonthKey;
+
+      document.getElementById("monthLabel").textContent = `Referencia ${formatMonth(displayMonth)}`;
+
       const allSellerMetrics = snapshot.docs
         .filter((metricDoc) => {
           const sellerRef = metricDoc.ref.parent.parent;
-          // Filter for current month and 'vendedores' collection
-          return metricDoc.id === monthKey && sellerRef?.parent.id === "vendedores";
+          const sellerId = sellerRef?.id;
+          
+          const isCurrentMonth = metricDoc.id === curMonthKey;
+          const isActive = sellersMap[sellerId]?.ativo !== false;
+
+          return metricDoc.id === displayMonth && 
+                 sellerRef?.parent.id === "vendedores" &&
+                 (isActive || !isCurrentMonth); // No mês atual respeita o status, no histórico mostra se houver dados
         })
         .map((metricDoc) => {
           const sellerId = metricDoc.ref.parent.parent.id;
@@ -1033,6 +1048,12 @@ function getCurrentMonthKey() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function getPreviousMonthKey() {
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
 function formatMonth(value) {
   const [year, month] = value.split("-");
   return `${month}/${year}`;
@@ -1209,11 +1230,17 @@ async function loadStoreRankingData() {
     unsubscribeStoreMetrics();
   }
 
+  const curMonthKey = getCurrentMonthKey();
+  const prevMonthKey = getPreviousMonthKey();
+
   const qStoreMetrics = query(collectionGroup(db, "metricas"));
 
   unsubscribeStoreMetrics = onSnapshot(qStoreMetrics, (snapshot) => {
+    const hasCurrentMonthData = snapshot.docs.some(doc => doc.id === curMonthKey && doc.ref.path.startsWith("lojas/"));
+    const targetMonth = hasCurrentMonthData ? curMonthKey : prevMonthKey;
+
     const allMetrics = snapshot.docs
-      .filter(doc => doc.id === monthKey && doc.ref.path.startsWith("lojas/"))
+      .filter(doc => doc.id === targetMonth && doc.ref.path.startsWith("lojas/"))
       .map(doc => ({ id: doc.ref.parent.parent.id, ...doc.data() }));
 
     if (allMetrics.length === 0) {

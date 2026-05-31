@@ -220,25 +220,47 @@ async function loadAdminMatrix() {
         `).join("");
       }
     } else {
-      const snapshot = await getDocs(collectionGroup(db, "metricas"));
-      
-      // Se for vendedores, pegamos todas as fotos de uma vez para economizar leituras
-      let profilesMap = {};
-      if (currentView === "vendedores") {
-        const profSnap = await getDocs(collection(db, "vendedores"));
-        profSnap.forEach(p => profilesMap[p.id] = p.data().foto || "");
-      }
+      // Busca as métricas e a lista base simultaneamente
+      const metricsSnapshot = await getDocs(collectionGroup(db, "metricas"));
+      const baseSnapshot = await getDocs(collection(db, currentView));
 
-      const records = snapshot.docs
-        .filter(mDoc => mDoc.id === monthKey && mDoc.ref.path.startsWith(currentView + "/"))
-        .map(mDoc => {
-          const docId = mDoc.ref.parent.parent.id;
-          const data = { id: docId, ...mDoc.data() };
-          if (currentView === "vendedores") {
-            data.foto = profilesMap[docId] || "";
+      const currentMonthMetrics = {};
+      const allKnownIds = new Set();
+
+      // 1. Identifica IDs através do histórico de métricas (garante que lojas sem documento pai apareçam)
+      metricsSnapshot.docs.forEach(mDoc => {
+        if (mDoc.ref.path.startsWith(currentView + "/")) {
+          const parentId = mDoc.ref.parent.parent.id;
+          allKnownIds.add(parentId);
+          if (mDoc.id === monthKey) {
+            currentMonthMetrics[parentId] = mDoc.data();
           }
-          return data;
-        });
+        }
+      });
+
+      // 2. Mapeia dados de perfil (fotos, status ativo) dos documentos existentes
+      const profilesMap = {};
+      baseSnapshot.docs.forEach(docSnap => {
+        profilesMap[docSnap.id] = docSnap.data();
+        allKnownIds.add(docSnap.id);
+      });
+
+      // 3. Constrói a lista final combinando as duas fontes
+      const records = Array.from(allKnownIds)
+        .map(id => {
+          const baseData = profilesMap[id] || {};
+          
+          if (currentView === "vendedores" && baseData.ativo === false) return null;
+
+          const monthData = currentMonthMetrics[id] || {};
+          return {
+            id,
+            ...monthData,
+            foto: baseData.foto || "",
+            ativo: baseData.ativo !== false
+          };
+        })
+        .filter(r => r !== null);
 
       const sortedRecords = records.sort((a, b) => {
         if (a.id === "GERAL") return -1;
@@ -276,7 +298,12 @@ async function loadAdminMatrix() {
           <td><input type="number" class="edit-field" data-key="metaComissao" value="${v.metaComissao || 0}"></td>
           <td><input type="number" class="edit-field" data-key="metaFaturamento" value="${v.metaFaturamento || 0}"></td>
           <td><input type="number" class="proj-field" value="${v.projeção || 0}" readonly></td>
-          <td><button class="btn-row-action" style="background:var(--ink); color:#fff" onclick="window.saveAdminRow('${v.id}')" title="Salvar">💾</button></td>
+          <td>
+            <div style="display:flex; gap:4px;">
+              <button class="btn-row-action" style="background:var(--ink); color:#fff" onclick="window.saveAdminRow('${v.id}')" title="Salvar">💾</button>
+              <button class="btn-row-action" style="background:var(--red); color:#fff" onclick="window.deactivateSeller('${v.id}')" title="Desativar">🚫</button>
+            </div>
+          </td>
         </tr>
       `).join("");
     }
@@ -295,14 +322,20 @@ window.saveAdminRow = async (id) => {
 
   inputs.forEach(input => {
     const key = input.dataset.key;
-    const val = (key === "URL" || key === "Titulo" || key === "foto") ? input.value.trim() : Number(input.value);
+    const val = input.type === "checkbox" ? input.checked : 
+                (key === "URL" || key === "Titulo" || key === "foto") ? input.value.trim() : Number(input.value);
     updateData[input.dataset.key] = val;
   });
 
   try {
-    if (currentView === "vendedores" && updateData.hasOwnProperty("foto")) {
-      await updateDoc(doc(db, "vendedores", id), { foto: updateData.foto });
-      delete updateData.foto;
+    if (currentView === "vendedores") {
+      const sellerDocUpdates = {};
+      if (updateData.hasOwnProperty("foto")) { sellerDocUpdates.foto = updateData.foto; delete updateData.foto; }
+      if (updateData.hasOwnProperty("ativo")) { sellerDocUpdates.ativo = updateData.ativo; delete updateData.ativo; }
+      
+      if (Object.keys(sellerDocUpdates).length > 0) {
+        await updateDoc(doc(db, "vendedores", id), sellerDocUpdates);
+      }
     }
 
     if (Object.keys(updateData).length > 1) {
@@ -382,6 +415,19 @@ window.deleteAdminRow = async (id) => {
     loadAdminMatrix();
   } catch (e) {
     alert("Erro ao excluir.");
+  }
+};
+
+window.deactivateSeller = async (id) => {
+  if (!confirm(`Deseja desativar o vendedor ${id}? Ele não aparecerá mais nos rankings e no admin do mês atual, mas seus dados históricos serão preservados.`)) return;
+  try {
+    // Usamos setDoc com merge em vez de updateDoc para garantir a criação 
+    // do campo mesmo que o documento de perfil base não exista
+    await setDoc(doc(db, "vendedores", id), { ativo: false }, { merge: true });
+    alert("Vendedor desativado com sucesso.");
+    loadAdminMatrix(); // Recarrega a lista para aplicar o filtro
+  } catch (e) {
+    alert("Erro ao desativar vendedor.");
   }
 };
 
