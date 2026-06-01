@@ -24,6 +24,10 @@ try {
 
 const monthKey = (() => {
   const now = new Date();
+  // Se for o primeiro dia do mês, ainda exibe/edita os dados do mês anterior
+  if (now.getDate() === 1) {
+    now.setMonth(now.getMonth() - 1);
+  }
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 })();
 

@@ -1045,11 +1045,19 @@ function formatPosition(position) {
 
 function getCurrentMonthKey() {
   const now = new Date();
+  // No dia 1, o "mês atual" para o sistema ainda é o mês que acabou de fechar
+  if (now.getDate() === 1) {
+    now.setMonth(now.getMonth() - 1);
+  }
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
 function getPreviousMonthKey() {
   const now = new Date();
+  // Se for dia 1, precisamos recuar dois meses (um pelo ajuste do 'atual' e outro para o 'anterior')
+  if (now.getDate() === 1) {
+    now.setMonth(now.getMonth() - 1);
+  }
   const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
