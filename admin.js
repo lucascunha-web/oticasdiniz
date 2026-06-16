@@ -63,6 +63,8 @@ if (isAdmin) {
   // Listeners para atualizar info de dias
   document.getElementById("calcDiasTrab").addEventListener("input", updateDaysInfo);
   document.getElementById("calcFeriados").addEventListener("input", updateDaysInfo);
+  document.getElementById("calcDiasTrab").addEventListener("change", saveGlobalDays);
+  document.getElementById("calcFeriados").addEventListener("change", saveGlobalDays);
   document.getElementById("btnSaveNew").addEventListener("click", addNewItem);
   document.getElementById("btnSaveNewLesson").addEventListener("click", addNewLesson);
   document.getElementById("btnSaveAll").addEventListener("click", saveAllModifiedRows);
@@ -103,12 +105,19 @@ async function openAdminModal() {
   modal.style.display = "flex";
   document.body.classList.add("modal-open");
 
-  // Carrega valores salvos anteriormente
-  const savedDias = localStorage.getItem("diasTrab_" + monthKey);
-  const savedFeriados = localStorage.getItem("feriados_" + monthKey);
-  
-  document.getElementById("calcDiasTrab").value = savedDias !== null ? savedDias : "1";
-  document.getElementById("calcFeriados").value = savedFeriados !== null ? savedFeriados : "4";
+  try {
+    // Busca os parâmetros globais diretamente no documento GERAL da coleção lojas
+    const geralRef = doc(db, "lojas", "GERAL");
+    const geralSnap = await getDoc(geralRef);
+
+    if (geralSnap.exists()) {
+      const data = geralSnap.data();
+      document.getElementById("calcDiasTrab").value = data.diasTrabalhados !== undefined ? data.diasTrabalhados : "1";
+      document.getElementById("calcFeriados").value = data.feriados !== undefined ? data.feriados : "4";
+    }
+  } catch (e) {
+    console.error("Erro ao carregar configurações das lojas do Firestore:", e);
+  }
 
   updateDaysInfo();
   await loadAdminMatrix();
@@ -118,10 +127,6 @@ function updateDaysInfo() {
   const diasTrab = Number(document.getElementById("calcDiasTrab").value) || 0;
   const feriados = Number(document.getElementById("calcFeriados").value) || 0;
 
-  // Salva os valores para persistência
-  localStorage.setItem("diasTrab_" + monthKey, diasTrab);
-  localStorage.setItem("feriados_" + monthKey, feriados);
-
   const [year, month] = monthKey.split("-").map(Number);
   const totalDays = new Date(year, month, 0).getDate();
   const remaining = totalDays - feriados - diasTrab;
@@ -130,14 +135,33 @@ function updateDaysInfo() {
   document.getElementById("displayRemainingDays").textContent = remaining;
 }
 
+async function saveGlobalDays() {
+  const diasTrab = Number(document.getElementById("calcDiasTrab").value) || 0;
+  const feriados = Number(document.getElementById("calcFeriados").value) || 0;
+
+  try {
+    await setDoc(doc(db, "lojas", "GERAL"), {
+      diasTrabalhados: diasTrab,
+      feriados: feriados
+    }, { merge: true });
+  } catch (e) {
+    console.error("Erro ao salvar configurações globais no Firestore:", e);
+  }
+}
+
+function formatMonthKey(key) {
+  const [year, month] = key.split("-");
+  return `${month}/${year}`;
+}
+
 async function loadAdminMatrix() {
   const tbody = document.getElementById("adminTableBody");
   const thead = document.querySelector(".admin-matrix thead tr");
   const calcBar = document.querySelector(".admin-calc-bar");
   const addBar = document.getElementById("adminAddForm");
   const addLessonBar = document.getElementById("adminAddLessonForm");
-
-  tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 40px;">Buscando dados de ' + currentView + '...</td></tr>';
+  
+  tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 40px;">Buscando dados de ${currentView} (Ref: ${formatMonthKey(monthKey)})...</td></tr>`;
   calcBar.style.display = (currentView === "lojas" || currentView === "vendedores") ? "flex" : "none";
   addBar.style.display = currentView === "comunicados" ? "flex" : "none";
   if (addLessonBar) addLessonBar.style.display = currentView === "treinamentos" ? "flex" : "none";
@@ -380,6 +404,12 @@ document.getElementById("btnCalcularProjecao").addEventListener("click", async (
   const rows = document.querySelectorAll("#adminTableBody tr");
   const batch = writeBatch(db);
 
+  // Salva os parâmetros globais do cálculo na raiz do documento GERAL na coleção lojas
+  batch.set(doc(db, "lojas", "GERAL"), { 
+    diasTrabalhados: diasTrab, 
+    feriados: feriados 
+  }, { merge: true });
+
   for (const row of rows) {
     const storeId = row.dataset.id;
     const fatInput = row.querySelector('[data-key="faturamento"]');
@@ -394,6 +424,14 @@ document.getElementById("btnCalcularProjecao").addEventListener("click", async (
     
     const metricRef = doc(db, currentView, storeId, "metricas", monthKey);
     batch.set(metricRef, { projeção: novaProjecao, atualizadoEm: new Date() }, { merge: true });
+
+    // Se estivermos editando lojas, salva os parâmetros diretamente no documento da loja (raiz da coleção)
+    if (currentView === "lojas" && storeId !== "GERAL") {
+      batch.set(doc(db, "lojas", storeId), { 
+        diasTrabalhados: diasTrab, 
+        feriados: feriados 
+      }, { merge: true });
+    }
   }
 
   try {

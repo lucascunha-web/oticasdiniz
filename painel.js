@@ -1238,18 +1238,32 @@ async function loadStoreRankingData() {
     unsubscribeStoreMetrics();
   }
 
-  const curMonthKey = getCurrentMonthKey();
+  const curMonthKey = monthKey;
   const prevMonthKey = getPreviousMonthKey();
 
   const qStoreMetrics = query(collectionGroup(db, "metricas"));
 
-  unsubscribeStoreMetrics = onSnapshot(qStoreMetrics, (snapshot) => {
+  unsubscribeStoreMetrics = onSnapshot(qStoreMetrics, async (snapshot) => {
+    // Busca configurações de dias (trabalhados/feriados) salvos na raiz da coleção lojas
+    const lojasSnap = await getDocs(collection(db, "lojas"));
+    const configMap = {};
+    lojasSnap.forEach(d => configMap[d.id] = d.data());
+
     const hasCurrentMonthData = snapshot.docs.some(doc => doc.id === curMonthKey && doc.ref.path.startsWith("lojas/"));
     const targetMonth = hasCurrentMonthData ? curMonthKey : prevMonthKey;
 
     const allMetrics = snapshot.docs
       .filter(doc => doc.id === targetMonth && doc.ref.path.startsWith("lojas/"))
-      .map(doc => ({ id: doc.ref.parent.parent.id, ...doc.data() }));
+      .map(doc => {
+        const id = doc.ref.parent.parent.id;
+        const config = configMap[id] || {};
+        return { 
+          id, 
+          ...doc.data(),
+          diasTrabalhados: config.diasTrabalhados,
+          feriados: config.feriados
+        };
+      });
 
     if (allMetrics.length === 0) {
       section.style.display = "none";
@@ -1259,17 +1273,23 @@ async function loadStoreRankingData() {
     // 1. Separar lojas individuais do documento GERAL
     const individualStores = allMetrics.filter(s => s.id !== "GERAL");
     let geralStore = allMetrics.find(s => s.id === "GERAL") || { id: "GERAL", desconto: 0, mkp: 0, ticketMedio: 0 };
+    
+    const geralConfig = configMap["GERAL"] || {};
+    geralStore.diasTrabalhados = geralConfig.diasTrabalhados;
+    geralStore.feriados = geralConfig.feriados;
 
     // 2. Calcular somas para o GERAL (Faturamento, Projeção e Vendas)
     const totals = individualStores.reduce((acc, store) => ({
       faturamento: acc.faturamento + Number(store.faturamento || 0),
       vendas: acc.vendas + Number(store.vendas || 0),
-      projeção: acc.projeção + Number(store.projeção || 0)
-    }), { faturamento: 0, vendas: 0, projeção: 0 });
+      projeção: acc.projeção + Number(store.projeção || 0),
+      metaFaturamento: acc.metaFaturamento + Number(store.metaFaturamento || 0)
+    }), { faturamento: 0, vendas: 0, projeção: 0, metaFaturamento: 0 });
 
     geralStore.faturamento = totals.faturamento;
     geralStore.vendas = totals.vendas;
     geralStore.projeção = totals.projeção;
+    geralStore.metaFaturamento = totals.metaFaturamento;
 
     // Atualiza o cache global incluindo o GERAL processado
     cachedStores = [geralStore, ...individualStores];
@@ -1330,12 +1350,27 @@ window.switchStoreView = (storeId) => {
     btn.classList.toggle("active", btn.innerText.trim() === storeId);
   });
 
+  // Cálculo automático da Meta Diária baseada nos dias que faltam
+  const [year, month] = monthKey.split("-").map(Number);
+  const totalDays = new Date(year, month, 0).getDate();
+  const dTrab = Number(store.diasTrabalhados || 0);
+  const fer = Number(store.feriados || 0);
+  const diasFaltam = totalDays - fer - dTrab;
+  
+  const metaF = Number(store.metaFaturamento || 0);
+  const fat = Number(store.faturamento || 0);
+  const metaDiaria = diasFaltam > 0 ? Math.max(0, (metaF - fat) / diasFaltam) : 0;
+
   const display = document.getElementById("activeStoreDisplay");
 
   display.innerHTML = `
     <div class="ind-group featured">
       <span>Faturamento</span>
       <strong>${formatCurrency(store.faturamento || 0)}</strong>
+    </div>
+    <div class="ind-group featured">
+      <span>Meta Diária</span>
+      <strong>${formatCurrency(metaDiaria)}</strong>
     </div>
     <div class="ind-group">
       <span>N de Vendas</span>
