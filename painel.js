@@ -27,6 +27,10 @@ const user = sessionStorage.getItem("usuarioLogado");
 let unsubscribeSellerMetrics = null;
 let unsubscribeStoreMetrics = null;
 
+// Global variables to store day configurations for daily goal calculations
+let globalDiasTrabalhados = 1;
+let globalFeriados = 4;
+
 const role = sessionStorage.getItem("usuarioCargo") || "";
 
 // --- Gerenciamento de Tema (Dark Mode) ---
@@ -720,6 +724,16 @@ document.getElementById("logoutButton").addEventListener("click", () => {
 async function loadPanel() {
   setRankingLoading();
 
+  // Fetch global day configurations from the 'GERAL' store document
+  try {
+    const geralRef = doc(db, "lojas", "GERAL");
+    const geralSnap = await getDoc(geralRef);
+    if (geralSnap.exists()) {
+      const data = geralSnap.data();
+      globalDiasTrabalhados = Number(data.diasTrabalhados ?? 1);
+      globalFeriados = Number(data.feriados ?? 4);
+    }
+  } catch (e) { console.error("Erro ao carregar configurações globais de dias:", e); }
   try {
     // Fetch seller profile once
     const currentSeller = await getSellerProfile(user);
@@ -865,8 +879,8 @@ function renderSellerIndicators(sellerMetrics) {
     const pctElement = document.querySelector(`[data-pct="${metricKey}"]`);
     const rankingItem = rankings[metricKey]?.find((item) => normalizeText(item.name) === normalizeText(user));
 
-    metricElement.textContent = config.format(sellerMetrics[metricKey]);
-    rankElement.textContent = rankingItem ? `Minha Posição ${rankingItem.position}º` : "Minha Posição --";
+    if (metricElement) metricElement.textContent = config.format(sellerMetrics[metricKey]);
+    if (rankElement) rankElement.textContent = rankingItem ? `Minha Posição ${rankingItem.position}º` : "Minha Posição --";
 
     const active = isStatusActive(metricKey, sellerMetrics);
     let statusText = getStatusText(metricKey, active);
@@ -875,6 +889,19 @@ function renderSellerIndicators(sellerMetrics) {
       const fat = Number(sellerMetrics.faturamento);
       const metaF = Number(sellerMetrics.metaFaturamento);
       const isMetaHit = fat >= metaF && metaF > 0;
+
+      // Lógica de Meta Diária
+      const [year, mNum] = monthKey.split("-").map(Number);
+      // mNum já é 1-based, então new Date(year, mNum, 0) pega o último dia do mês correto
+      const totalDays = new Date(year, mNum, 0).getDate();
+      const diasRestantes = totalDays - globalFeriados - globalDiasTrabalhados;
+      const metaDiariaVal = diasRestantes > 0 ? Math.max(0, (metaF - fat) / diasRestantes) : 0;
+      
+      const metaDiariaElem = document.querySelector(`[data-metric="metaDiaria"]`);
+      if (metaDiariaElem) {
+        metaDiariaElem.textContent = formatCurrency(metaDiariaVal);
+      }
+
       const pctMeta = metaF > 0 ? (fat / metaF) * 100 : 0;
 
       if (isMetaHit) {
@@ -882,21 +909,23 @@ function renderSellerIndicators(sellerMetrics) {
         statusElement.style.background = "#3182ce";
         statusElement.classList.remove("inactive");
       } else {
-        statusElement.style.background = ""; 
-        statusElement.classList.toggle("inactive", !active);
+        if (statusElement) {
+          statusElement.style.background = ""; 
+          statusElement.classList.toggle("inactive", !active);
+        }
       }
-      statusElement.textContent = statusText;
-      statusElement.hidden = false;
+      
+      // Removemos a exibição do status e porcentagem no faturamento conforme solicitado
+      if (statusElement) statusElement.hidden = true;
+      if (pctElement) pctElement.hidden = true;
 
-      if (pctElement) {
-        pctElement.textContent = `${pctMeta.toFixed(0)}%`;
-        pctElement.hidden = false;
-      }
     } else {
-      statusElement.textContent = statusText;
-      statusElement.hidden = !statusText;
-      statusElement.style.background = "";
-      statusElement.classList.toggle("inactive", Boolean(statusText) && !active);
+      if (statusElement) {
+        statusElement.textContent = statusText;
+        statusElement.hidden = !statusText;
+        statusElement.style.background = "";
+        statusElement.classList.toggle("inactive", Boolean(statusText) && !active);
+      }
 
       if (pctElement) {
         pctElement.hidden = true;
@@ -936,7 +965,6 @@ function renderRanking(metricKey) {
         const fat = Number(item.faturamento);
         const metaC = Number(item.metaComissao);
         const metaF = Number(item.metaFaturamento);
-        const isMetaHit = fat >= metaF && metaF > 0;
         
         // Lógica da Barra Proporcional à Meta
         const pctMeta = metaF > 0 ? (fat / metaF) * 100 : 0;
@@ -946,9 +974,6 @@ function renderRanking(metricKey) {
           <div class="ranking-info-cols">
             <div class="ranking-col-item"><span>Faturamento</span><strong>${config.format(fat)}</strong></div>
             <div class="ranking-col-item"><span>Projeção</span><strong>${formatCurrency(item.projeção || 0)}</strong></div>
-            <div class="ranking-col-item"><span>Status</span>
-              ${isMetaHit ? '<span class="r-status-badge" style="background:#3182ce;">Meta Batida</span>' : `<span class="r-status-badge ${active ? 'active' : 'inactive'}">${statusText}</span>`}
-            </div>
           </div>`;
 
         progressHtml = `
@@ -1369,7 +1394,7 @@ window.switchStoreView = (storeId) => {
       <strong>${formatCurrency(store.faturamento || 0)}</strong>
     </div>
     <div class="ind-group featured">
-      <span>Meta Diária</span>
+      <span>Meta Diária Atual</span>
       <strong>${formatCurrency(metaDiaria)}</strong>
     </div>
     <div class="ind-group">

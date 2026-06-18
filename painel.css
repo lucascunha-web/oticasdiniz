@@ -776,8 +776,8 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 
 .indicator-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: clamp(10px, 1.5vw, 20px);
+  grid-template-columns: repeat(6, 1fr);
+  gap: 15px;
   margin-bottom: 30px;
 }
 
@@ -789,11 +789,13 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 
 .indicator-card {
   position: relative;
-  overflow: hidden;
-  min-height: 155px;
-  padding: 22px 24px;
+  min-height: 140px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   border: 1px solid rgba(237, 240, 245, 0.92);
   border-radius: 20px;
   background: var(--surface);
@@ -802,10 +804,10 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
   animation: liftIn 0.5s ease both;
 }
 
-.indicator-card::before {
+.indicator-card::before { /* Keep for hover effect */
   content: "";
   position: absolute;
-  top: 0;
+  top: 0; 
   left: -100%;
   width: 100%;
   height: 100%;
@@ -824,20 +826,27 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
   box-shadow: 0 24px 56px rgba(20, 28, 44, 0.12);
 }
 
+.indicator-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  width: 100%;
+}
+
 .indicator-icon {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  left: 24px;
-  width: 42px;
-  height: 42px;
-  display: grid;
-  place-items: center;
-  color: #ffffff;
-  font-style: normal;
-  font-size: 1.2rem;
-  font-weight: 900;
+  position: static;
+  transform: none;
+  width: 45px;
+  height: 45px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 12px;
+  color: #fff;
+  font-size: 1.3rem;
+  font-style: normal;
 }
 
 .indicator-icon.money {
@@ -852,6 +861,8 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
   background: #ff8787;
 }
 
+.indicator-icon.daily { background: #3182ce; }
+
 .indicator-icon.sales {
   background: #8ce99a;
 }
@@ -861,8 +872,9 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 }
 
 .indicator-badges {
-  order: 5;
-  margin: 12px 0 0 58px;
+  position: absolute;
+  top: 15px;
+  right: 15px;
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
@@ -875,7 +887,6 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
   font-weight: 800;
   text-transform: uppercase;
   border-radius: 5px;
-  background: var(--green);
 }
 .indicator-card strong.pct-badge { background: var(--ink); }
 .indicator-card strong.inactive {
@@ -884,10 +895,8 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 
 .indicator-card span {
   display: block;
-  margin: 0 0 0 58px;
   color: var(--muted) !important;
-  font-size: 0.75rem;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.02em;
@@ -895,27 +904,25 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 }
 
 .indicator-card h2 {
-  margin: 4px 0 0 58px;
+  margin: 4px 0 0 0;
   color: var(--ink) !important;
-  font-size: clamp(0.95rem, 1.3vw, 1.2rem);
+  font-size: clamp(1rem, 1.5vw, 1.35rem);
   font-weight: 800;
   line-height: 1;
 }
 
 .indicator-card p {
-  order: -1;
-  margin: 0 0 16px;
+  margin: 12px 0 0 0;
   color: var(--red);
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   font-weight: 900;
-  text-align: right;
+  text-align: center;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   background: rgba(215, 25, 32, 0.08);
   padding: 4px 10px;
   border-radius: 6px;
   width: fit-content;
-  margin-left: auto;
 }
 
 .manager-section {
@@ -1936,12 +1943,12 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
   }
 
   .indicator-card h2, .indicator-card span, .indicator-card p, .indicator-badges {
-    margin-left: 0;
-    width: 100%;
-    justify-content: center;
+    margin-left: 0; /* Reset margin */
+    width: auto; /* Allow width to be natural */
+    justify-content: flex-start; /* Align badges to start */
   }
 
-  .indicator-icon { display: none; }
+  .indicator-icon { display: grid; } /* Ensure icon is visible */
   
   .calc-info-display {
     gap: 10px;
