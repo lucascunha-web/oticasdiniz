@@ -129,7 +129,7 @@ function updateDaysInfo() {
 
   const [year, month] = monthKey.split("-").map(Number);
   // Correctly get total days in the month represented by monthKey
-  const totalDays = new Date(year, month + 1, 0).getDate(); 
+  const totalDays = new Date(year, month , 0).getDate(); 
   const remaining = totalDays - feriados - diasTrab;
 
   document.getElementById("displayTotalDays").textContent = totalDays;
