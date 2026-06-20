@@ -400,7 +400,7 @@ document.getElementById("btnCalcularProjecao").addEventListener("click", async (
   // Cálculo de dias que faltam: Dias do Mês - Feriados - Dias Trabalhados
   const [year, month] = monthKey.split("-").map(Number);
   // Correctly get total days in the month represented by monthKey
-  const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
+  const totalDaysInMonth = new Date(year, month , 0).getDate();
   const diasFaltam = totalDaysInMonth - feriados - diasTrab;
 
   const rows = document.querySelectorAll("#adminTableBody tr");
