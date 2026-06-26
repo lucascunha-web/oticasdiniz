@@ -35,6 +35,10 @@
   --track-bg: #334155;
 }
 
+[data-theme="dark"] .indicator-card::before {
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+}
+
 * {
   box-sizing: border-box;
   transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease;
@@ -1791,50 +1795,38 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 .btn-separate { background: var(--green); color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-weight: 800; cursor: pointer; font-size: 0.7rem; }
 .btn-cancel-reserva { background: var(--bg-muted); color: var(--red); border: none; padding: 6px 12px; border-radius: 4px; font-weight: 800; cursor: pointer; font-size: 0.7rem; }
 
-/* Estilos Treinamentos */
-.trainings-grid-layout {
+/* --- Estilos Treinamentos (Novo Layout) --- */
+.trainings-header {
   display: flex;
-  gap: 24px;
-  overflow-x: auto;
-  padding: 20px 5px;
-  scroll-snap-type: x mandatory; /* Melhora o scroll no mobile */
-  height: calc(100% - 60px);
-  align-items: flex-start;
-}
-
-.module-column {
-  flex: 0 0 320px;
-  min-width: 280px; /* Reduzi um pouco para não vazar em celulares pequenos */
-  max-width: 90vw;
-  scroll-snap-align: start;
-  background: var(--bg-muted);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  max-height: 100%;
-}
-
-.module-header {
-  padding: 16px;
-  background: var(--surface);
-  border-bottom: 2px solid var(--red);
-  border-radius: 12px 12px 0 0;
-  display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 20px;
 }
 
-.module-header h3 {
-  margin: 0 10px 0 0;
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  color: var(--ink);
-  font-weight: 800;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.module-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   flex: 1;
+}
+
+.module-selector label {
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.lessons-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 15px;
+  overflow-y: auto;
+  height: calc(100% - 130px); /* Ajuste a altura conforme necessário */
+  padding: 5px;
 }
 
 .btn-apostila {
@@ -1845,8 +1837,6 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 }
 .btn-apostila:hover { filter: grayscale(0); }
 
-.lessons-list { padding: 12px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
-
 .lesson-card {
   background: var(--surface);
   padding: 14px;
@@ -1855,7 +1845,15 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
   cursor: pointer;
   font-weight: 700;
   font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   transition: all 0.2s;
+}
+.lesson-card::before {
+  content: '▶';
+  color: var(--red);
+  font-size: 0.7rem;
 }
 .lesson-card:hover { border-color: var(--red); transform: translateX(5px); color: var(--red); }
 
@@ -1924,6 +1922,18 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
   .indicator-grid {
     grid-template-columns: repeat(3, 1fr);
   }
+
+  /* Ajustes para o novo modal de treinamentos em tablets */
+  .trainings-header {
+    flex-wrap: wrap;
+  }
+  .module-selector {
+    min-width: 250px;
+  }
+  .lessons-grid {
+    height: calc(100% - 180px); /* Nova altura para acomodar o header quebrado */
+  }
+
 }
 
 @media (max-width: 1500px) {
@@ -1980,6 +1990,10 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 
   .indicator-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .lessons-grid {
+    grid-template-columns: 1fr;
     gap: 10px;
   }
   

@@ -355,8 +355,17 @@
         <h2>Módulos de Treinamento</h2>
         <button type="button" id="closeTrainings" aria-label="Fechar treinamentos">×</button>
       </div>
-      <div id="trainingsContainer" class="trainings-grid-layout">
-        <p class="empty-state">Carregando módulos...</p>
+      <div class="trainings-header">
+        <div class="module-selector">
+          <label for="moduleSelect">Módulo:</label>
+          <select id="moduleSelect" class="stock-select"></select>
+        </div>
+        <a href="#" id="apostilaLink" target="_blank" class="top-nav-button" style="display: none; min-width: 150px; background: var(--btn-dark-bg); border-color: var(--line);">
+          Ver Apostila 📕
+        </a>
+      </div>
+      <div id="lessonsGrid" class="lessons-grid">
+        <!-- Aulas em blocos serão injetadas aqui -->
       </div>
     </div>
   </aside>

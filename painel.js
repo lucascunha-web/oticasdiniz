@@ -147,7 +147,8 @@ listenAnnouncements();
 // --- Sistema de Treinamentos ---
 const trainingsButton = document.getElementById("trainingsButton");
 const trainingsPanel = document.getElementById("trainingsPanel");
-const trainingsContainer = document.getElementById("trainingsContainer");
+const moduleSelect = document.getElementById("moduleSelect");
+const lessonsGrid = document.getElementById("lessonsGrid");
 
 trainingsButton?.addEventListener("click", (e) => {
   e.preventDefault();
@@ -161,65 +162,69 @@ document.getElementById("closeTrainings")?.addEventListener("click", () => {
   document.body.classList.remove("modal-open");
 });
 
+let trainingModules = []; // Cache para os módulos
+
 async function loadTrainings() {
-  trainingsContainer.innerHTML = "<p class='empty-state'>Carregando treinamentos...</p>";
-  
+  if (trainingModules.length > 0) return; // Evita recarregar se já tiver os dados
+
+  lessonsGrid.innerHTML = "<p class='empty-state'>Carregando módulos...</p>";
+
   try {
     const querySnapshot = await getDocs(collection(db, "treinamentos"));
     if (querySnapshot.empty) {
-      trainingsContainer.innerHTML = "<p class='empty-state'>Nenhum treinamento disponível.</p>";
+      lessonsGrid.innerHTML = "<p class='empty-state'>Nenhum treinamento disponível.</p>";
       return;
     }
 
-    const columnsHtml = await Promise.all(querySnapshot.docs.map(async (docSnap) => {
-      const data = docSnap.data();
-      const titulo = data.titulo || "Módulo sem título";
-      const apostilaUrl = data.apostila || "";
-      
-      // Busca subcoleção de Aulas
-      const aulasSnap = await getDocs(collection(db, "treinamentos", docSnap.id, "Aulas"));
-      
-      let lessonsHtml = "";
-      if (aulasSnap.empty) {
-        lessonsHtml = "<p style='font-size:0.75rem; color:var(--muted); text-align:center; padding:20px;'>Módulo indisponível</p>";
-      } else {
-        // Converte para array e aplica ordenação NATURAL (Aula 1, Aula 2, Aula 10...)
-        const aulas = aulasSnap.docs.map(aulaDoc => ({ id: aulaDoc.id, ...aulaDoc.data() }));
-        
-        aulas.sort((a, b) => {
-          const extractNum = (str) => {
-            const match = str.match(/Aula\s*(\d+)/i);
-            return match ? parseInt(match[1], 10) : 0;
-          };
-          return extractNum(a.nome) - extractNum(b.nome);
-        });
+    trainingModules = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        lessonsHtml = aulas.map(aula => {
-          return `
-            <div class="lesson-card" onclick="window.openLessonVideo('${aula.nome}', '${aula.url}')">
-              ${aula.nome}
-            </div>
-          `;
-        }).join("");
-      }
+    // Popula o dropdown
+    moduleSelect.innerHTML = trainingModules
+      .map(mod => `<option value="${mod.id}">${mod.titulo || "Módulo sem Título"}</option>`)
+      .join("");
 
-      return `
-        <div class="module-column">
-          <div class="module-header">
-            <h3>${titulo}</h3>
-            ${apostilaUrl ? `<a href="${apostilaUrl}" target="_blank" class="btn-apostila" title="Ver Apostila">📕</a>` : ""}
-          </div>
-          <div class="lessons-list">
-            ${lessonsHtml}
-          </div>
-        </div>
-      `;
-    }));
+    // Carrega as aulas do primeiro módulo por padrão
+    if (trainingModules.length > 0) {
+      renderLessonsForModule(trainingModules[0].id);
+    }
 
-    trainingsContainer.innerHTML = columnsHtml.join("");
+    // Adiciona o listener para trocas no dropdown
+    moduleSelect.addEventListener("change", (e) => renderLessonsForModule(e.target.value));
+
   } catch (error) {
     console.error("Erro ao carregar treinamentos:", error);
-    trainingsContainer.innerHTML = "<p class='empty-state'>Erro ao carregar dados do Firebase.</p>";
+    lessonsGrid.innerHTML = "<p class='empty-state'>Erro ao carregar dados do Firebase.</p>";
+  }
+}
+
+async function renderLessonsForModule(moduleId) {
+  lessonsGrid.innerHTML = "<p class='empty-state'>Carregando aulas...</p>";
+  const apostilaLink = document.getElementById("apostilaLink");
+
+  const selectedModule = trainingModules.find(m => m.id === moduleId);
+  if (selectedModule && selectedModule.apostila) {
+    apostilaLink.href = selectedModule.apostila;
+    apostilaLink.style.display = "inline-flex";
+  } else {
+    apostilaLink.style.display = "none";
+  }
+
+  try {
+    const aulasSnap = await getDocs(collection(db, "treinamentos", moduleId, "Aulas"));
+    if (aulasSnap.empty) {
+      lessonsGrid.innerHTML = "<p class='empty-state'>Nenhuma aula encontrada para este módulo.</p>";
+      return;
+    }
+
+    const aulas = aulasSnap.docs.map(doc => doc.data()).sort((a, b) => a.nome.localeCompare(b.nome, undefined, { numeric: true }));
+    lessonsGrid.innerHTML = aulas.map(aula => `
+      <div class="lesson-card" onclick="window.openLessonVideo('${aula.nome}', '${aula.url}')">
+        ${aula.nome}
+      </div>
+    `).join("");
+  } catch (error) {
+    console.error("Erro ao carregar aulas do módulo:", error);
+    lessonsGrid.innerHTML = "<p class='empty-state'>Erro ao carregar aulas.</p>";
   }
 }
 
@@ -735,9 +740,11 @@ async function loadPanel() {
     }
   } catch (e) { console.error("Erro ao carregar configurações globais de dias:", e); }
   try {
-    // Fetch seller profile once
-    const currentSeller = await getSellerProfile(user);
-    setProfilePhoto(currentSeller.photo);
+    if (isSeller) {
+      // Fetch seller profile once only if the user is a seller
+      const currentSeller = await getSellerProfile(user);
+      setProfilePhoto(currentSeller.photo);
+    }
 
     // Fetch all sellers data once to map names to photos
     const sellersSnap = await getDocs(collection(db, "vendedores"));
@@ -816,7 +823,7 @@ async function loadPanel() {
     });
 
     // Load store ranking data if applicable
-    if (canSwitchRanking) {
+    if (canSwitchRanking && !isSeller) {
       loadStoreRankingData();
     }
 
