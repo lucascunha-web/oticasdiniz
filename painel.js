@@ -754,6 +754,8 @@ async function loadPanel() {
 
     const qSellerMetrics = query(collectionGroup(db, "metricas"));
 
+    let initialLoadComplete = false;
+
     unsubscribeSellerMetrics = onSnapshot(qSellerMetrics, (snapshot) => {
       // Fallback para o mês anterior se não houver dados no mês atual para vendedores
       const hasCurrentMonthData = snapshot.docs.some(d => d.id === curMonthKey && d.ref.path.includes("vendedores/"));
@@ -795,11 +797,22 @@ async function loadPanel() {
       }
 
       renderRanking("faturamento"); // Render default ranking
+
+      // Esconde o loader após a primeira carga de dados
+      if (!initialLoadComplete) {
+        const loader = document.getElementById("loaderOverlay");
+        if (loader) {
+          loader.classList.add("hidden");
+        }
+        initialLoadComplete = true;
+      }
     }, (error) => {
       console.error("Erro ao carregar métricas de vendedor em tempo real:", error);
       document.getElementById("rankingTable").innerHTML = `
         <p class="empty-state">Nao foi possivel carregar os dados do ranking agora.</p>
       `;
+      // Esconde o loader mesmo em caso de erro para não travar a tela
+      document.getElementById("loaderOverlay")?.classList.add("hidden");
     });
 
     // Load store ranking data if applicable
@@ -812,6 +825,8 @@ async function loadPanel() {
     document.getElementById("rankingTable").innerHTML = `
       <p class="empty-state">Nao foi possivel carregar os dados do ranking agora.</p>
     `;
+    // Esconde o loader mesmo em caso de erro para não travar a tela
+    document.getElementById("loaderOverlay")?.classList.add("hidden");
   }
 }
 
@@ -889,25 +904,39 @@ function renderSellerIndicators(sellerMetrics) {
       const fat = Number(sellerMetrics.faturamento);
       const metaF = Number(sellerMetrics.metaFaturamento);
       const isMetaHit = fat >= metaF && metaF > 0;
-
-      // Lógica de Meta Diária
-      const [year, mNum] = monthKey.split("-").map(Number);
-      // mNum já é 1-based, então new Date(year, mNum, 0) pega o último dia do mês correto
-      const totalDays = new Date(year, mNum, 0).getDate();
-      const diasRestantes = totalDays - globalFeriados - globalDiasTrabalhados;
-      const metaDiariaVal = diasRestantes > 0 ? Math.max(0, (metaF - fat) / diasRestantes) : 0;
-      
       const metaDiariaElem = document.querySelector(`[data-metric="metaDiaria"]`);
-      if (metaDiariaElem) {
-        metaDiariaElem.textContent = formatCurrency(metaDiariaVal);
+      const metaDiariaLabelElem = document.querySelector(`[data-label="metaDiaria"]`);
+
+      if (isMetaHit) {
+        // Se a meta foi batida, mostra o saldo positivo
+        const saldo = fat - metaF;
+        if (metaDiariaElem) {
+          metaDiariaElem.textContent = `+${formatCurrency(saldo)}`;
+          metaDiariaElem.style.color = "var(--green)";
+        }
+        if (metaDiariaLabelElem) metaDiariaLabelElem.textContent = "Saldo da Meta";
+      } else {
+        // Se não, calcula e mostra a meta diária
+        const [year, mNum] = monthKey.split("-").map(Number);
+        // mNum já é 1-based, então new Date(year, mNum, 0) pega o último dia do mês correto
+        const totalDays = new Date(year, mNum, 0).getDate();
+        const diasRestantes = totalDays - globalFeriados - globalDiasTrabalhados;
+        const metaDiariaVal = diasRestantes > 0 ? Math.max(0, (metaF - fat) / diasRestantes) : 0;
+        if (metaDiariaElem) {
+          metaDiariaElem.textContent = formatCurrency(metaDiariaVal);
+          metaDiariaElem.style.color = ""; // Reseta a cor para o padrão
+        }
+        if (metaDiariaLabelElem) metaDiariaLabelElem.textContent = "Meta Diária Atual";
       }
 
       const pctMeta = metaF > 0 ? (fat / metaF) * 100 : 0;
 
       if (isMetaHit) {
         statusText = "Meta Batida";
-        statusElement.style.background = "#3182ce";
-        statusElement.classList.remove("inactive");
+        if (statusElement) {
+          statusElement.style.background = "#3182ce";
+          statusElement.classList.remove("inactive");
+        }
       } else {
         if (statusElement) {
           statusElement.style.background = ""; 
@@ -1375,16 +1404,26 @@ window.switchStoreView = (storeId) => {
     btn.classList.toggle("active", btn.innerText.trim() === storeId);
   });
 
-  // Cálculo automático da Meta Diária baseada nos dias que faltam
-  const [year, month] = monthKey.split("-").map(Number);
-  const totalDays = new Date(year, month, 0).getDate();
-  const dTrab = Number(store.diasTrabalhados || 0);
-  const fer = Number(store.feriados || 0);
-  const diasFaltam = totalDays - fer - dTrab;
-  
   const metaF = Number(store.metaFaturamento || 0);
   const fat = Number(store.faturamento || 0);
-  const metaDiaria = diasFaltam > 0 ? Math.max(0, (metaF - fat) / diasFaltam) : 0;
+  const isMetaHit = fat >= metaF && metaF > 0;
+
+  let metaDiariaLabel = "Meta Diária Atual";
+  let metaDiariaValue = 0;
+
+  if (isMetaHit) {
+    const saldo = fat - metaF;
+    metaDiariaLabel = "Saldo da Meta";
+    metaDiariaValue = `+${formatCurrency(saldo)}`;
+  } else {
+    const [year, month] = monthKey.split("-").map(Number);
+    const totalDays = new Date(year, month, 0).getDate();
+    const dTrab = Number(store.diasTrabalhados || globalDiasTrabalhados);
+    const fer = Number(store.feriados || globalFeriados);
+    const diasFaltam = totalDays - fer - dTrab;
+    const valor = diasFaltam > 0 ? Math.max(0, (metaF - fat) / diasFaltam) : 0;
+    metaDiariaValue = formatCurrency(valor);
+  }
 
   const display = document.getElementById("activeStoreDisplay");
 
@@ -1393,9 +1432,9 @@ window.switchStoreView = (storeId) => {
       <span>Faturamento</span>
       <strong>${formatCurrency(store.faturamento || 0)}</strong>
     </div>
-    <div class="ind-group featured">
-      <span>Meta Diária Atual</span>
-      <strong>${formatCurrency(metaDiaria)}</strong>
+    <div class="ind-group featured ${isMetaHit ? 'featured-green' : ''}">
+      <span>${metaDiariaLabel}</span>
+      <strong>${metaDiariaValue}</strong>
     </div>
     <div class="ind-group">
       <span>N de Vendas</span>

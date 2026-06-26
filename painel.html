@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="painel.css?v=6">
+  <link rel="stylesheet" href="painel.css?v=8">
   <style>
     .header-identity .brand-mark {
       background: none !important;
@@ -32,6 +32,13 @@
   </style>
 </head>
 <body>
+  <!-- Tela de Carregamento -->
+  <div class="loader-overlay" id="loaderOverlay">
+    <div class="loader-content">
+      <div class="loader-spinner"></div>
+      <span>Carregando painel...</span>
+    </div>
+  </div>
   <header class="panel-header">
     <div class="header-identity">
       <a class="brand-mark" href="painel.html" aria-label="Oticas Diniz">
@@ -124,7 +131,7 @@
         <div class="indicator-header">
           <i class="indicator-icon daily" aria-hidden="true">📅</i>
           <div>
-            <span>Meta Diária Atual</span>
+            <span data-label="metaDiaria">Meta Diária Atual</span>
             <h2 data-metric="metaDiaria">--</h2>
           </div>
         </div>

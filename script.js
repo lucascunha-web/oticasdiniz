@@ -69,7 +69,6 @@ form.addEventListener("submit", async (event) => {
     sessionStorage.setItem("usuarioLoja", userData.loja ?? "");
 
     showMessage("Login realizado com sucesso.", "success");
-    document.body.classList.add("page-leaving");
     window.setTimeout(() => {
       window.location.href = "painel.html";
     }, 260);
