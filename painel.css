@@ -679,7 +679,7 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 .admin-matrix { width: 100%; border-collapse: collapse; text-align: left; }
 @media (max-width: 768px) {
   .admin-matrix {
-    min-width: 900px; /* Garante que a tabela não esmague os inputs, forçando scroll lateral */
+    min-width: 1100px; /* Aumentado para acomodar a nova coluna e evitar que os inputs fiquem esmagados */
   }
   
   .admin-header {
@@ -824,8 +824,9 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 
 .indicator-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 15px;
+  /* Layout flexível que se adapta ao número de itens e ao espaço */
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
   margin-bottom: 30px;
 }
 
@@ -837,12 +838,12 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 
 .indicator-card {
   position: relative;
-  min-height: 140px;
+  min-height: 120px;
   padding: 20px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch; /* Permite que os itens internos ocupem a largura total */
+  justify-content: space-between; /* Distribui o espaço verticalmente */
   text-align: center;
   border: 1px solid rgba(237, 240, 245, 0.92);
   border-radius: 20px;
@@ -878,6 +879,7 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
   display: flex;
   align-items: center;
   justify-content: center;
+  text-align: left; /* Alinha o texto à esquerda, dentro do header */
   gap: 15px;
   width: 100%;
 }
@@ -917,6 +919,10 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 
 .indicator-icon.star {
   background: #ffd43b;
+}
+
+.indicator-icon.sunglasses {
+  background: #6366f1;
 }
 
 .indicator-badges {
@@ -1920,7 +1926,8 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
   }
 
   .indicator-grid {
-    grid-template-columns: repeat(3, 1fr);
+    /* Mantém o layout flexível, mas com um tamanho mínimo menor para tablets */
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   }
 
   /* Ajustes para o novo modal de treinamentos em tablets */
@@ -1989,9 +1996,15 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
   }
 
   .indicator-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); /* Layout mais flexível */
+    gap: 12px;
   }
+
+  /* Se o último card ficar sozinho na linha, ele ocupa o espaço de 2 colunas */
+  .indicator-card:last-child:nth-child(odd) {
+    grid-column: span 2;
+  }
+
   .lessons-grid {
     grid-template-columns: 1fr;
     gap: 10px;
@@ -2043,7 +2056,7 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 
   .ranking-info-cols {
     width: 100%;
-    justify-content: space-between;
+  justify-content: flex-start; /* Alinha à esquerda para melhor visualização */
     margin-top: 8px;
     padding-top: 10px;
     border-top: 1px dashed var(--line);

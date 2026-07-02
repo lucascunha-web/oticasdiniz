@@ -183,8 +183,14 @@ async function loadAdminMatrix() {
     `;
   } else if (currentView === "vendedores") {
     thead.innerHTML = `
-      <th style="width:150px">Vendedor</th><th style="width:250px">Foto Perfil URL</th><th>Faturamento</th><th>Vendas</th><th>T. Médio</th>
-      <th>Desc %</th><th>Avaliações</th><th>Meta Com.</th><th>Meta Fat.</th><th>Projeção</th><th>Ação</th>
+      <th style="width:150px">Vendedor</th>
+      <th style="width:250px">Foto Perfil URL</th>
+      <th>Faturamento</th>
+      <th>Vendas</th>
+      <th>Solares</th>
+      <th>T. Médio</th>
+      <th>Desc %</th>
+      <th>Avaliações</th><th>Meta Com.</th><th>Meta Fat.</th><th>Projeção</th><th>Ação</th>
     `;
   } else if (currentView === "treinamentos") {
     thead.innerHTML = `<th style="width:250px">Módulo (Título)</th><th>Apostila (URL)</th><th style="width:140px">Ação</th>`;
@@ -321,6 +327,7 @@ async function loadAdminMatrix() {
           <td><input type="text" class="edit-field" data-key="foto" value="${v.foto || ''}"></td>
           <td><input type="number" class="edit-field" data-key="faturamento" value="${v.faturamento || 0}"></td>
           <td><input type="number" class="edit-field" data-key="vendas" value="${v.vendas || 0}"></td>
+          <td><input type="number" class="edit-field" data-key="oculosSolares" value="${v.oculosSolares || 0}"></td>
           <td><input type="number" class="edit-field" data-key="ticketMedio" value="${v.ticketMedio || 0}"></td>
           <td><input type="number" class="edit-field" data-key="desconto" value="${v.desconto || 0}"></td>
           <td><input type="number" class="edit-field" data-key="avaliacoes" value="${v.avaliacoes || 0}"></td>

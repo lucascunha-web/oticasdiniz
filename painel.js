@@ -87,6 +87,11 @@ const metrics = {
     format: formatInteger,
     sort: "desc"
   },
+  oculosSolares: {
+    label: "Óculos Solares",
+    format: formatInteger,
+    sort: "desc"
+  },
   avaliacoes: {
     label: "Avaliacoes",
     format: formatInteger,
@@ -875,6 +880,7 @@ function normalizeMetricRecord(name, data, sellerData = {}) {
     metaComissao: Number(data.metaComissao ?? 0),
     metaFaturamento: Number(data.metaFaturamento ?? 0),
     ticketMedio: Number(data.ticketMedio ?? 0),
+    oculosSolares: Number(data.oculosSolares ?? 0),
     vendas: Number(data.vendas ?? 0)
   };
 }
@@ -958,7 +964,7 @@ function renderSellerIndicators(sellerMetrics) {
     } else {
       if (statusElement) {
         statusElement.textContent = statusText;
-        statusElement.hidden = !statusText;
+        statusElement.hidden = !statusText || metricKey === 'avaliacoes'; // Oculta para avaliações
         statusElement.style.background = "";
         statusElement.classList.toggle("inactive", Boolean(statusText) && !active);
       }
