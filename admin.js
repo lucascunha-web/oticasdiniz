@@ -32,6 +32,7 @@ const monthKey = (() => {
 })();
 
 let currentView = "lojas"; // Estado da aba atual
+let showInactiveSellers = false; // Estado para visualização de vendedores inativos
 
 // Função de normalização para bater com o painel
 const normalize = (val) => String(val || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
@@ -49,6 +50,7 @@ if (isAdmin) {
 
   document.getElementById("btnViewLojas").addEventListener("click", () => switchAdminView("lojas"));
   document.getElementById("btnViewVendedores").addEventListener("click", () => switchAdminView("vendedores"));
+  document.getElementById("btnViewUsuarios").addEventListener("click", () => switchAdminView("usuarios"));
   document.getElementById("btnViewTabelas").addEventListener("click", () => switchAdminView("tabelas"));
   document.getElementById("btnViewComunicados").addEventListener("click", () => switchAdminView("comunicados"));
   document.getElementById("btnViewTreinamentos").addEventListener("click", () => switchAdminView("treinamentos"));
@@ -67,7 +69,23 @@ if (isAdmin) {
   document.getElementById("calcFeriados").addEventListener("change", saveGlobalDays);
   document.getElementById("btnSaveNew").addEventListener("click", addNewItem);
   document.getElementById("btnSaveNewLesson").addEventListener("click", addNewLesson);
+  document.getElementById("btnSaveNewUser").addEventListener("click", addNewUser);
   document.getElementById("btnSaveAll").addEventListener("click", saveAllModifiedRows);
+
+  document.getElementById("btnToggleInactive").addEventListener("click", () => {
+    showInactiveSellers = !showInactiveSellers;
+    document.getElementById("btnToggleInactive").textContent = showInactiveSellers ? "Ocultar Inativos" : "Mostrar Inativos";
+    loadAdminMatrix();
+  });
+
+  // Listener para fechar o modal de histórico de loja
+  const closeHistoryBtn = document.getElementById("closeHistoryModal");
+  if (closeHistoryBtn) {
+    closeHistoryBtn.addEventListener("click", () => {
+      document.getElementById("historyModal").style.display = "none";
+      document.body.classList.remove("modal-open");
+    });
+  }
 }
 
 function switchAdminView(view) {
@@ -80,6 +98,7 @@ function switchAdminView(view) {
   currentView = view;
   document.getElementById("btnViewLojas").classList.toggle("active", view === "lojas");
   document.getElementById("btnViewVendedores").classList.toggle("active", view === "vendedores");
+  document.getElementById("btnViewUsuarios").classList.toggle("active", view === "usuarios");
   document.getElementById("btnViewTabelas").classList.toggle("active", view === "tabelas");
   document.getElementById("btnViewComunicados").classList.toggle("active", view === "comunicados");
   document.getElementById("btnViewTreinamentos").classList.toggle("active", view === "treinamentos");
@@ -160,10 +179,14 @@ async function loadAdminMatrix() {
   const thead = document.querySelector(".admin-matrix thead tr");
   const calcBar = document.querySelector(".admin-calc-bar");
   const addBar = document.getElementById("adminAddForm");
+  const addUserBar = document.getElementById("adminAddUserForm");
   const addLessonBar = document.getElementById("adminAddLessonForm");
+  const toggleInactiveBtn = document.getElementById("btnToggleInactive");
   
   tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 40px;">Buscando dados de ${currentView} (Ref: ${formatMonthKey(monthKey)})...</td></tr>`;
   calcBar.style.display = (currentView === "lojas" || currentView === "vendedores") ? "flex" : "none";
+  addUserBar.style.display = currentView === "usuarios" ? "grid" : "none";
+  toggleInactiveBtn.style.display = currentView === "vendedores" ? "block" : "none";
   addBar.style.display = currentView === "comunicados" ? "flex" : "none";
   if (addLessonBar) addLessonBar.style.display = currentView === "treinamentos" ? "flex" : "none";
 
@@ -178,21 +201,23 @@ async function loadAdminMatrix() {
   // Define o cabeçalho dinamicamente
   if (currentView === "lojas") {
     thead.innerHTML = `
-      <th style="width:120px">Loja</th><th style="width:120px">Faturamento</th><th style="width:100px">Vendas</th><th>T. Médio</th>
-      <th>Desc %</th><th>MKP</th><th>Meta Com.</th><th>Meta Fat.</th><th>Projeção</th><th>Ação</th>
+      <th style="width:120px">Loja</th><th style="width:120px">Faturamento</th><th style="width:100px">Vendas</th><th style="width:120px">T. Médio</th>
+      <th style="width:100px">Desc %</th><th style="width:100px">MKP</th><th>Meta Com.</th><th>Meta Fat.</th><th>Projeção</th><th style="width:100px">Ação</th>
     `;
   } else if (currentView === "vendedores") {
     thead.innerHTML = `
       <th style="width:150px">Vendedor</th>
-      <th style="width:250px">Foto Perfil URL</th>
+      <th style="width:200px">Foto Perfil URL</th>
       <th>Faturamento</th>
-      <th>Vendas</th>
-      <th>Solares</th>
+      <th style="width:100px">Vendas</th>
+      <th style="width:100px">Solares</th>
       <th>T. Médio</th>
       <th>Desc %</th>
       <th>Avaliações</th><th>Meta Com.</th><th>Meta Fat.</th><th>Projeção</th><th>Ação</th>
     `;
   } else if (currentView === "treinamentos") {
+    thead.innerHTML = `<th style="width:250px">Módulo (Título)</th><th>Apostila (URL)</th><th style="width:140px">Ação</th>`;
+  } else if (currentView === "usuarios") {
     thead.innerHTML = `<th style="width:250px">Módulo (Título)</th><th>Apostila (URL)</th><th style="width:140px">Ação</th>`;
   } else {
     thead.innerHTML = `
@@ -201,7 +226,29 @@ async function loadAdminMatrix() {
   }
 
   try {
-    if (currentView === "tabelas" || currentView === "comunicados" || currentView === "treinamentos") {
+    if (currentView === "usuarios") {
+      thead.innerHTML = `<th>Usuário (Login)</th><th>Loja</th><th>Cargo</th><th>Senha</th><th style="width:100px">Ação</th>`;
+      const snapshot = await getDocs(collection(db, "usuarios"));
+      const records = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      tbody.innerHTML = records.map(u => `
+        <tr data-id="${u.id}">
+          <td style="font-weight:800; text-transform: uppercase;">${u.id}</td>
+          <td><input type="text" class="edit-field" data-key="loja" value="${u.loja || ''}" style="width:100%"></td>
+          <td><input type="text" class="edit-field" data-key="cargo" value="${u.cargo || ''}" style="width:100%"></td>
+          <td><input type="text" class="edit-field" data-key="senha" value="${u.senha || ''}" style="width:100%"></td>
+          <td>
+            <div class="admin-btn-group">
+              <button class="btn-row-action" style="background:var(--ink); color:#fff" onclick="window.saveAdminRow('${u.id}')" title="Salvar">💾</button>
+              <button class="btn-row-action" style="background:var(--red); color:#fff" onclick="window.deleteAdminRow('${u.id}')" title="Excluir">🗑️</button>
+            </div>
+          </td>
+        </tr>
+      `).join("");
+
+      if (records.length === 0) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 40px;">Nenhum usuário encontrado.</td></tr>`;
+
+    } else if (currentView === "tabelas" || currentView === "comunicados" || currentView === "treinamentos") {
       const snapshot = await getDocs(collection(db, currentView));
       const records = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
@@ -285,7 +332,10 @@ async function loadAdminMatrix() {
         .map(id => {
           const baseData = profilesMap[id] || {};
           
-          if (currentView === "vendedores" && baseData.ativo === false) return null;
+          // Filtro de vendedores ativos/inativos
+          if (currentView === "vendedores" && !showInactiveSellers && baseData.ativo === false) {
+            return null;
+          }
 
           const monthData = currentMonthMetrics[id] || {};
           return {
@@ -312,7 +362,7 @@ async function loadAdminMatrix() {
           <td><input type="number" class="edit-field" data-key="faturamento" value="${s.faturamento || 0}" ${isGeral ? 'readonly' : ''}></td>
           <td><input type="number" class="edit-field" data-key="vendas" value="${s.vendas || 0}" ${isGeral ? 'readonly' : ''}></td>
           <td><input type="number" class="edit-field" data-key="ticketMedio" value="${s.ticketMedio || 0}"></td>
-          <td><input type="number" class="edit-field" data-key="desconto" value="${s.desconto || 0}"></td>
+          <td><input type="number" class="edit-field" data-key="desconto" step="0.01" value="${s.desconto || 0}"></td>
           <td><input type="number" class="edit-field" data-key="mkp" step="0.01" value="${s.mkp || 0}"></td>
           <td><input type="number" class="edit-field" data-key="metaComissao" value="${s.metaComissao || 0}" ${isGeral ? 'readonly' : ''}></td>
           <td><input type="number" class="edit-field" data-key="metaFaturamento" value="${s.metaFaturamento || 0}" ${isGeral ? 'readonly' : ''}></td>
@@ -322,7 +372,7 @@ async function loadAdminMatrix() {
       `}).join("");
     } else if (currentView === "vendedores") {
       tbody.innerHTML = sortedRecords.map(v => `
-        <tr data-id="${v.id}">
+        <tr data-id="${v.id}" style="${v.ativo === false ? 'opacity: 0.5; background-color: #f8f9fa;' : ''}">
           <td style="font-weight:800;">${v.id}</td>
           <td><input type="text" class="edit-field" data-key="foto" value="${v.foto || ''}"></td>
           <td><input type="number" class="edit-field" data-key="faturamento" value="${v.faturamento || 0}"></td>
@@ -336,8 +386,11 @@ async function loadAdminMatrix() {
           <td><input type="number" class="proj-field" value="${v.projeção || 0}" readonly></td>
           <td>
             <div style="display:flex; gap:4px;">
-              <button class="btn-row-action" style="background:var(--ink); color:#fff" onclick="window.saveAdminRow('${v.id}')" title="Salvar">💾</button>
-              <button class="btn-row-action" style="background:var(--red); color:#fff" onclick="window.deactivateSeller('${v.id}')" title="Desativar">🚫</button>
+              <button class="btn-row-action" style="background:var(--ink); color:#fff" onclick="window.saveAdminRow('${v.id}')" title="Salvar">💾</button> 
+              ${v.ativo !== false ?
+                `<button class="btn-row-action" style="background:var(--red); color:#fff" onclick="window.deactivateSeller('${v.id}')" title="Desativar">🚫</button>` :
+                `<button class="btn-row-action" style="background:var(--green); color:#fff" onclick="window.reactivateSeller('${v.id}')" title="Reativar">✅</button>`
+              }
             </div>
           </td>
         </tr>
@@ -358,13 +411,18 @@ window.saveAdminRow = async (id) => {
 
   inputs.forEach(input => {
     const key = input.dataset.key;
-    const val = input.type === "checkbox" ? input.checked : 
-                (key === "URL" || key === "Titulo" || key === "foto") ? input.value.trim() : Number(input.value);
+    let val = input.value;
+
+    if (input.type !== "text" && key !== "URL" && key !== "Titulo" && key !== "foto" && key !== "loja" && key !== "cargo" && key !== "senha") {
+        val = Number(input.value);
+    } else if (input.type === "text") {
+        val = input.value.trim();
+    }
     updateData[input.dataset.key] = val;
   });
 
   try {
-    if (currentView === "vendedores") {
+    if (currentView === "vendedores" && (updateData.hasOwnProperty("foto") || updateData.hasOwnProperty("ativo"))) {
       const sellerDocUpdates = {};
       if (updateData.hasOwnProperty("foto")) { sellerDocUpdates.foto = updateData.foto; delete updateData.foto; }
       if (updateData.hasOwnProperty("ativo")) { sellerDocUpdates.ativo = updateData.ativo; delete updateData.ativo; }
@@ -375,7 +433,7 @@ window.saveAdminRow = async (id) => {
     }
 
     if (Object.keys(updateData).length > 1) {
-      const docRef = (["tabelas", "comunicados", "treinamentos"].includes(currentView))
+      const docRef = (["tabelas", "comunicados", "treinamentos", "usuarios"].includes(currentView))
         ? doc(db, currentView, id)
         : doc(db, currentView, id, "metricas", monthKey);
       await setDoc(docRef, updateData, { merge: true });
@@ -482,6 +540,18 @@ window.deactivateSeller = async (id) => {
   }
 };
 
+window.reactivateSeller = async (id) => {
+  if (!confirm(`Deseja reativar o vendedor ${id}? Ele voltará a aparecer nos rankings.`)) return;
+  try {
+    await setDoc(doc(db, "vendedores", id), { ativo: true }, { merge: true });
+    alert("Vendedor reativado com sucesso.");
+    // Mantém na visão de inativos até o usuário trocar
+    loadAdminMatrix();
+  } catch (e) {
+    alert("Erro ao reativar vendedor.");
+  }
+};
+
 async function addNewItem() {
   const titulo = document.getElementById("newTitle").value.trim();
   const url = document.getElementById("newURL").value.trim();
@@ -502,6 +572,29 @@ async function addNewItem() {
     loadAdminMatrix();
   } catch (e) {
     alert("Erro ao adicionar: " + e.message);
+  }
+}
+
+async function addNewUser() {
+  const login = document.getElementById("newUserName").value.trim().toUpperCase();
+  const senha = document.getElementById("newUserPass").value.trim();
+  const cargo = document.getElementById("newUserRole").value.trim();
+  const loja = document.getElementById("newUserStore").value.trim();
+
+  if (!login || !senha || !cargo) {
+    return alert("Preencha Login, Senha e Cargo para adicionar um novo usuário.");
+  }
+
+  try {
+    await setDoc(doc(db, "usuarios", login), { senha, cargo, loja });
+    alert("Usuário adicionado com sucesso!");
+    document.getElementById("newUserName").value = "";
+    document.getElementById("newUserPass").value = "";
+    document.getElementById("newUserRole").value = "";
+    document.getElementById("newUserStore").value = "";
+    loadAdminMatrix();
+  } catch (e) {
+    alert("Erro ao adicionar usuário: " + e.message);
   }
 }
 

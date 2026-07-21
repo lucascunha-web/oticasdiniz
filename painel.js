@@ -624,6 +624,22 @@ document.getElementById("confirmReserveAction")?.addEventListener("click", async
   }
 });
 
+const brandImages = {
+  AR: "ar.jpg",
+  FILTRO_AZUL: "filtroazul.jpg",
+  ZEISS: "zeiss.png"
+};
+
+const parseGrau = (id) => {
+  // Procura pelas partes que começam com 'E' e 'C' para evitar erros com
+  // nomes de marcas que contêm underscore, como 'FILTRO_AZUL'.
+  const parts = id.split('_');
+  const esfPart = parts.find(p => p.startsWith('E'));
+  const cilPart = parts.find(p => p.startsWith('C'));
+
+  return { esf: esfPart?.replace('E', '') || '', cil: cilPart?.replace('C', '') || '' };
+};
+
 document.getElementById("btnViewReservas")?.addEventListener("click", async () => {
   reservasListPanel.classList.add("open");
   document.body.classList.add("modal-open");
@@ -646,25 +662,35 @@ document.getElementById("btnViewReservas")?.addEventListener("click", async () =
     }
 
     container.innerHTML = filtered.map(r => {
-      // Extrai os graus das strings de ID (ex: AR_E+0.25_C-1.25 -> E+0.25 C-1.25)
-      const formatGrau = (id) => id.split('_').slice(1).join(' ').replace('E', 'Esf: ').replace('C', 'Cil: ');
+      const grauOD = parseGrau(r.idOD);
+      const grauOE = parseGrau(r.idOE);
+      const imageUrl = brandImages[r.brandKey] || 'placeholder.jpg';
       
       return `
         <div class="reserva-item-card">
-          <div style="display:flex; justify-content:space-between; align-items:center">
-            <strong>OS: ${r.os}</strong>
-            <span class="reserva-badge status-${r.status}">${r.status}</span>
+          <div class="reserva-main-info">
+            <img src="${imageUrl}" alt="${r.brandLabel}" class="reserva-brand-img">
+            <div class="reserva-details">
+              <div class="reserva-header">
+                <strong>OS: ${r.os}</strong>
+                <span class="reserva-badge status-${r.status.toLowerCase()}">${r.status}</span>
+              </div>
+              <div class="reserva-sub-details">
+                <span>${r.brandLabel}</span>
+                <span>Por: <strong>${r.usuario}</strong></span>
+              </div>
+            </div>
           </div>
-          <div style="font-size:0.8rem; color:var(--ink); margin: 8px 0;">
-            <strong>Lente:</strong> ${r.brandLabel} <br>
-            <span style="color:var(--muted)">Por: ${r.usuario}</span>
-          </div>
-          <div style="background:var(--bg-muted); padding:10px; border-radius:8px; font-size:0.75rem; border: 1px solid var(--line);">
-            <div style="margin-bottom:4px;"><strong>OD:</strong> ${formatGrau(r.idOD)}</div>
-            <div><strong>OE:</strong> ${formatGrau(r.idOE)}</div>
+          <div class="reserva-grau-grid">
+            <div class="grau-cell"><span class="eye-label">OD</span><span class="grau-label">ESF</span><strong>${grauOD.esf}</strong></div>
+            <div class="grau-cell"><span class="grau-label">CIL</span><strong>${grauOD.cil}</strong></div>
+            <div class="grau-cell"><span class="eye-label">OE</span><span class="grau-label">ESF</span><strong>${grauOE.esf}</strong></div>
+            <div class="grau-cell"><span class="grau-label">CIL</span><strong>${grauOE.cil}</strong></div>
           </div>
           <div class="reserva-footer">
-            ${isControlRole ? `<button class="btn-separate" onclick="window.separateAction('${r.id}', '${r.idOD}', '${r.idOE}')">Separar Estoque</button>` : ''}
+            ${isControlRole ? `
+              <button class="btn-separate" onclick="window.separateAction('${r.id}', '${r.idOD}', '${r.idOE}')">Separar Estoque</button>
+            ` : ''}
             <button class="btn-cancel-reserva" onclick="window.cancelReserva('${r.id}')">Cancelar</button>
           </div>
         </div>
@@ -1373,7 +1399,7 @@ async function loadStoreRankingData() {
       const isMetaHit = fat >= mFat && mFat > 0;
 
       return `
-        <div class="rank-card-white">
+        <div class="rank-card-white" onclick="window.showStoreHistory('${store.id}')" style="cursor: pointer;">
           <div class="r-header">
             <span class="r-pos-badge">${index + 1}</span>
             <span class="r-store-name">${store.id}</span>
@@ -1407,6 +1433,64 @@ async function loadStoreRankingData() {
     section.style.display = "none";
   });
 }
+
+let historyChartInstance = null;
+
+window.showStoreHistory = async (storeId) => {
+  const modal = document.getElementById("historyModal");
+  const title = document.getElementById("historyModalTitle");
+  const canvas = document.getElementById("historyChart");
+
+  if (!modal || !title || !canvas) return;
+
+  title.textContent = `Histórico de Faturamento: ${storeId}`;
+  modal.style.display = "flex";
+  document.body.classList.add("modal-open");
+
+  if (historyChartInstance) {
+    historyChartInstance.destroy();
+  }
+
+  try {
+    const metricsSnap = await getDocs(collection(db, "lojas", storeId, "metricas"));
+    const historicalData = metricsSnap.docs
+      .map(doc => ({ month: doc.id, ...doc.data() }))
+      .sort((a, b) => a.month.localeCompare(b.month)); // Ordena por mês
+
+    const labels = historicalData.map(d => formatMonth(d.month));
+    const data = historicalData.map(d => d.faturamento || 0);
+
+    historyChartInstance = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Faturamento Mensal',
+          data: data,
+          fill: true,
+          backgroundColor: 'rgba(215, 25, 32, 0.1)',
+          borderColor: 'rgba(215, 25, 32, 1)',
+          tension: 0.3,
+          pointBackgroundColor: 'rgba(215, 25, 32, 1)',
+          pointBorderColor: '#fff',
+          pointHoverRadius: 7,
+          pointHoverBackgroundColor: '#fff',
+          pointHoverBorderColor: 'rgba(215, 25, 32, 1)',
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { y: { ticks: { callback: (value) => formatCurrency(value) } } }
+      }
+    });
+  } catch (error) {
+    console.error("Erro ao buscar histórico da loja:", error);
+    alert("Não foi possível carregar o histórico da loja.");
+    modal.style.display = "none";
+    document.body.classList.remove("modal-open");
+  }
+};
 
 window.switchStoreView = (storeId) => {
   const store = cachedStores.find(s => s.id === storeId);

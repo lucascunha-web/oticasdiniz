@@ -12,6 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="painel.css?v=8">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     .header-identity .brand-mark {
       background: none !important;
@@ -417,11 +418,13 @@
         <div class="admin-nav">
           <button class="admin-nav-btn active" id="btnViewLojas">Lojas</button>
           <button class="admin-nav-btn" id="btnViewVendedores">Vendedores</button>
+          <button class="admin-nav-btn" id="btnViewUsuarios">Usuários</button>
           <button class="admin-nav-btn" id="btnViewTabelas">Tabelas</button>
           <button class="admin-nav-btn" id="btnViewComunicados">Comunicados</button>
           <button class="admin-nav-btn" id="btnViewTreinamentos">Treinamentos</button>
         </div>
         <div class="admin-header-right">
+          <button id="btnToggleInactive" class="btn-secondary-stock" style="display: none; height: 40px; font-size: 0.7rem; padding: 0 12px;">Mostrar Inativos</button>
           <button id="btnSaveAll" class="btn-save-all" title="Salvar todas as alterações">Salvar Tudo 💾</button>
           <button id="closeAdmin" class="admin-close-x">×</button>
         </div>
@@ -458,7 +461,21 @@
           <label id="lblNewURL" for="newURL">Link do Arquivo (URL)</label>
           <input type="text" id="newURL" placeholder="https://drive.google.com/...">
         </div>
-        <button id="btnSaveNew">Adicionar Novo</button>
+        <button id="btnSaveNew" class="btn-admin-add">Adicionar Novo</button>
+      </div>
+
+      <div class="admin-add-bar" id="adminAddUserForm" style="display: none; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 15px;">
+        <div class="add-input-group">
+          <label for="newUserName">Usuário (Login)</label><input type="text" id="newUserName">
+        </div>
+        <div class="add-input-group">
+          <label for="newUserPass">Senha</label><input type="text" id="newUserPass">
+        </div>
+        <div class="add-input-group">
+          <label for="newUserRole">Cargo</label><input type="text" id="newUserRole">
+        </div>
+        <div class="add-input-group"><label for="newUserStore">Loja</label><input type="text" id="newUserStore"></div>
+        <button id="btnSaveNewUser" class="btn-admin-add">Adicionar Usuário</button>
       </div>
 
       <div class="admin-add-bar" id="adminAddLessonForm" style="display: none;">
@@ -474,7 +491,7 @@
           <label>URL do Vídeo (Drive)</label>
           <input type="text" id="newLessonURL" placeholder="https://drive.google.com/...">
         </div>
-        <button id="btnSaveNewLesson">Adicionar Aula</button>
+        <button id="btnSaveNewLesson" class="btn-admin-add">Adicionar Aula</button>
       </div>
 
       <div class="admin-table-wrapper">
@@ -500,6 +517,20 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal de Histórico de Performance -->
+  <div id="historyModal" class="admin-modal" style="display: none;">
+    <div class="admin-card" style="max-width: 900px; max-height: 90vh;">
+      <div class="admin-header">
+        <h2 id="historyModalTitle">Histórico de Faturamento</h2>
+        <button id="closeHistoryModal" class="admin-close-x">×</button>
+      </div>
+      <div class="admin-table-wrapper" style="padding: 20px 10px; border: none;">
+        <canvas id="historyChart"></canvas>
+      </div>
+    </div>
+  </div>
+
 
   <img class="panel-watermark" src="logodiniz.png" alt="" aria-hidden="true">
 
