@@ -105,6 +105,11 @@
       <div class="store-selector-wrapper">
         <div class="store-tabs" id="storeTabs"></div>
         <div class="horizontal-indicators" id="activeStoreDisplay"></div>
+        <!-- Gráfico será inserido aqui -->
+        <div id="storeChartContainer" style="margin-top: 20px; position: relative; height: 350px; display: none;">
+          <h3 id="storeChartTitle" style="text-align: center; font-size: 1rem; color: var(--muted); margin-bottom: 15px;"></h3>
+          <canvas id="storeHistoryChart"></canvas>
+        </div>
       </div>
 
       <div class="ranking-heading" style="margin-top: 40px; margin-bottom: 20px;">
@@ -517,20 +522,6 @@
       </div>
     </div>
   </div>
-
-  <!-- Modal de Histórico de Performance -->
-  <div id="historyModal" class="admin-modal" style="display: none;">
-    <div class="admin-card" style="max-width: 900px; max-height: 90vh;">
-      <div class="admin-header">
-        <h2 id="historyModalTitle">Histórico de Faturamento</h2>
-        <button id="closeHistoryModal" class="admin-close-x">×</button>
-      </div>
-      <div class="admin-table-wrapper" style="padding: 20px 10px; border: none;">
-        <canvas id="historyChart"></canvas>
-      </div>
-    </div>
-  </div>
-
 
   <img class="panel-watermark" src="logodiniz.png" alt="" aria-hidden="true">
 

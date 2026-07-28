@@ -1399,7 +1399,7 @@ async function loadStoreRankingData() {
       const isMetaHit = fat >= mFat && mFat > 0;
 
       return `
-        <div class="rank-card-white" onclick="window.showStoreHistory('${store.id}')" style="cursor: pointer;">
+        <div class="rank-card-white">
           <div class="r-header">
             <span class="r-pos-badge">${index + 1}</span>
             <span class="r-store-name">${store.id}</span>
@@ -1433,64 +1433,6 @@ async function loadStoreRankingData() {
     section.style.display = "none";
   });
 }
-
-let historyChartInstance = null;
-
-window.showStoreHistory = async (storeId) => {
-  const modal = document.getElementById("historyModal");
-  const title = document.getElementById("historyModalTitle");
-  const canvas = document.getElementById("historyChart");
-
-  if (!modal || !title || !canvas) return;
-
-  title.textContent = `Histórico de Faturamento: ${storeId}`;
-  modal.style.display = "flex";
-  document.body.classList.add("modal-open");
-
-  if (historyChartInstance) {
-    historyChartInstance.destroy();
-  }
-
-  try {
-    const metricsSnap = await getDocs(collection(db, "lojas", storeId, "metricas"));
-    const historicalData = metricsSnap.docs
-      .map(doc => ({ month: doc.id, ...doc.data() }))
-      .sort((a, b) => a.month.localeCompare(b.month)); // Ordena por mês
-
-    const labels = historicalData.map(d => formatMonth(d.month));
-    const data = historicalData.map(d => d.faturamento || 0);
-
-    historyChartInstance = new Chart(canvas, {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: 'Faturamento Mensal',
-          data: data,
-          fill: true,
-          backgroundColor: 'rgba(215, 25, 32, 0.1)',
-          borderColor: 'rgba(215, 25, 32, 1)',
-          tension: 0.3,
-          pointBackgroundColor: 'rgba(215, 25, 32, 1)',
-          pointBorderColor: '#fff',
-          pointHoverRadius: 7,
-          pointHoverBackgroundColor: '#fff',
-          pointHoverBorderColor: 'rgba(215, 25, 32, 1)',
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: { y: { ticks: { callback: (value) => formatCurrency(value) } } }
-      }
-    });
-  } catch (error) {
-    console.error("Erro ao buscar histórico da loja:", error);
-    alert("Não foi possível carregar o histórico da loja.");
-    modal.style.display = "none";
-    document.body.classList.remove("modal-open");
-  }
-};
 
 window.switchStoreView = (storeId) => {
   const store = cachedStores.find(s => s.id === storeId);
@@ -1554,4 +1496,239 @@ window.switchStoreView = (storeId) => {
       <strong>${formatCurrency(store.projeção || 0)}</strong>
     </div>
   `;
+
+  // Chamar a função para renderizar o gráfico
+  renderStoreHistoryChart(storeId);
 };
+
+function createProportionalScale(goal) {
+  if (goal <= 0) {
+    return {
+      scaleMap: [],
+      transformValue: value => value
+    };
+  }
+
+  // Define os pontos percentuais da escala: 0, 80, 90, ..., 150
+  const percentages = [0, ...Array.from({ length: 8 }, (_, i) => 80 + i * 10)];
+  
+  // Mapeia os pontos percentuais para os valores em R$
+  const scaleMap = percentages.map(p => (p / 100) * goal);
+
+  // Função para transformar um valor de faturamento (R$) em um ponto na escala artificial (0 a 8)
+  const transformValue = (value) => {
+    // Encontra o intervalo em que o valor se encaixa
+    for (let i = 1; i < scaleMap.length; i++) {
+      if (value <= scaleMap[i]) {
+        const lowerBound = scaleMap[i - 1];
+        const upperBound = scaleMap[i];
+        const range = upperBound - lowerBound;
+        const progress = range > 0 ? (value - lowerBound) / range : 0;
+        // O valor na escala artificial é o índice do limite inferior mais a proporção dentro do intervalo
+        return (i - 1) + progress;
+      }
+    }
+    // Se o valor for maior que 150% da meta, ele fica no topo da escala
+    return scaleMap.length - 1;
+  };
+
+  return { scaleMap, transformValue };
+}
+
+let historyChartInstance = null;
+
+async function renderStoreHistoryChart(storeId) {
+  const container = document.getElementById("storeChartContainer");
+  const canvas = document.getElementById("storeHistoryChart");
+  const title = document.getElementById("storeChartTitle");
+
+  if (!container || !canvas || !title) return;
+
+  container.style.display = "block";
+  title.textContent = `Histórico de Faturamento: ${storeId}`;
+
+  if (historyChartInstance) {
+    historyChartInstance.destroy();
+  }
+
+  try {
+    let historicalData = [];
+    let collectionPath;
+
+    if (storeId === "GERAL") {
+      // Para GERAL, precisamos buscar e somar os dados de todas as lojas
+      const storesSnap = await getDocs(query(collection(db, "lojas"), where(documentId(), "!=", "GERAL")));
+      const storeIds = storesSnap.docs.map(d => d.id);
+      
+      const allMetricsPromises = storeIds.map(id => getDocs(collection(db, "lojas", id, "metricas")));
+      const allMetricsSnaps = await Promise.all(allMetricsPromises);
+
+      const monthlyTotals = {}; // { "2024-05": { faturamento: X, metaFaturamento: Y }, ... }
+
+      allMetricsSnaps.forEach(storeMetricsSnap => {
+        storeMetricsSnap.forEach(doc => {
+          const month = doc.id;
+          const data = doc.data();
+          if (!monthlyTotals[month]) {
+            monthlyTotals[month] = { faturamento: 0, metaFaturamento: 0 };
+          }
+          monthlyTotals[month].faturamento += Number(data.faturamento || 0);
+          monthlyTotals[month].metaFaturamento += Number(data.metaFaturamento || 0);
+        });
+      });
+
+      historicalData = Object.keys(monthlyTotals).map(month => ({
+        month,
+        faturamento: monthlyTotals[month].faturamento,
+        metaFaturamento: monthlyTotals[month].metaFaturamento
+      }));
+
+    } else {
+      // Para uma loja individual
+      const metricsSnap = await getDocs(collection(db, "lojas", storeId, "metricas"));
+      historicalData = metricsSnap.docs.map(doc => ({ month: doc.id, ...doc.data() }));
+    }
+
+    historicalData.sort((a, b) => a.month.localeCompare(b.month));
+
+    // Busca a meta do mês ATUAL para usar como referência constante no gráfico
+    const currentStoreData = cachedStores.find(s => s.id === storeId);
+    const currentMonthGoal = currentStoreData ? currentStoreData.metaFaturamento || 0 : 0;
+    const yAxisOptions = {
+      type: 'linear',
+    };
+
+    let faturamentoData;
+    let metaData = [];
+    const labels = historicalData.map(d => formatMonth(d.month));
+
+    if (currentMonthGoal > 0) {
+      const { scaleMap, transformValue } = createProportionalScale(currentMonthGoal);
+      faturamentoData = historicalData.map(d => transformValue(d.faturamento || 0));
+
+      yAxisOptions.min = 0; // Mínimo da escala artificial
+      metaData = labels.map(() => 3); // O valor '3' corresponde a 100% na escala proporcional
+      yAxisOptions.max = scaleMap.length - 1; // Máximo da escala artificial (ex: 8 para 150%)
+      yAxisOptions.ticks = {
+        stepSize: 1, // Pula de 1 em 1 na escala artificial (0, 1, 2...)
+        callback: function(value) {
+          // 'value' aqui é o tick da escala artificial (0, 1, 2...)
+          // Usamos ele como índice para pegar o valor real em R$ do nosso mapa.
+          if (Number.isInteger(value) && value >= 0 && value < scaleMap.length) {
+            return formatCurrency(scaleMap[value]);
+          }
+          return ''; // Oculta ticks intermediários se houver
+        },
+        font: function(context) {
+          // O valor '3' na escala artificial corresponde a 100% da meta.
+          // Deixa o texto da meta em negrito e azul.
+          if (context.tick && context.tick.value === 3) return { weight: 'bold' };
+        },
+        color: (context) => (context.tick && context.tick.value === 3) ? '#2563EB' : undefined
+      };
+    } else {
+      // Comportamento padrão se não houver meta
+      faturamentoData = historicalData.map(d => d.faturamento || 0);
+      metaData = historicalData.map(d => d.metaFaturamento || 0);
+      yAxisOptions.beginAtZero = true;
+      yAxisOptions.ticks = { callback: (value) => formatCurrency(value) };
+    }
+
+    historyChartInstance = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Faturamento',
+            data: faturamentoData,
+            fill: true,
+            backgroundColor: 'rgba(107, 114, 128, 0.1)', // Preenchimento cinza mais escuro
+            tension: 0.3, // Restaura a curvatura da linha
+            borderColor: (context) => {
+              const chart = context.chart;
+              const { ctx, chartArea } = chart;
+              if (!chartArea) return null; // Gradiente só pode ser criado quando a área do gráfico existe
+              
+              const metaValue = (currentMonthGoal > 0) ? 3 : -1;
+              if (metaValue === -1) return 'rgba(215, 25, 32, 1)'; // Cor padrão se não há meta
+              
+              const metaY = chart.scales.y.getPixelForValue(metaValue);
+              const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+              
+              const transitionPoint = (metaY - chartArea.top) / chartArea.height;
+              
+              gradient.addColorStop(0, '#2563EB'); // Cor de cima (acima da meta)
+              gradient.addColorStop(transitionPoint, '#2563EB');
+              gradient.addColorStop(transitionPoint, 'rgba(215, 25, 32, 1)'); // Cor de baixo (abaixo da meta)
+              gradient.addColorStop(1, 'rgba(215, 25, 32, 1)');
+              
+              return gradient;
+            },
+            pointBackgroundColor: (ctx) => {
+              // Lógica para mudar a cor dos pontos
+              const metaValue = (currentMonthGoal > 0) ? 3 : currentMonthGoal;
+              if (ctx.raw > metaValue) {
+                return '#2563EB'; // Ponto azul se acima da meta
+              }
+              return 'rgba(215, 25, 32, 1)'; // Ponto vermelho se abaixo da meta
+            }
+          },
+          {
+            label: 'Meta 100%',
+            data: metaData,
+            borderColor: 'rgba(37, 99, 235, 0.8)', // Linha da meta em azul escuro
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            pointRadius: 0, // Sem bolinhas nos pontos
+            borderDash: [5, 5], // Linha tracejada
+            fill: false,
+            tension: 0.3,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { y: yAxisOptions },
+        plugins: {
+          legend: {
+            display: false, // Oculta a legenda (Faturamento, Meta 100%)
+            labels: {
+              // Deixa o texto da legenda da meta em negrito e azul
+              font: function(context) { 
+                if (context.datasetIndex === 1) {
+                  return { weight: 'bold' };
+                }
+              }
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                if (context.datasetIndex === 1) return null; // Oculta tooltip para a linha da meta
+
+                const dataPoint = historicalData[context.dataIndex];
+                if (!dataPoint) return '';
+
+                const faturamento = dataPoint.faturamento || 0;
+                // Usa a meta do mês atual para o cálculo da porcentagem, como solicitado.
+                const percent = currentMonthGoal > 0 ? (faturamento / currentMonthGoal) * 100 : 0;
+
+                return `Faturamento: ${formatCurrency(faturamento)} (${percent.toFixed(1)}% da meta)`;
+              },
+              labelPointStyle: function(context) {
+                // Oculta o ícone do ponto da legenda para a linha da meta
+                return context.datasetIndex === 1 ? { pointStyle: false } : undefined;
+              }
+            }
+          }
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error(`Erro ao buscar histórico para ${storeId}:`, error);
+    title.textContent = "Não foi possível carregar o histórico.";
+  }
+}
