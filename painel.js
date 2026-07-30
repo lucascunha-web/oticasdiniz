@@ -1540,12 +1540,14 @@ let historyChartInstance = null;
 async function renderStoreHistoryChart(storeId) {
   const container = document.getElementById("storeChartContainer");
   const canvas = document.getElementById("storeHistoryChart");
-  const title = document.getElementById("storeChartTitle");
+  const faturamentoAcumuladoEl = document.getElementById("faturamentoAcumulado");
+  const faturamentoMedioEl = document.getElementById("faturamentoMedio");
 
-  if (!container || !canvas || !title) return;
+  if (!container || !canvas || !faturamentoAcumuladoEl || !faturamentoMedioEl) return;
 
   container.style.display = "block";
-  title.textContent = `Histórico de Faturamento: ${storeId}`;
+  faturamentoAcumuladoEl.textContent = "Calculando...";
+  faturamentoMedioEl.textContent = "Calculando...";
 
   if (historyChartInstance) {
     historyChartInstance.destroy();
@@ -1590,6 +1592,14 @@ async function renderStoreHistoryChart(storeId) {
     }
 
     historicalData.sort((a, b) => a.month.localeCompare(b.month));
+
+    // Calcula e exibe o faturamento acumulado e médio
+    const faturamentoAcumulado = historicalData.reduce((acc, data) => acc + (Number(data.faturamento) || 0), 0);
+    const numeroDeMeses = historicalData.length;
+    const faturamentoMedio = numeroDeMeses > 0 ? faturamentoAcumulado / numeroDeMeses : 0;
+
+    faturamentoAcumuladoEl.textContent = formatCurrency(faturamentoAcumulado);
+    faturamentoMedioEl.textContent = formatCurrency(faturamentoMedio);
 
     // Busca a meta do mês ATUAL para usar como referência constante no gráfico
     const currentStoreData = cachedStores.find(s => s.id === storeId);
@@ -1729,6 +1739,7 @@ async function renderStoreHistoryChart(storeId) {
 
   } catch (error) {
     console.error(`Erro ao buscar histórico para ${storeId}:`, error);
-    title.textContent = "Não foi possível carregar o histórico.";
+    faturamentoAcumuladoEl.textContent = "Erro";
+    faturamentoMedioEl.textContent = "Erro";
   }
 }

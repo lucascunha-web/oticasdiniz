@@ -107,12 +107,21 @@
         <div class="horizontal-indicators" id="activeStoreDisplay"></div>
         <!-- Gráfico será inserido aqui -->
         <div id="storeChartContainer" style="margin-top: 20px; position: relative; height: 350px; display: none;">
-          <h3 id="storeChartTitle" style="text-align: center; font-size: 1rem; color: var(--muted); margin-bottom: 15px;"></h3>
-          <canvas id="storeHistoryChart"></canvas>
+          <div id="storeChartHeader" style="display: flex; justify-content: space-around; margin-bottom: 15px; text-align: center;">
+            <div class="ind-group" style="min-width: 220px; padding: 12px 15px;">
+              <span>Faturamento Acumulado</span>
+              <strong id="faturamentoAcumulado" style="font-size: 1.1rem;">--</strong>
+            </div>
+            <div class="ind-group" style="min-width: 220px; padding: 12px 15px;">
+              <span>Faturamento Médio</span>
+              <strong id="faturamentoMedio" style="font-size: 1.1rem;">--</strong>
+            </div>
+          </div>
+          <canvas id="storeHistoryChart" style="height: 280px !important;"></canvas>
         </div>
       </div>
 
-      <div class="ranking-heading" style="margin-top: 40px; margin-bottom: 20px;">
+      <div class="ranking-heading" style="margin-top: 105px; margin-bottom: 20px;">
         <h2>Ranking de Faturamento (Lojas)</h2>
       </div>
       <div class="store-ranking-list" id="storeRankingList">
