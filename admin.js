@@ -210,7 +210,6 @@ async function loadAdminMatrix() {
       <th style="width:200px">Foto Perfil URL</th>
       <th>Faturamento</th>
       <th style="width:100px">Vendas</th>
-      <th style="width:100px">Solares</th>
       <th>T. Médio</th>
       <th>Desc %</th>
       <th>Avaliações</th><th>Meta Com.</th><th>Meta Fat.</th><th>Projeção</th><th>Ação</th>
@@ -377,7 +376,6 @@ async function loadAdminMatrix() {
           <td><input type="text" class="edit-field" data-key="foto" value="${v.foto || ''}"></td>
           <td><input type="number" class="edit-field" data-key="faturamento" value="${v.faturamento || 0}"></td>
           <td><input type="number" class="edit-field" data-key="vendas" value="${v.vendas || 0}"></td>
-          <td><input type="number" class="edit-field" data-key="oculosSolares" value="${v.oculosSolares || 0}"></td>
           <td><input type="number" class="edit-field" data-key="ticketMedio" value="${v.ticketMedio || 0}"></td>
           <td><input type="number" class="edit-field" data-key="desconto" value="${v.desconto || 0}"></td>
           <td><input type="number" class="edit-field" data-key="avaliacoes" value="${v.avaliacoes || 0}"></td>

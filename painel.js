@@ -87,11 +87,6 @@ const metrics = {
     format: formatInteger,
     sort: "desc"
   },
-  oculosSolares: {
-    label: "Óculos Solares",
-    format: formatInteger,
-    sort: "desc"
-  },
   avaliacoes: {
     label: "Avaliacoes",
     format: formatInteger,
@@ -906,7 +901,6 @@ function normalizeMetricRecord(name, data, sellerData = {}) {
     metaComissao: Number(data.metaComissao ?? 0),
     metaFaturamento: Number(data.metaFaturamento ?? 0),
     ticketMedio: Number(data.ticketMedio ?? 0),
-    oculosSolares: Number(data.oculosSolares ?? 0),
     vendas: Number(data.vendas ?? 0)
   };
 }

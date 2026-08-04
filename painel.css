@@ -972,10 +972,6 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
   background: #8ce99a;
 }
 
-.indicator-icon.star {
-  background: #ffd43b;
-}
-
 .indicator-icon.sunglasses {
   background: #6366f1;
 }
