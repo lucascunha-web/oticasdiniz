@@ -185,6 +185,7 @@ img {
   text-decoration: none;
   text-transform: uppercase;
   border: 1px solid rgba(255, 255, 255, 0.4);
+  line-height: 1.3;
   border-radius: 8px;
   background: rgba(168, 15, 22, 0.18);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 8px 18px rgba(65, 0, 5, 0.2);
@@ -897,10 +898,10 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
   padding: 20px;
   display: flex;
   flex-direction: column;
-  align-items: stretch; /* Permite que os itens internos ocupem a largura total */
+  align-items: flex-start; /* Alinha todo o conteúdo à esquerda */
   justify-content: space-between; /* Distribui o espaço verticalmente */
-  text-align: center;
-  border: 1px solid rgba(237, 240, 245, 0.92);
+  text-align: left; /* Alinha o texto à esquerda */
+  border: 1px solid var(--line);
   border-radius: 20px;
   background: var(--surface);
   box-shadow: var(--soft-shadow);
@@ -933,10 +934,9 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 .indicator-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  text-align: left; /* Alinha o texto à esquerda, dentro do header */
+  justify-content: flex-start; /* Alinha o conteúdo do header à esquerda */
   gap: 15px;
-  width: 100%;
+  width: 100%; /* Garante que o header ocupe toda a largura */
 }
 
 .indicator-icon {
@@ -952,28 +952,7 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
   color: #fff;
   font-size: 1.3rem;
   font-style: normal;
-}
-
-.indicator-icon.money {
-  background: #4dabf7;
-}
-
-.indicator-icon.ticket {
-  background: #ffc078;
-}
-
-.indicator-icon.percent {
-  background: #ff8787;
-}
-
-.indicator-icon.daily { background: #3182ce; }
-
-.indicator-icon.sales {
-  background: #8ce99a;
-}
-
-.indicator-icon.sunglasses {
-  background: #6366f1;
+  background: var(--red);
 }
 
 .indicator-badges {
@@ -1025,7 +1004,7 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
   text-transform: uppercase;
   letter-spacing: 0.05em;
   background: rgba(215, 25, 32, 0.08);
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: 6px;
   width: fit-content;
 }
@@ -2042,6 +2021,10 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
   .lessons-grid {
     height: calc(100% - 180px); /* Nova altura para acomodar o header quebrado */
   }
+  .store-ranking-list {
+    /* Em tablet, 3 colunas ficam melhor */
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
 
 }
 
@@ -2078,6 +2061,7 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
   .top-nav-button {
     min-width: 146px;
     min-height: 42px;
+    padding: 5px 15px;
     font-size: 0.82rem;
   }
 
@@ -2148,8 +2132,9 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 
   .ranking-row {
     flex-direction: column; /* Empilha os itens verticalmente */
-    align-items: flex-start; /* Alinha os itens à esquerda */
+    align-items: center; /* Centraliza para um visual mais limpo */
     gap: 10px;
+    text-align: center;
   }
 
   .ranking-name {
@@ -2158,7 +2143,7 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 
   .ranking-info-cols {
     width: 100%;
-  justify-content: flex-start; /* Alinha à esquerda para melhor visualização */
+    justify-content: space-around; /* Alinha à esquerda para melhor visualização */
     margin-top: 8px;
     padding-top: 10px;
     border-top: 1px dashed var(--line);
@@ -2174,7 +2159,7 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
   }
 
   .store-ranking-list {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
   }
 
   .ranking-value {

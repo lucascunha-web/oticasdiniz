@@ -22,7 +22,19 @@ try {
   db = getFirestore(app);
 }
 
-const user = sessionStorage.getItem("usuarioLogado");
+// Verifica se há um usuário na sessão; se não, verifica se há um usuário "lembrado" no localStorage
+let user = sessionStorage.getItem("usuarioLogado");
+if (!user) {
+  const rememberedUser = localStorage.getItem("usuarioLogado");
+  if (rememberedUser) {
+    // Se encontrou um usuário lembrado, copia os dados para a sessão atual
+    sessionStorage.setItem("usuarioLogado", rememberedUser);
+    sessionStorage.setItem("usuarioCargo", localStorage.getItem("usuarioCargo") || "");
+    sessionStorage.setItem("usuarioLoja", localStorage.getItem("usuarioLoja") || "");
+    user = rememberedUser; // Atualiza a variável 'user' para o restante do script
+  }
+}
+
 // Store unsubscribe functions for real-time listeners
 let unsubscribeSellerMetrics = null;
 let unsubscribeStoreMetrics = null;
@@ -136,6 +148,8 @@ document.addEventListener("click", (event) => {
 
 document.getElementById("logoutButton").addEventListener("click", () => {
   sessionStorage.clear();
+  localStorage.removeItem("usuarioLogado");
+  localStorage.removeItem("usuarioCargo");
   window.location.href = "login.html";
 });
 
@@ -748,6 +762,9 @@ document.getElementById("logoutButton").addEventListener("click", () => {
   if (unsubscribeSellerMetrics) unsubscribeSellerMetrics();
   if (unsubscribeStoreMetrics) unsubscribeStoreMetrics();
   // Add other unsubscribe calls here if more listeners are added
+  localStorage.removeItem("usuarioLogado");
+  localStorage.removeItem("usuarioCargo");
+  localStorage.removeItem("usuarioLoja");
   sessionStorage.clear();
   window.location.href = "login.html";
 });
@@ -1503,8 +1520,8 @@ function createProportionalScale(goal) {
     };
   }
 
-  // Define os pontos percentuais da escala: 0, 80, 90, ..., 150
-  const percentages = [0, ...Array.from({ length: 8 }, (_, i) => 80 + i * 10)];
+  // Define os pontos percentuais da escala: 0, 80, 90, ..., 130
+  const percentages = [0, ...Array.from({ length: 6 }, (_, i) => 80 + i * 10)];
   
   // Mapeia os pontos percentuais para os valores em R$
   const scaleMap = percentages.map(p => (p / 100) * goal);
@@ -1522,7 +1539,7 @@ function createProportionalScale(goal) {
         return (i - 1) + progress;
       }
     }
-    // Se o valor for maior que 150% da meta, ele fica no topo da escala
+    // Se o valor for maior que 130% da meta, ele fica no topo da escala
     return scaleMap.length - 1;
   };
 
@@ -1612,7 +1629,7 @@ async function renderStoreHistoryChart(storeId) {
 
       yAxisOptions.min = 0; // Mínimo da escala artificial
       metaData = labels.map(() => 3); // O valor '3' corresponde a 100% na escala proporcional
-      yAxisOptions.max = scaleMap.length - 1; // Máximo da escala artificial (ex: 8 para 150%)
+      yAxisOptions.max = scaleMap.length - 1; // Máximo da escala artificial (ex: 6 para 130%)
       yAxisOptions.ticks = {
         stepSize: 1, // Pula de 1 em 1 na escala artificial (0, 1, 2...)
         callback: function(value) {

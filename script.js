@@ -64,10 +64,13 @@ form.addEventListener("submit", async (event) => {
       return;
     }
 
-    sessionStorage.setItem("usuarioLogado", login);
-    sessionStorage.setItem("usuarioCargo", userData.cargo ?? "");
-    sessionStorage.setItem("usuarioLoja", userData.loja ?? "");
+    const rememberMe = document.querySelector('input[name="remember"]').checked;
+    const storage = rememberMe ? localStorage : sessionStorage;
 
+    storage.setItem("usuarioLogado", login);
+    storage.setItem("usuarioCargo", userData.cargo ?? "");
+    storage.setItem("usuarioLoja", userData.loja ?? "");
+    
     showMessage("Login realizado com sucesso.", "success");
     window.setTimeout(() => {
       window.location.href = "painel.html";
