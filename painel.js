@@ -1520,13 +1520,13 @@ function createProportionalScale(goal) {
     };
   }
 
-  // Define os pontos percentuais da escala: 0, 80, 90, ..., 130
-  const percentages = [0, ...Array.from({ length: 6 }, (_, i) => 80 + i * 10)];
+  // Define os pontos percentuais da escala: 0, 80, 90, 100 (Meta), 115 (Prata), 130 (Ouro), 145 (Diamante)
+  const percentages = [0, 80, 90, 100, 115, 130, 145];
   
   // Mapeia os pontos percentuais para os valores em R$
   const scaleMap = percentages.map(p => (p / 100) * goal);
 
-  // Função para transformar um valor de faturamento (R$) em um ponto na escala artificial (0 a 8)
+  // Função para transformar um valor de faturamento (R$) em um ponto na escala artificial (0 a 6)
   const transformValue = (value) => {
     // Encontra o intervalo em que o valor se encaixa
     for (let i = 1; i < scaleMap.length; i++) {
@@ -1539,7 +1539,7 @@ function createProportionalScale(goal) {
         return (i - 1) + progress;
       }
     }
-    // Se o valor for maior que 130% da meta, ele fica no topo da escala
+    // Se o valor for maior que 145% da meta (Diamante), ele fica no topo da escala
     return scaleMap.length - 1;
   };
 
@@ -1620,7 +1620,6 @@ async function renderStoreHistoryChart(storeId) {
     };
 
     let faturamentoData;
-    let metaData = [];
     const labels = historicalData.map(d => formatMonth(d.month));
 
     if (currentMonthGoal > 0) {
@@ -1628,85 +1627,142 @@ async function renderStoreHistoryChart(storeId) {
       faturamentoData = historicalData.map(d => transformValue(d.faturamento || 0));
 
       yAxisOptions.min = 0; // Mínimo da escala artificial
-      metaData = labels.map(() => 3); // O valor '3' corresponde a 100% na escala proporcional
-      yAxisOptions.max = scaleMap.length - 1; // Máximo da escala artificial (ex: 6 para 130%)
+      yAxisOptions.max = scaleMap.length - 1; // Máximo da escala artificial (6 para Diamante 145%)
       yAxisOptions.ticks = {
-        stepSize: 1, // Pula de 1 em 1 na escala artificial (0, 1, 2...)
+        stepSize: 1, // Pula de 1 em 1 na escala artificial (0, 1, 2, 3, 4, 5, 6)
         callback: function(value) {
-          // 'value' aqui é o tick da escala artificial (0, 1, 2...)
-          // Usamos ele como índice para pegar o valor real em R$ do nosso mapa.
+          // Exibe apenas os valores monetários formatados
           if (Number.isInteger(value) && value >= 0 && value < scaleMap.length) {
             return formatCurrency(scaleMap[value]);
           }
           return ''; // Oculta ticks intermediários se houver
         },
         font: function(context) {
-          // O valor '3' na escala artificial corresponde a 100% da meta.
-          // Deixa o texto da meta em negrito e azul.
-          if (context.tick && context.tick.value === 3) return { weight: 'bold' };
+          // Destaque em negrito para Meta (3), Prata (4), Ouro (5) e Diamante (6)
+          if (context.tick && context.tick.value >= 3) return { weight: 'bold' };
         },
-        color: (context) => (context.tick && context.tick.value === 3) ? '#2563EB' : undefined
+        color: (context) => {
+          if (!context.tick) return undefined;
+          const val = context.tick.value;
+          if (val === 3) return '#2563EB'; // Meta 100% (Azul)
+          if (val === 4) return '#64748b'; // Prata 115% (Cinza Prata)
+          if (val === 5) return '#d97706'; // Ouro 130% (Dourado)
+          if (val === 6) return '#0284c7'; // Diamante 145% (Azul Diamante)
+          return undefined; // 0, 80% e 90% usam a cor padrão
+        }
       };
     } else {
       // Comportamento padrão se não houver meta
       faturamentoData = historicalData.map(d => d.faturamento || 0);
-      metaData = historicalData.map(d => d.metaFaturamento || 0);
       yAxisOptions.beginAtZero = true;
       yAxisOptions.ticks = { callback: (value) => formatCurrency(value) };
+    }
+
+    const datasets = [
+      {
+        label: 'Faturamento',
+        data: faturamentoData,
+        fill: true,
+        backgroundColor: 'rgba(107, 114, 128, 0.1)', // Preenchimento cinza mais escuro
+        tension: 0.3, // Restaura a curvatura da linha
+        borderColor: (context) => {
+          const chart = context.chart;
+          const { ctx, chartArea } = chart;
+          if (!chartArea) return null; // Gradiente só pode ser criado quando a área do gráfico existe
+          
+          const metaValue = (currentMonthGoal > 0) ? 3 : -1;
+          if (metaValue === -1) return 'rgba(215, 25, 32, 1)'; // Cor padrão se não há meta
+          
+          const metaY = chart.scales.y.getPixelForValue(metaValue);
+          const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+          
+          const transitionPoint = Math.max(0, Math.min(1, (metaY - chartArea.top) / chartArea.height));
+          
+          gradient.addColorStop(0, '#2563EB'); // Cor de cima (acima da meta)
+          gradient.addColorStop(transitionPoint, '#2563EB');
+          gradient.addColorStop(transitionPoint, 'rgba(215, 25, 32, 1)'); // Cor de baixo (abaixo da meta)
+          gradient.addColorStop(1, 'rgba(215, 25, 32, 1)');
+          
+          return gradient;
+        },
+        pointBackgroundColor: (ctx) => {
+          // Lógica para mudar a cor dos pontos conforme o patamar alcançado
+          if (currentMonthGoal <= 0) return 'rgba(215, 25, 32, 1)';
+          if (ctx.raw >= 6) return '#0284c7'; // Diamante (145%)
+          if (ctx.raw >= 5) return '#d97706'; // Ouro (130%)
+          if (ctx.raw >= 4) return '#64748b'; // Prata (115%)
+          if (ctx.raw >= 3) return '#2563EB'; // Meta (100%)
+          return 'rgba(215, 25, 32, 1)'; // Abaixo da meta
+        }
+      }
+    ];
+
+    if (currentMonthGoal > 0) {
+      datasets.push(
+        {
+          label: 'Meta',
+          data: labels.map(() => 3),
+          borderColor: 'rgba(37, 99, 235, 0.8)', // Linha da meta em azul
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          pointRadius: 0,
+          borderDash: [5, 5],
+          fill: false,
+          tension: 0
+        },
+        {
+          label: 'Prata',
+          data: labels.map(() => 4),
+          borderColor: 'rgba(100, 116, 139, 0.7)', // Linha prata
+          backgroundColor: 'transparent',
+          borderWidth: 1.5,
+          pointRadius: 0,
+          borderDash: [4, 4],
+          fill: false,
+          tension: 0
+        },
+        {
+          label: 'Ouro',
+          data: labels.map(() => 5),
+          borderColor: 'rgba(217, 119, 6, 0.7)', // Linha ouro
+          backgroundColor: 'transparent',
+          borderWidth: 1.5,
+          pointRadius: 0,
+          borderDash: [4, 4],
+          fill: false,
+          tension: 0
+        },
+        {
+          label: 'Diamante',
+          data: labels.map(() => 6),
+          borderColor: 'rgba(2, 132, 199, 0.7)', // Linha diamante
+          backgroundColor: 'transparent',
+          borderWidth: 1.5,
+          pointRadius: 0,
+          borderDash: [4, 4],
+          fill: false,
+          tension: 0
+        }
+      );
+    } else {
+      datasets.push({
+        label: 'Meta',
+        data: historicalData.map(d => d.metaFaturamento || 0),
+        borderColor: 'rgba(37, 99, 235, 0.8)',
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        pointRadius: 0,
+        borderDash: [5, 5],
+        fill: false,
+        tension: 0
+      });
     }
 
     historyChartInstance = new Chart(canvas, {
       type: 'line',
       data: {
         labels: labels,
-        datasets: [
-          {
-            label: 'Faturamento',
-            data: faturamentoData,
-            fill: true,
-            backgroundColor: 'rgba(107, 114, 128, 0.1)', // Preenchimento cinza mais escuro
-            tension: 0.3, // Restaura a curvatura da linha
-            borderColor: (context) => {
-              const chart = context.chart;
-              const { ctx, chartArea } = chart;
-              if (!chartArea) return null; // Gradiente só pode ser criado quando a área do gráfico existe
-              
-              const metaValue = (currentMonthGoal > 0) ? 3 : -1;
-              if (metaValue === -1) return 'rgba(215, 25, 32, 1)'; // Cor padrão se não há meta
-              
-              const metaY = chart.scales.y.getPixelForValue(metaValue);
-              const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-              
-              const transitionPoint = (metaY - chartArea.top) / chartArea.height;
-              
-              gradient.addColorStop(0, '#2563EB'); // Cor de cima (acima da meta)
-              gradient.addColorStop(transitionPoint, '#2563EB');
-              gradient.addColorStop(transitionPoint, 'rgba(215, 25, 32, 1)'); // Cor de baixo (abaixo da meta)
-              gradient.addColorStop(1, 'rgba(215, 25, 32, 1)');
-              
-              return gradient;
-            },
-            pointBackgroundColor: (ctx) => {
-              // Lógica para mudar a cor dos pontos
-              const metaValue = (currentMonthGoal > 0) ? 3 : currentMonthGoal;
-              if (ctx.raw > metaValue) {
-                return '#2563EB'; // Ponto azul se acima da meta
-              }
-              return 'rgba(215, 25, 32, 1)'; // Ponto vermelho se abaixo da meta
-            }
-          },
-          {
-            label: 'Meta 100%',
-            data: metaData,
-            borderColor: 'rgba(37, 99, 235, 0.8)', // Linha da meta em azul escuro
-            backgroundColor: 'transparent',
-            borderWidth: 2,
-            pointRadius: 0, // Sem bolinhas nos pontos
-            borderDash: [5, 5], // Linha tracejada
-            fill: false,
-            tension: 0.3,
-          }
-        ]
+        datasets: datasets
       },
       options: {
         responsive: true,
@@ -1714,33 +1770,25 @@ async function renderStoreHistoryChart(storeId) {
         scales: { y: yAxisOptions },
         plugins: {
           legend: {
-            display: false, // Oculta a legenda (Faturamento, Meta 100%)
-            labels: {
-              // Deixa o texto da legenda da meta em negrito e azul
-              font: function(context) { 
-                if (context.datasetIndex === 1) {
-                  return { weight: 'bold' };
-                }
-              }
-            }
+            display: false
           },
           tooltip: {
             callbacks: {
               label: function(context) {
-                if (context.datasetIndex === 1) return null; // Oculta tooltip para a linha da meta
+                if (context.datasetIndex !== 0) return null; // Oculta tooltip para as linhas de referência
 
                 const dataPoint = historicalData[context.dataIndex];
                 if (!dataPoint) return '';
 
                 const faturamento = dataPoint.faturamento || 0;
-                // Usa a meta do mês atual para o cálculo da porcentagem, como solicitado.
+                // Usa a meta do mês atual para o cálculo da porcentagem
                 const percent = currentMonthGoal > 0 ? (faturamento / currentMonthGoal) * 100 : 0;
 
                 return `Faturamento: ${formatCurrency(faturamento)} (${percent.toFixed(1)}% da meta)`;
               },
               labelPointStyle: function(context) {
-                // Oculta o ícone do ponto da legenda para a linha da meta
-                return context.datasetIndex === 1 ? { pointStyle: false } : undefined;
+                // Oculta o ícone do ponto da legenda para as linhas de referência
+                return context.datasetIndex !== 0 ? { pointStyle: false } : undefined;
               }
             }
           }
