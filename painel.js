@@ -727,17 +727,43 @@ window.cancelReserva = async (resId) => {
   } catch (e) { alert("Erro ao cancelar."); }
 };
 
-// Lógica do menu Tabelas
+// Lógica do menu Tabelas e Navegação Mobile
 const tabelasToggle = document.getElementById("tabelasToggle");
 const tabelasDropdown = document.getElementById("tabelasDropdown");
 const menuToggle = document.getElementById("mobileMenuToggle");
 const topNav = document.querySelector(".top-nav");
+const navBackdrop = document.getElementById("navBackdrop");
+
+function closeMobileMenu() {
+  if (topNav?.classList.contains("active")) {
+    topNav.classList.remove("active");
+    menuToggle?.classList.remove("open");
+    navBackdrop?.classList.remove("active");
+    document.body.classList.remove("modal-open");
+  }
+}
+
+navBackdrop?.addEventListener("click", closeMobileMenu);
 
 menuToggle?.addEventListener("click", (e) => {
   e.stopPropagation();
   const isOpen = topNav.classList.toggle("active");
   menuToggle.classList.toggle("open", isOpen);
+  navBackdrop?.classList.toggle("active", isOpen);
   document.body.classList.toggle("modal-open", isOpen);
+});
+
+// Fecha gaveta mobile ao clicar em qualquer item de navegação
+document.querySelectorAll(".top-nav a, .top-nav > button:not(#tabelasToggle), #tabelasDropdown button").forEach(elem => {
+  elem.addEventListener("click", () => {
+    closeMobileMenu();
+  });
+});
+
+document.addEventListener("click", (e) => {
+  if (topNav?.classList.contains("active") && !topNav.contains(e.target) && !menuToggle?.contains(e.target)) {
+    closeMobileMenu();
+  }
 });
 
 tabelasToggle?.addEventListener("click", (e) => {
@@ -750,6 +776,7 @@ document.querySelectorAll("#tabelasDropdown button").forEach(btn => {
     const type = btn.dataset.type;
     openTabelasPanel(type);
     tabelasDropdown.classList.remove("show");
+    closeMobileMenu();
   });
 });
 

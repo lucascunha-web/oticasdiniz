@@ -64,6 +64,7 @@
         Documentos<br>Importantes
       </button>
     </nav>
+    <div class="nav-backdrop" id="navBackdrop"></div>
 
     <div class="header-actions">
       <button class="hamburger-menu" id="mobileMenuToggle" aria-label="Menu" type="button">
@@ -105,22 +106,24 @@
         <div class="store-tabs" id="storeTabs"></div>
         <div class="horizontal-indicators" id="activeStoreDisplay"></div>
         <!-- Gráfico será inserido aqui -->
-        <div id="storeChartContainer" style="margin-top: 20px; position: relative; height: 350px; display: none;">
-          <div id="storeChartHeader" style="display: flex; justify-content: space-around; margin-bottom: 15px; text-align: center;">
-            <div class="ind-group" style="min-width: 220px; padding: 12px 15px;">
+        <div id="storeChartContainer" style="margin-top: 20px; margin-bottom: 35px; position: relative; display: none;">
+          <div id="storeChartHeader" class="store-chart-header">
+            <div class="ind-group chart-ind-group">
               <span>Faturamento Acumulado</span>
               <strong id="faturamentoAcumulado" style="font-size: 1.1rem;">--</strong>
             </div>
-            <div class="ind-group" style="min-width: 220px; padding: 12px 15px;">
+            <div class="ind-group chart-ind-group">
               <span>Faturamento Médio</span>
               <strong id="faturamentoMedio" style="font-size: 1.1rem;">--</strong>
             </div>
           </div>
-          <canvas id="storeHistoryChart" style="height: 280px !important;"></canvas>
+          <div class="store-chart-canvas-wrapper" style="position: relative; height: 320px; width: 100%;">
+            <canvas id="storeHistoryChart"></canvas>
+          </div>
         </div>
       </div>
 
-      <div class="ranking-heading" style="margin-top: 105px; margin-bottom: 20px;">
+      <div class="ranking-heading manager-ranking-heading">
         <h2>Ranking de Faturamento (Lojas)</h2>
       </div>
       <div class="store-ranking-list" id="storeRankingList">
@@ -422,9 +425,10 @@
           <button class="admin-nav-btn" id="btnViewTreinamentos">Treinamentos</button>
         </div>
         <div class="admin-header-right">
+          <button id="btnToggleAddSeller" class="btn-primary-admin" style="display: none;" type="button">+ Criar Vendedor</button>
           <button id="btnToggleInactive" class="btn-secondary-stock" style="display: none; height: 40px; font-size: 0.7rem; padding: 0 12px;">Mostrar Inativos</button>
           <button id="btnSaveAll" class="btn-save-all" title="Salvar todas as alterações">Salvar Tudo 💾</button>
-          <button id="closeAdmin" class="admin-close-x">×</button>
+          <button id="closeAdmin" class="admin-close-x" type="button" aria-label="Fechar" title="Fechar">×</button>
         </div>
       </div>
       
@@ -450,6 +454,28 @@
         <button id="btnCalcularProjecao">Calcular e Salvar Projeções</button>
       </div>
 
+      <!-- Formulário de Criação de Vendedor -->
+      <div class="admin-add-bar" id="adminAddSellerForm" style="display: none;">
+        <div class="add-input-group">
+          <label for="newSellerName">Nome do Vendedor (ID) *</label>
+          <input type="text" id="newSellerName" placeholder="Ex: MARIA SILVA" autocomplete="off" required>
+        </div>
+        <div class="add-input-group">
+          <label for="newSellerStore">Loja</label>
+          <input type="text" id="newSellerStore" placeholder="Ex: MATRIZ" list="storeDatalist" autocomplete="off">
+        </div>
+        <div class="add-input-group">
+          <label for="newSellerPhoto">Foto URL (opcional)</label>
+          <input type="text" id="newSellerPhoto" placeholder="https://..." autocomplete="off">
+        </div>
+        <div class="add-input-group">
+          <label for="newSellerPass">Senha Acesso (opcional)</label>
+          <input type="text" id="newSellerPass" placeholder="Criar login de acesso" autocomplete="off">
+        </div>
+        <button id="btnSaveNewSeller" class="btn-admin-add" type="button">Criar Vendedor ➕</button>
+      </div>
+      <datalist id="storeDatalist"></datalist>
+
       <div class="admin-add-bar" id="adminAddForm" style="display: none;">
         <div class="add-input-group">
           <label id="lblNewTitle" for="newTitle">Título / Nome</label>
@@ -462,7 +488,7 @@
         <button id="btnSaveNew" class="btn-admin-add">Adicionar Novo</button>
       </div>
 
-      <div class="admin-add-bar" id="adminAddUserForm" style="display: none; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 15px;">
+      <div class="admin-add-bar" id="adminAddUserForm" style="display: none;">
         <div class="add-input-group">
           <label for="newUserName">Usuário (Login)</label><input type="text" id="newUserName">
         </div>
@@ -470,9 +496,9 @@
           <label for="newUserPass">Senha</label><input type="text" id="newUserPass">
         </div>
         <div class="add-input-group">
-          <label for="newUserRole">Cargo</label><input type="text" id="newUserRole">
+          <label for="newUserRole">Cargo</label><input type="text" id="newUserRole" placeholder="Ex: vendedor / gerente">
         </div>
-        <div class="add-input-group"><label for="newUserStore">Loja</label><input type="text" id="newUserStore"></div>
+        <div class="add-input-group"><label for="newUserStore">Loja</label><input type="text" id="newUserStore" list="storeDatalist"></div>
         <button id="btnSaveNewUser" class="btn-admin-add">Adicionar Usuário</button>
       </div>
 

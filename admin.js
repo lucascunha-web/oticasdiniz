@@ -70,6 +70,8 @@ if (isAdmin) {
   document.getElementById("btnSaveNew").addEventListener("click", addNewItem);
   document.getElementById("btnSaveNewLesson").addEventListener("click", addNewLesson);
   document.getElementById("btnSaveNewUser").addEventListener("click", addNewUser);
+  document.getElementById("btnSaveNewSeller")?.addEventListener("click", addNewSeller);
+  document.getElementById("btnToggleAddSeller")?.addEventListener("click", toggleAddSellerForm);
   document.getElementById("btnSaveAll").addEventListener("click", saveAllModifiedRows);
 
   document.getElementById("btnToggleInactive").addEventListener("click", () => {
@@ -106,15 +108,35 @@ function switchAdminView(view) {
   loadAdminMatrix();
 }
 
-document.getElementById("closeAdmin").addEventListener("click", () => {
+function closeAdminModal() {
   const modifiedFields = document.querySelectorAll("#adminTableBody .modified");
   if (modifiedFields.length > 0) {
     const confirmLeave = confirm("Existem campos alterados que não foram salvos. Deseja realmente sair?");
     if (!confirmLeave) return;
   }
 
-  document.getElementById("adminModal").style.display = "none";
+  const modal = document.getElementById("adminModal");
+  if (modal) modal.style.display = "none";
   document.body.classList.remove("modal-open");
+}
+
+document.getElementById("closeAdmin")?.addEventListener("click", closeAdminModal);
+
+// Fecha também ao clicar fora do card (no backdrop escuro)
+document.getElementById("adminModal")?.addEventListener("click", (e) => {
+  if (e.target.id === "adminModal") {
+    closeAdminModal();
+  }
+});
+
+// Fecha também pressionando a tecla ESC
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    const modal = document.getElementById("adminModal");
+    if (modal && modal.style.display === "flex") {
+      closeAdminModal();
+    }
+  }
 });
 
 async function openAdminModal() {
@@ -139,7 +161,22 @@ async function openAdminModal() {
   }
 
   updateDaysInfo();
+  populateStoreDatalist();
   await loadAdminMatrix();
+}
+
+async function populateStoreDatalist() {
+  const datalist = document.getElementById("storeDatalist");
+  if (!datalist || datalist.children.length > 0) return;
+  try {
+    const snap = await getDocs(collection(db, "lojas"));
+    datalist.innerHTML = snap.docs
+      .filter(d => d.id !== "GERAL")
+      .map(d => `<option value="${d.id}">`)
+      .join("");
+  } catch (e) {
+    console.error("Erro ao carregar lojas para datalist:", e);
+  }
 }
 
 function updateDaysInfo() {
@@ -181,12 +218,16 @@ async function loadAdminMatrix() {
   const addBar = document.getElementById("adminAddForm");
   const addUserBar = document.getElementById("adminAddUserForm");
   const addLessonBar = document.getElementById("adminAddLessonForm");
+  const addSellerBar = document.getElementById("adminAddSellerForm");
+  const toggleAddSellerBtn = document.getElementById("btnToggleAddSeller");
   const toggleInactiveBtn = document.getElementById("btnToggleInactive");
   
   tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 40px;">Buscando dados de ${currentView} (Ref: ${formatMonthKey(monthKey)})...</td></tr>`;
-  calcBar.style.display = (currentView === "lojas" || currentView === "vendedores") ? "flex" : "none";
-  addUserBar.style.display = currentView === "usuarios" ? "grid" : "none";
-  toggleInactiveBtn.style.display = currentView === "vendedores" ? "block" : "none";
+  if (calcBar) calcBar.style.display = (currentView === "lojas" || currentView === "vendedores") ? "flex" : "none";
+  if (addUserBar) addUserBar.style.display = currentView === "usuarios" ? "flex" : "none";
+  if (toggleInactiveBtn) toggleInactiveBtn.style.display = currentView === "vendedores" ? "block" : "none";
+  if (addSellerBar) addSellerBar.style.display = "none";
+  if (toggleAddSellerBtn) toggleAddSellerBtn.style.display = currentView === "vendedores" ? "inline-flex" : "none";
   addBar.style.display = currentView === "comunicados" ? "flex" : "none";
   if (addLessonBar) addLessonBar.style.display = currentView === "treinamentos" ? "flex" : "none";
 
@@ -593,6 +634,108 @@ async function addNewUser() {
     loadAdminMatrix();
   } catch (e) {
     alert("Erro ao adicionar usuário: " + e.message);
+  }
+}
+
+function toggleAddSellerForm() {
+  const bar = document.getElementById("adminAddSellerForm");
+  if (!bar) return;
+  const isHidden = bar.style.display === "none";
+  bar.style.display = isHidden ? "flex" : "none";
+  if (isHidden) {
+    const input = document.getElementById("newSellerName");
+    input?.focus();
+    input?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+}
+
+async function addNewSeller() {
+  const nameInput = document.getElementById("newSellerName");
+  const storeInput = document.getElementById("newSellerStore");
+  const photoInput = document.getElementById("newSellerPhoto");
+  const passInput = document.getElementById("newSellerPass");
+
+  const rawName = nameInput ? nameInput.value.trim() : "";
+  if (!rawName) {
+    alert("Por favor, preencha o Nome do Vendedor.");
+    nameInput?.focus();
+    return;
+  }
+
+  // Normalização: ID em maiúsculas sem espaços extras
+  const sellerId = rawName.toUpperCase();
+  const loja = storeInput ? storeInput.value.trim().toUpperCase() : "";
+  const foto = photoInput ? photoInput.value.trim() : "";
+  const senha = passInput ? passInput.value.trim() : "";
+
+  const btn = document.getElementById("btnSaveNewSeller");
+  const originalText = btn ? btn.textContent : "Criar Vendedor ➕";
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Criando no DB...";
+  }
+
+  try {
+    // 1. Cria ou atualiza o perfil base em 'vendedores/{sellerId}'
+    await setDoc(doc(db, "vendedores", sellerId), {
+      ativo: true,
+      foto: foto,
+      loja: loja,
+      criadoEm: new Date()
+    }, { merge: true });
+
+    // 2. Inicializa as métricas do mês vigente em 'vendedores/{sellerId}/metricas/{monthKey}'
+    const metricRef = doc(db, "vendedores", sellerId, "metricas", monthKey);
+    const existingMetricSnap = await getDoc(metricRef);
+    if (!existingMetricSnap.exists()) {
+      await setDoc(metricRef, {
+        faturamento: 0,
+        vendas: 0,
+        ticketMedio: 0,
+        desconto: 0,
+        avaliacoes: 0,
+        metaComissao: 0,
+        metaFaturamento: 0,
+        projeção: 0,
+        atualizadoEm: new Date()
+      });
+    }
+
+    // 3. Se foi informada uma senha, cria também a conta de login em 'usuarios/{sellerId}'
+    if (senha) {
+      await setDoc(doc(db, "usuarios", sellerId), {
+        cargo: "vendedor",
+        loja: loja,
+        senha: senha,
+        criadoEm: new Date()
+      }, { merge: true });
+    }
+
+    alert(`Vendedor "${sellerId}" criado com sucesso no banco de dados!`);
+
+    if (nameInput) nameInput.value = "";
+    if (storeInput) storeInput.value = "";
+    if (photoInput) photoInput.value = "";
+    if (passInput) passInput.value = "";
+
+    // Recarrega a tabela de vendedores para refletir a nova inserção
+    await loadAdminMatrix();
+
+    // Rola suavemente até a linha do novo vendedor e destaca
+    const newRow = document.querySelector(`tr[data-id="${sellerId}"]`);
+    if (newRow) {
+      newRow.scrollIntoView({ behavior: "smooth", block: "center" });
+      newRow.classList.add("save-success");
+      setTimeout(() => newRow.classList.remove("save-success"), 3000);
+    }
+  } catch (e) {
+    console.error("Erro ao criar vendedor no DB:", e);
+    alert("Erro ao criar vendedor: " + e.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
   }
 }
 
