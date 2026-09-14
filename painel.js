@@ -80,6 +80,7 @@ if (!user) {
 
 const normalizedRole = normalizeText(role);
 const isSeller = normalizedRole === "vendedor";
+const isAdmin = ["admin", "administrador"].includes(normalizedRole);
 const canSwitchRanking = ["admin", "administrador", "gerente"].includes(normalizedRole);
 const monthKey = getCurrentMonthKey();
 const rankings = {};

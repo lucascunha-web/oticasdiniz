@@ -931,10 +931,10 @@ async function enter(){
   if(main)main.style.display="none"; if(v)v.removeAttribute("hidden");
   if(!canRun){blocked();return;}
   let avail=[];
-  if(isAdmin||isMan||isEst)avail=await discover(); else {const my=sessionStore();if(!my){blocked();return;}avail=[my];}
+  if(isAdmin||isEst)avail=await discover(); else {const my=sessionStore();if(!my){blocked();return;}avail=[my];}
   if(!avail.length)avail=[1];
   const my=sessionStore();
-  let act=(isAdmin||isMan||isEst)?"GERAL":(my||avail[0]);
+  let act=isAdmin?"GERAL":(my||avail[0]);
   if(act==null)act="GERAL";
   cxAvail=avail; cxStore=act; cxTab="vendas";
   document.querySelectorAll(".top-nav a").forEach(a=>a.classList.remove("active"));
