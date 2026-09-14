@@ -2584,3 +2584,1777 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ==========================================================================
+   CAIXA DIARIO
+   ========================================================================== */
+.caixa-card {
+  width: min(1180px, 100%);
+  max-width: 1180px;
+  height: calc(100vh - 4vh);
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+
+.caixa-card .announcements-heading {
+  flex-wrap: wrap;
+  padding: 16px 46px 12px 20px;
+  margin: 0;
+}
+
+.caixa-heading-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.caixa-store-label {
+  color: var(--red);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: rgba(215, 25, 32, 0.08);
+  border: 1px solid rgba(215, 25, 32, 0.18);
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.caixa-tabs {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.caixa-tab-btn {
+  background: var(--bg-muted);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.caixa-tab-btn:hover {
+  color: var(--red);
+  border-color: var(--red);
+}
+
+.caixa-tab-btn.active {
+  background: var(--red);
+  border-color: var(--red);
+  color: #ffffff;
+}
+
+.caixa-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 20px 20px;
+}
+
+.caixa-view {
+  width: 100%;
+}
+
+/* --- Toolbar (Loja + status) --- */
+.caixa-toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 18px 0 0;
+}
+
+.caixa-store-switch {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: min(260px, 100%);
+}
+
+.caixa-store-switch label {
+  font-size: 0.66rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.caixa-store-switch .stock-select {
+  height: 42px;
+}
+
+.caixa-status {
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 2px;
+}
+
+.caixa-meta-text {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: right;
+}
+
+.caixa-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.caixa-status-pill .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.caixa-status-pill.open {
+  background: rgba(33, 189, 91, 0.13);
+  color: #159a48;
+}
+
+.caixa-status-pill.closed {
+  background: rgba(120, 127, 140, 0.14);
+  color: var(--ink);
+}
+
+.caixa-status-pill.none {
+  background: rgba(215, 25, 32, 0.09);
+  color: var(--red);
+}
+
+[data-theme="dark"] .caixa-status-pill.closed {
+  color: var(--muted);
+}
+
+/* --- Botoes de acao --- */
+.caixa-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 16px 0 0;
+}
+
+.caixa-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 20px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.caixa-btn:hover { transform: translateY(-1px); }
+
+.caixa-btn.primary { background: var(--btn-dark-bg); color: #ffffff !important; }
+.caixa-btn.primary:hover { background: var(--red); }
+
+.caixa-btn.success { background: var(--green); color: #ffffff !important; }
+.caixa-btn.success:hover { filter: brightness(0.95); }
+
+.caixa-btn.danger { background: var(--red); color: #ffffff !important; }
+.caixa-btn.danger:hover { filter: brightness(0.95); }
+
+.caixa-btn.ghost {
+  background: var(--bg-muted);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+.caixa-btn.ghost:hover { border-color: var(--red); color: var(--red); }
+
+/* --- Resumo / cards --- */
+.caixa-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding: 20px 0 4px;
+}
+
+.caixa-summary-card {
+  background: var(--bg-muted);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 13px 16px;
+  min-width: 0;
+}
+
+.caixa-summary-card > span {
+  display: block;
+  font-size: 0.66rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.caixa-summary-card strong {
+  display: block;
+  font-size: 1.22rem;
+  line-height: 1.15;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.caixa-summary-card .positive { color: #159a48; }
+.caixa-summary-card .negative { color: var(--red); }
+
+/* --- Por metodo --- */
+.caixa-methods {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+  gap: 10px;
+  padding-top: 12px;
+}
+
+.caixa-method-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  min-width: 0;
+}
+
+.caixa-method-card .m-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.caixa-method-card .m-value {
+  font-size: 0.86rem;
+  font-weight: 900;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.caixa-method-card .m-value.pos { color: #159a48; }
+.caixa-method-card .m-value.neg { color: var(--red); }
+
+/* --- Lista de lancamentos --- */
+.caixa-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 26px 0 10px;
+}
+
+.caixa-list-head h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.caixa-list-head span {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.caixa-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.caixa-entry {
+  display: grid;
+  grid-template-columns: 64px 82px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 11px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  min-width: 0;
+}
+
+.caixa-entry.excluded {
+  opacity: 0.62;
+  background: var(--bg-muted);
+}
+
+.caixa-entry .ce-time {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.caixa-entry .ce-tipo {
+  justify-self: start;
+  font-size: 0.6rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.caixa-entry.entrada .ce-tipo { background: rgba(33, 189, 91, 0.14); color: #159a48; }
+.caixa-entry.saida .ce-tipo { background: rgba(215, 25, 32, 0.1); color: var(--red); }
+
+.caixa-entry .ce-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.caixa-entry .ce-valor {
+  font-size: 0.96rem;
+  font-weight: 900;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.caixa-entry.entrada .ce-valor { color: #159a48; }
+.caixa-entry.saida .ce-valor { color: var(--red); }
+
+.caixa-entry .ce-desc {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 600;
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.caixa-entry .ce-desc .m-chip {
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 0.62rem;
+  background: var(--bg-muted);
+  border: 1px solid var(--line);
+  padding: 2px 7px;
+  border-radius: 6px;
+  color: var(--ink);
+}
+
+.caixa-entry .ce-desc .excl-badge {
+  font-weight: 900;
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  background: rgba(215, 25, 32, 0.12);
+  color: var(--red);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.caixa-entry .ce-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 0;
+}
+
+.caixa-entry .ce-responsible {
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: right;
+}
+
+.caixa-entry .ce-excl-meta {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--red);
+  text-align: right;
+  font-style: italic;
+}
+
+.caixa-entry .ce-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.caixa-entry .ce-btn {
+  background: var(--bg-muted);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--ink);
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.caixa-entry .ce-btn:hover { border-color: var(--red); color: var(--red); }
+.caixa-entry .ce-btn.del:hover { background: var(--red); border-color: var(--red); color: #fff; }
+
+.caixa-empty {
+  text-align: center;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 22px 10px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  background: var(--bg-muted);
+}
+
+/* --- Cabecalho do dia (dia detalhado) --- */
+.caixa-day-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 0 4px;
+  flex-wrap: wrap;
+}
+
+.caixa-back-btn {
+  background: var(--bg-muted);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 0.74rem;
+  padding: 9px 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.caixa-back-btn:hover { border-color: var(--red); color: var(--red); }
+
+.caixa-day-title {
+  font-size: 0.8rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--red);
+}
+
+/* --- Calendario --- */
+.caixa-cal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 20px 0 4px;
+}
+
+.caixa-cal-title {
+  min-width: 200px;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.caixa-cal-nav {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--bg-muted);
+  color: var(--ink);
+  font-size: 1.1rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.caixa-cal-nav:hover { border-color: var(--red); color: var(--red); }
+
+.caixa-cal-legend {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  padding: 8px 0 2px;
+}
+
+.caixa-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.caixa-legend-item i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.caixa-legend-item i.aberto { background: var(--green); }
+.caixa-legend-item i.fechado { background: var(--muted); }
+.caixa-legend-item i.vazio { background: transparent; border: 1px solid var(--line); }
+
+.caixa-cal-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.caixa-cal-week span {
+  text-align: center;
+  font-size: 0.62rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 6px 0;
+}
+
+.caixa-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.caixa-cal-cell {
+  min-height: 68px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--bg-muted);
+  padding: 7px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  min-width: 0;
+}
+
+.caixa-cal-cell:hover { border-color: var(--red); box-shadow: 0 6px 16px rgba(20, 28, 44, 0.08); transform: translateY(-1px); }
+
+.caixa-cal-cell .day-num {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.caixa-cal-cell .cal-dot {
+  align-self: flex-start;
+  font-size: 0.55rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.caixa-cal-cell .cal-dot.aberto { background: rgba(33, 189, 91, 0.16); color: #159a48; }
+.caixa-cal-cell .cal-dot.fechado { background: rgba(120, 127, 140, 0.15); color: var(--ink); }
+
+[data-theme="dark"] .caixa-cal-cell .cal-dot.fechado { color: var(--muted); }
+
+.caixa-cal-cell.other-month { opacity: 0.35; }
+
+.caixa-cal-cell.future { cursor: not-allowed; }
+.caixa-cal-cell.future:hover { border-color: var(--line); transform: none; box-shadow: none; }
+
+.caixa-cal-cell.today { box-shadow: inset 0 0 0 2px var(--red); }
+
+/* --- Campos e modais do caixa --- */
+.caixa-modal-field { margin-bottom: 14px; }
+
+.caixa-modal-field > label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.caixa-modal-field .caixa-static {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.caixa-modal-field input[type="text"],
+.caixa-modal-field input[type="number"],
+.caixa-modal-field textarea,
+.caixa-modal-field select {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.92rem;
+  padding: 11px 12px;
+  outline: none;
+}
+
+.caixa-modal-field textarea { resize: vertical; min-height: 74px; }
+
+.caixa-modal-field input:focus,
+.caixa-modal-field textarea:focus,
+.caixa-modal-field select:focus {
+  border-color: var(--red);
+}
+
+.caixa-lanc-tipo-row {
+  display: flex;
+  gap: 8px;
+}
+
+.caixa-lanc-tipo-btn {
+  flex: 1;
+  height: 46px;
+  border-radius: 9px;
+  border: 2px solid var(--line);
+  background: var(--bg-muted);
+  color: var(--muted);
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.caixa-lanc-tipo-btn[data-tipo="entrada"].active {
+  background: rgba(33, 189, 91, 0.14);
+  border-color: var(--green);
+  color: #159a48;
+}
+
+.caixa-lanc-tipo-btn[data-tipo="saida"].active {
+  background: rgba(215, 25, 32, 0.1);
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.caixa-modal-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.caixa-modal-row > * { flex: 1 1 160px; }
+
+.caixa-print-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 14px 0 6px;
+}
+
+.caixa-print-summary .caixa-summary-card { padding: 11px 13px; }
+.caixa-print-summary .caixa-summary-card strong { font-size: 1rem; }
+
+/* --- Aviso de lancamento excluido (regua) --- */
+.caixa-entry .ce-desc .excl-why {
+  font-style: italic;
+  font-weight: 700;
+  color: var(--red);
+  font-size: 0.66rem;
+  flex-basis: 100%;
+}
+
+/* --- Responsivo --- */
+@media (max-width: 768px) {
+  .announcements-card.caixa-card {
+    padding: 0 !important;
+  }
+
+  .caixa-card .announcements-heading {
+    padding: 14px 46px 12px 14px;
+    gap: 8px;
+  }
+
+  .caixa-heading-left { gap: 6px; }
+  .caixa-heading-left h2 { font-size: 1rem; }
+  .caixa-tabs { margin-left: 0; width: 100%; }
+  .caixa-tab-btn { flex: 1; padding: 9px 8px; }
+
+  .caixa-body { padding: 0 12px 12px; }
+  .caixa-toolbar { padding-top: 14px; }
+  .caixa-status { justify-content: flex-start; min-width: 100%; }
+  .caixa-meta-text { text-align: left; }
+
+  .caixa-summary-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .caixa-summary-card { padding: 11px 12px; }
+  .caixa-summary-card strong { font-size: 1.05rem; }
+
+  .caixa-actions { padding-top: 12px; }
+  .caixa-btn { flex: 1 1 auto; min-width: 140px; }
+
+  .caixa-entry {
+    grid-template-columns: 52px 1fr;
+    gap: 6px 10px;
+    align-items: start;
+    padding: 10px 12px;
+  }
+
+  .caixa-entry .ce-tipo { justify-self: start; }
+  .caixa-entry .ce-meta {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .caixa-entry .ce-responsible { text-align: left; }
+  .caixa-entry .ce-excl-meta { text-align: left; }
+  .caixa-entry .ce-actions { margin-left: auto; }
+
+  .caixa-cal-cell { min-height: 56px; padding: 5px 4px; }
+  .caixa-cal-title { min-width: 0; order: 2; width: 100%; }
+  .caixa-cal-toolbar { padding-top: 16px; }
+}
+
+@media (max-width: 480px) {
+  .caixa-summary-grid { grid-template-columns: repeat(2, 1fr); }
+  .caixa-btn { min-width: calc(50% - 5px); }
+  .caixa-cal-cell .cal-dot { font-size: 0.5rem; padding: 1px 5px; }
+}
+
+/* --- Ajustes finos do caixa (renderizado por JS) --- */
+.caixa-statusline {
+  flex: none;
+  width: 100%;
+  min-width: 0;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 0 2px;
+}
+
+.caixa-statusline .caixa-meta-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+}
+
+.caixa-statusline .caixa-status-pill {
+  flex: none;
+}
+
+/* ==========================================================================
+   VISÃO PRÓPRIA DO CAIXA (Opção B · sem modal / dentro do painel)
+   caixa.js renderiza o conteúdo interno de #caixaView.
+   ========================================================================== */
+.caixa-shell {
+  width: min(1600px, 95%);
+  margin: 0 auto;
+  padding: 28px 0 48px;
+}
+
+.caixa-shell[hidden] {
+  display: none;
+}
+
+/* Card principal do caixa dentro da view própria */
+.caixa-shell .cx-card {
+  background: var(--surface);
+  border: 1px solid rgba(237, 240, 245, 0.92);
+  border-radius: 8px;
+  box-shadow: var(--soft-shadow);
+  padding: 20px 24px;
+  animation: pageEnter 0.45s ease both;
+}
+
+.caixa-shell .cx-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.caixa-shell .cx-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(1.15rem, 2vw, 1.4rem);
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.caixa-shell .cx-sub {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.caixa-shell .cx-loja-tag {
+  color: var(--red);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: rgba(215, 25, 32, 0.08);
+  border: 1px solid rgba(215, 25, 32, 0.18);
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.caixa-shell .cx-grow { flex: 1; }
+
+.caixa-shell .cx-status-delimeter {
+  color: var(--line);
+  font-weight: 800;
+}
+
+.caixa-shell .cx-layout {
+  padding-top: 16px;
+}
+
+/* Barra de acesso bloqueado */
+.caixa-shell .cx-blocked {
+  text-align: center;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 46px 20px;
+  line-height: 1.7;
+}
+
+/* Etapa em construção (placeholder) */
+.caixa-shell .cx-coming {
+  margin-top: 18px;
+  padding: 18px;
+  background: var(--bg-muted);
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* ---- Ajustes/novidades Etapa 2 (navegar por dia, abrir, lançamentos) ------- */
+.caixa-shell .daterow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 14px 0 4px;
+  flex-wrap: wrap;
+}
+.caixa-shell .daterow .caixa-cal-nav {
+  width: auto;
+  height: auto;
+  border-radius: 6px;
+  padding: 9px 14px;
+  display: inline-flex;
+}
+.caixa-shell .date-nav-btn,
+.caixa-shell .date-today-btn {
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 0.82rem;
+  background: var(--bg-muted);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+.caixa-shell .date-nav-btn { padding: 8px 12px; }
+.caixa-shell .date-nav-btn:hover { border-color: var(--red); color: var(--red); }
+
+/* ---- Etapa 3 · categorias (Vendas/Entregas), planilha OS, rodapé, FAB --- */
+.caixa-shell .cvmtab {
+  display: flex;
+  gap: 6px;
+  margin: 14px 0 10px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 2px;
+}
+.caixa-shell .cvm {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 0.9rem;
+  padding: 8px 14px;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+}
+.caixa-shell .cvm:hover { color: var(--ink); }
+.caixa-shell .cvm.on {
+  color: var(--red);
+  border-bottom: 3px solid var(--red);
+  background: rgba(215, 25, 32, 0.05);
+}
+.caixa-shell .cv-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.caixa-shell table.cvt {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  min-width: 480px;
+}
+.caixa-shell .cvt th,
+.caixa-shell .cvt td {
+  border-bottom: 1px solid var(--line);
+  padding: 9px 12px;
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.caixa-shell .cvt thead th {
+  background: var(--bg-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  font-weight: 900;
+}
+.caixa-shell .cvt th.th-os,
+.caixa-shell .cvt td.os {
+  font-weight: 900;
+  min-width: 90px;
+}
+.caixa-shell .cvt td.c-money {
+  font-weight: 800;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.caixa-shell .cvt td.c-seller { color: var(--ink); }
+.caixa-shell .cvt td.c-carne { color: var(--red); }
+.caixa-shell .cvt td.empty {
+  text-align: center;
+  color: var(--muted);
+  font-weight: 700;
+  padding: 22px 12px;
+}
+.caixa-shell .cvt tfoot .tf-soma td {
+  background: var(--bg-muted);
+  font-weight: 900;
+  text-align: right;
+  border-top: 2px solid var(--line);
+  border-bottom: none;
+}
+.caixa-shell .cvt tfoot .tf-soma td:first-child { text-align: left; }
+.caixa-shell .cvt tfoot .tf-tot td {
+  background: var(--surface);
+  border-top: 2px solid var(--line);
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 12px;
+  line-height: 1.9;
+}
+.caixa-shell .cvt .kv { color: var(--muted); font-weight: 700; margin: 0 4px 0 12px; }
+.caixa-shell .cvt .kv:first-child { margin-left: 0; }
+.caixa-shell .cvt .c-carne b { color: var(--red); }
+.caixa-shell .cx-fab {
+  position: fixed;
+  right: 34px;
+  bottom: 34px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: none;
+  background: var(--red);
+  color: #fff;
+  font-size: 28px;
+  font-weight: 900;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+  z-index: 60;
+  line-height: 1;
+}
+.caixa-shell .cx-fab:hover { transform: scale(1.06); }
+
+.caixa-shell .date-today-btn {
+  min-width: 210px;
+  padding: 10px 14px;
+  text-transform: capitalize;
+}
+.caixa-shell .date-today-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.caixa-shell .cx-statusblock {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 2px;
+}
+.caixa-shell .cx-meta-text {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.6;
+}
+.caixa-shell .cx-resumo { margin: 6px 0 4px; }
+.caixa-shell .cx-methods {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  padding: 8px 0 2px;
+}
+.caixa-shell .cx-sub-tag {
+  align-self: center;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  opacity: 0.85;
+}
+.caixa-shell .cx-lanc-title {
+  font-weight: 900;
+  font-size: 0.78rem;
+  color: var(--ink);
+  margin: 20px 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.caixa-shell .cx-list {
+  display: grid;
+  gap: 6px;
+}
+.caixa-shell .caixa-warn,
+.caixa-shell .cx-warn {
+  background: rgba(215, 25, 32, 0.08);
+  color: var(--red);
+  border: 1px solid rgba(215, 25, 32, 0.18);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.5;
+  margin: 4px 0 10px;
+}
+.caixa-shell .cx-row {
+  display: grid;
+  grid-template-columns: 64px 68px 86px 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 9px 12px;
+  background: var(--bg-muted);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.caixa-shell .cx-row.in { border-left-color: #159a48; }
+.caixa-shell .cx-row.out { border-left-color: var(--red); }
+.caixa-shell .cx-row-time { color: var(--muted); }
+.caixa-shell .cx-row-tipo { color: var(--ink); }
+.caixa-shell .cx-row-metodo {
+  color: var(--muted);
+  background: rgba(120, 127, 140, 0.12);
+  border-radius: 999px;
+  padding: 2px 8px;
+  text-align: center;
+  align-self: start;
+}
+.caixa-shell .cx-row-desc {
+  color: var(--ink);
+  white-space: normal;
+  word-break: break-word;
+}
+.caixa-shell .cx-row-who { color: var(--muted); font-size: 0.72rem; }
+.caixa-shell .cx-row-val { text-align: right; white-space: nowrap; }
+.caixa-shell .cx-row-val.pos { color: #159a48; }
+.caixa-shell .cx-row-val.neg { color: var(--red); }
+
+@media (max-width: 720px) {
+  .caixa-shell .cx-row {
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas:
+      "time valor who"
+      "metodo desc .";
+  }
+  .caixa-shell .cx-row .cx-row-time { grid-area: time; }
+  .caixa-shell .cx-row .cx-row-val { grid-area: valor; }
+  .caixa-shell .cx-row .cx-row-who { grid-area: who; }
+  .caixa-shell .cx-row .cx-row-metodo { grid-area: metodo; justify-self: start; }
+  .caixa-shell .cx-row .cx-row-desc { grid-area: desc; }
+  .caixa-shell .cx-row .cx-row-tipo { display: none; }
+}
+
+/* =============== ETAPAS 3–6 · planilha OS + modal + consolidado ============ */
+.caixa-shell .caixa-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.caixa-shell .caixa-actions .caixa-btn.ghost { background:#fff; border:1px solid var(--line); color:var(--ink); }
+.caixa-shell table.cvtable { width:100%; border-collapse:collapse; font-size:.85rem; min-width:520px; }
+.caixa-shell .cvtable th,.caixa-shell .cvtable td { border-bottom:1px solid var(--line); padding:8px 12px; text-align:left; white-space:nowrap; }
+.caixa-shell .cvtable thead th { background:var(--bg-muted); text-transform:uppercase; font-size:.72rem; letter-spacing:.03em; color:var(--muted); font-weight:900; }
+.caixa-shell .cvtable td.os{ font-weight:900; min-width:80px; }
+.caixa-shell .cvtable td.m{ text-align:right; font-weight:800; font-variant-numeric:tabular-nums; }
+.caixa-shell .cvtable td.c-carne{ color:var(--red); }
+.caixa-shell .cvtable tfoot .tf-somas td{ background:var(--bg-muted); font-weight:900; border-top:2px solid var(--line); }
+.caixa-shell .cvtable tfoot .tf-meta td{ border-top:2px solid var(--line); font-weight:800; padding:12px; background:var(--surface); }
+.caixa-shell .kv{ color:var(--muted); font-weight:700; margin-left:12px; }
+.caixa-shell .kv:first-child{ margin-left:0; }
+.caixa-shell .caixa-status-pill{ display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:4px 12px; font-size:.74rem; font-weight:900; }
+.caixa-shell .caixa-status-pill .dot{ width:9px;height:9px;border-radius:50%;display:inline-block; }
+.caixa-shell .caixa-status-pill.open{ background:rgba(21,154,72,.14); color:#0d7a3a; }
+.caixa-shell .caixa-status-pill.open .dot{ background:#159a48; }
+.caixa-shell .caixa-status-pill.closed{ background:rgba(215,25,32,.12); color:var(--red); }
+.caixa-shell .caixa-status-pill.closed .dot{ background:var(--red); }
+.caixa-shell .caixa-status-pill.none{ background:rgba(120,127,140,.14); color:var(--muted); }
+.caixa-shell .caixa-status-pill.none .dot{ background:var(--muted); }
+.caixa-shell .sm{ margin-top:14px; padding:14px; border:1px solid var(--line); border-radius:10px; background:var(--surface); }
+.caixa-shell .sm h3{ margin:0 0 10px; font-size:.9rem; }
+.caixa-shell table.cvtable.sm{ min-width:600px; }
+.caixa-shell .cvm { border:1px solid var(--line); background:#fff; color:var(--muted); font-weight:800; font-size:.82rem; padding:7px 14px; cursor:pointer; border-radius:8px; }
+.caixa-shell .cvm.on { border-color:var(--red); color:var(--red); background:rgba(215,25,32,.06); }
+.caixa-shell .daterow{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:12px 0; }
+.caixa-shell .caixa-cal-nav{ background:#fff; border:1px solid var(--line); color:var(--ink); border-radius:8px; cursor:pointer; padding:8px 12px; }
+.caixa-shell .date-today-btn{ min-width:210px; padding:9px 12px; border-radius:8px; border:1px solid var(--line); background:#fff; cursor:pointer; text-transform:capitalize; }
+.caixa-shell .date-today-btn:disabled{ opacity:.6; cursor:default; }
+
+/* MODAL – Novo OS (Etapa 4) */
+.cx-modal{ position:fixed; inset:0; background:rgba(10,12,18,.55); display:flex; align-items:center; justify-content:center; z-index:200; padding:16px; }
+.cx-modal-card{ background:#fff; border-radius:14px; width:min(620px,96vw); max-height:92vh; overflow:auto; padding:20px; box-shadow:0 16px 44px rgba(0,0,0,.3); position:relative; }
+.cx-modal-x{ position:absolute; top:10px; right:14px; border:none; background:none; font-size:22px; cursor:pointer; color:var(--muted); line-height:1; }
+.cx-modal-card form label{ display:block; margin:10px 0 4px; font-weight:800; font-size:.8rem; color:var(--ink); }
+.cx-modal-card form input[type=number],.cx-modal-card form input[type=tel],.cx-modal-card form input[type=text],.cx-modal-card form select{
+  width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:8px; margin-top:4px; font-size:.9rem; box-sizing:border-box; }
+.cx-modal-card fieldset{ border:1px solid var(--line); border-radius:10px; margin-top:12px; padding:12px 14px; }
+.cx-modal-card legend{ font-weight:900; font-size:.74rem; color:var(--muted); padding:0 6px; text-transform:uppercase; }
+.cvm-tool{ display:flex; gap:6px; margin-bottom:8px; }
+.cvm-tool .cvm.mode{ flex:1; padding:9px 4px; }
+.pay-grid{ display:grid; grid-template-columns:1fr 1fr; gap:6px 14px; }
+.chk{ display:flex !important; align-items:center; gap:8px; font-weight:800; }
+.chk input{ width:auto !important; margin:0 !important; }
+.tot-row{ margin-top:10px; display:flex; align-items:baseline; gap:10px; font-weight:900; }
+.tot-row b{ color:var(--red); font-size:1.1rem; }
+.tot-row .nota{ color:var(--muted); font-weight:600; font-size:.74rem; }
+.cx-modal-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
+.caixa-btn{ border:none; border-radius:9px; padding:10px 16px; font-weight:900; cursor:pointer; }
+.caixa-btn.primary{ background:var(--red); color:#fff; }
+.caixa-btn.ghost{ background:#fff; border:1px solid var(--line); color:var(--ink); }
+
+/* refinamentos modal Novos OS — cliente + vendedor + topo */
+.cx-modal-card .cvm-tool{ margin-bottom:6px; }
+.cli-field .cli-srclb,
+.cli-field > label{ display:flex; flex-direction:column; gap:4px; font-weight:800; font-size:.8rem; margin:10px 0 2px; }
+.cli-src{ display:flex; gap:6px; }
+.cli-src input{ flex:1; }
+.cli-field input#f_nome,.cli-field input#f_contato{ width:100%; margin-top:4px; }
+.cli-new{ border:none; background:#fff; border:1px solid var(--line); color:var(--ink); border-radius:8px; padding:8px 12px; font-weight:800; cursor:pointer; flex:0 0 auto; }
+.cli-new:hover{border-color:var(--red); color:var(--red);}
+.cli-hint{ display:block; margin-top:6px; color:#159a48; font-weight:800; font-size:.76rem; min-height:1em; }
+.cli-field select#f_vend{ width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:8px; margin-top:4px; }
+.cvm-tool.ven-box{ margin-top:10px; }
+
+/* ==== Switch Venda/Entrega no modal (Novo OS) ==== */
+.cx-modal-card .cx-mode{ margin:0 0 10px; }
+.cx-modal-card .cx-mode-cap{ display:block; font-size:.7rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; }
+.cx-modal-card .cx-switch{
+  position:relative; display:flex; align-items:center;
+  height:48px; padding:4px; border-radius:999px;
+  background:#eceff4; border:1px solid var(--line,#e2e6ec);
+  box-shadow:inset 0 1px 3px rgba(0,0,0,.06);
+}
+.cx-modal-card .cx-sw-thumb{
+  position:absolute; top:4px; left:4px;
+  width:calc(50% - 4px); height:calc(100% - 8px);
+  border-radius:999px; background:#fff; z-index:1;
+  box-shadow:0 2px 8px rgba(20,28,44,.18), 0 0 0 1px rgba(0,0,0,.03);
+  transition:transform .26s cubic-bezier(.4,0,.2,1);
+}
+.cx-modal-card .cx-sw-opt{
+  position:relative; z-index:2; flex:0 0 50%;
+  height:100%; background:transparent; border:none;
+  color:#7a828d; font-weight:800; font-size:.9rem; letter-spacing:.02em;
+  text-transform:uppercase; cursor:pointer; border-radius:999px;
+  transition:color .2s ease; font-family:inherit;
+}
+.cx-modal-card .cx-sw-opt.on{ color:var(--red); }
+.cx-modal-card .cx-sw-opt:not(.on):hover{ color:#3b4450; }
+.cx-modal-card .cx-sw-opt:focus{ outline:none; }
+[data-theme="dark"] .cx-modal-card .cx-switch{ background:#283244; border-color:#334155; }
+[data-theme="dark"] .cx-modal-card .cx-sw-thumb{ background:#0f172a; }
+[data-theme="dark"] .cx-modal-card .cx-sw-opt{ color:#9aa5b1; }
+[data-theme="dark"] .cx-modal-card .cx-sw-opt.on{ color:#f18c90; }
+[data-theme="dark"] .cx-modal-card .cx-sw-opt:not(.on):hover{ color:#e2e8f0; }
+
+/* Cards de totais no topo da planilha do caixa */
+.cx-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:4px 0 6px;}
+.cx-kpi{background:linear-gradient(135deg,#fff,#fbf7f6);border:1px solid var(--line,#e4d8d2);border-left:4px solid #9a1f26;border-radius:10px;padding:12px 10px;text-align:center;box-shadow:0 2px 6px rgba(60,0,8,.06);}
+.cx-kpi span{display:block;font-size:.72rem;letter-spacing:.03em;text-transform:uppercase;color:#8c7c76;font-weight:800;}
+.cx-kpi b{display:block;margin-top:4px;font-size:1.45rem;color:#2b1a15;}
+.cx-kpi.fat{border-left-color:#2e7d32;background:linear-gradient(135deg,#fff,#f3fbf4);}
+.cx-kpi.meta{border-left-color:#8a6d3b;}
+.cx-kpi.falta{border-left-color:#b02a30;}
+.cx-means{margin-top:8px;}
+.cx-means-head{font-weight:800;font-size:.76rem;text-transform:uppercase;letter-spacing:.05em;color:#8c7c76;margin-bottom:6px;}
+.cx-means-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+.cm-body{border:1px solid var(--line,#e4d8d2);border-top-width:3px;border-radius:9px;background:#fff;padding:8px;text-align:center;}
+.cm-body.dinheiro{border-top-color:#4c9f38;} .cm-body.pix{border-top-color:#26a69a;} .cm-body.cartao{border-top-color:#9a1f26;}
+.cm-body.carne{border-top-color:#8a6d3b;} .cm-body.convenio{border-top-color:#b05a1a;}
+.cm-lb{display:block;font-weight:800;font-size:.72rem;color:#8c7c76;}
+.cm-val{display:block;font-size:1.2rem;margin-top:3px;color:#2b1a15;}
+@media(max-width:720px){.cx-means-grid{grid-template-columns:repeat(2,1fr);}.cx-kpis{grid-template-columns:1fr;}}
+
+/* Calendário superior direito + botão flutuante novo OS/Entrega */
+.cx-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.cx-datechip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line,#e8dcd5);background:#fff;border-radius:999px;padding:5px 8px;color:#8c2a30;font-weight:800;font-size:.72rem;}
+.cx-datechip input{appearance:none;-webkit-appearance:none;border:none;background:transparent;color:#66141a;font-weight:800;font-size:.82rem;font-family:inherit;outline:none;padding:0 2px;}
+.cx-datechip input::-webkit-calendar-picker-indicator{opacity:.6;cursor:pointer;}
+
+/* FAB + menu pequeno */
+.cxfab{position:fixed;right:20px;bottom:26px;z-index:140;display:flex;flex-direction:column;align-items:flex-end;gap:0;}
+.cxfab[hidden]{display:none;}
+.cxfab-main{width:58px;height:58px;border-radius:50%;border:none;cursor:pointer;font-weight:800;font-size:1.8rem;color:#fff;
+  background:linear-gradient(135deg,#b02a30,#7d161d) !important;box-shadow:0 8px 20px rgba(180,40,48,.45);transition:transform .15s ease;}
+.cxfab-main:active{transform:scale(.94);}
+.cxfab-menu{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;visibility:hidden;opacity:0;transform:translateY(6px);transition:.16s ease;}
+.cxfab.open .cxfab-menu{visibility:visible;opacity:1;transform:translateY(0);}
+.fab-opt{border:1px solid var(--line);background:#fff;color:#5c2025;font-weight:800;border-radius:999px;padding:8px 14px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.08);}
+.fab-opt:hover{background:#7d161d;color:#fff;}
+@media(max-width:760px){ .cxfab{right:14px;bottom:18px;} .cxfab-main{width:54px;height:54px;} }
+
+/* --- FAB único, maior e mais animado (sem submenu) --- */
+.caixa-shell .cxfab{right:26px;bottom:30px;}
+.caixa-shell .cxfab-main{
+  width:74px;height:74px;font-size:2.6rem;font-weight:900;line-height:1;
+  border:3px solid rgba(255,255,255,.9);
+  background:radial-gradient(circle at 32% 28%, #ff6a6f, #c10f1a 62%, #7a0b10) !important;
+  box-shadow:0 12px 30px rgba(180,20,30,.5), 0 0 0 0 rgba(215,25,32,.4);
+  animation:cxFabPulse 2.2s ease-out infinite;
+}
+.caixa-shell .cxfab-main:hover{transform:scale(1.12) rotate(6deg);}
+.caixa-shell .cxfab-main:active{transform:scale(.9) rotate(0);}
+@keyframes cxFabPulse{
+  0%{box-shadow:0 12px 30px rgba(180,20,30,.5), 0 0 0 0 rgba(215,25,32,.55);}
+  70%{box-shadow:0 12px 30px rgba(180,20,30,.5), 0 0 0 24px rgba(215,25,32,0);}
+  100%{box-shadow:0 12px 30px rgba(180,20,30,.5), 0 0 0 0 rgba(215,25,32,0);}
+}
+@media(max-width:760px){ .caixa-shell .cxfab{right:16px;bottom:20px;} .caixa-shell .cxfab-main{width:62px;height:62px;font-size:2.1rem;} }
+
+/* ==========================================================================
+   CAIXA · VENDAS como planilha (compacta, sem espaços vazios)
+   ========================================================================== */
+.caixa-shell .cv-wrap{margin:0;padding:0;border:1px solid var(--line);border-radius:8px;overflow:auto;}
+.caixa-shell table.cvtable{border-collapse:collapse;width:100%;min-width:560px;font-size:.84rem;margin:0;line-height:1.3;background:var(--surface);}
+.caixa-shell .cvtable th,.caixa-shell .cvtable td{border:1px solid var(--line);padding:7px 10px;text-align:left;white-space:nowrap;vertical-align:middle;}
+.caixa-shell .cvtable thead th{background:var(--bg-muted);text-transform:uppercase;font-size:.68rem;letter-spacing:.04em;color:var(--muted);font-weight:900;border-bottom:2px solid #d7dce4;}
+.caixa-shell .cvtable td.os,.caixa-shell .cvtable th[scope="col"]:first-child{font-weight:900;color:var(--ink);}
+.caixa-shell .cvtable td.m,.caixa-shell .cvtable tfoot .tf-somas td{text-align:right;font-weight:800;font-variant-numeric:tabular-nums;}
+.caixa-shell .cvtable tbody tr:nth-child(even){background:rgba(0,0,0,.025);}
+[data-theme="dark"] .caixa-shell .cvtable tbody tr:nth-child(even){background:rgba(255,255,255,.03);}
+.caixa-shell .cvtable tbody tr:hover{background:rgba(215,25,32,.05);}
+.caixa-shell .cvtable td.c-carne,.caixa-shell .cvtable td.fat-col{color:#159a48;}
+.caixa-shell .cvtable td.carne-v{color:#8a6d3b;}
+.caixa-shell .cvtable tfoot .tf-somas td{background:var(--bg-muted);font-weight:900;border-top:2px solid #d7dce4;color:var(--ink);}
+.caixa-shell .cvtable tfoot .fat-col{color:var(--red);}
+[data-theme="dark"] .caixa-shell .cvtable thead th,
+[data-theme="dark"] .caixa-shell .cvtable tfoot .tf-somas td,
+[data-theme="dark"] .caixa-shell .cvtable th,
+[data-theme="dark"] .caixa-shell .cvtable td{border-color:#334155;}
+
+/* espremer vazios entre blocos da visão e da planilha */
+.caixa-shell .cx-kpis{margin:2px 0 10px;gap:8px;}
+.caixa-shell .cx-means{margin-top:4px;}
+.caixa-shell .cx-means-grid{gap:6px;}
+.caixa-shell .cx-means-head{margin-bottom:4px;}
+
+/* ---- Toolbar do caixa em uma única linha (loja + fechar + calendário) ---- */
+.caixa-shell .cx-toolbar{align-items:center;flex-wrap:nowrap;}
+.caixa-shell .cx-tb-info{min-width:0;}
+.caixa-shell .cx-tb-info .cx-sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.caixa-shell .cx-ctl{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:nowrap;}
+.caixa-shell .cx-ctl-item{display:inline-flex;align-items:center;flex:0 0 auto;}
+.caixa-shell .cx-ctl-item .cx-loja-tag{white-space:nowrap;}
+.caixa-shell .cx-ctl-item .stock-select{
+  width:auto;min-width:170px;height:38px;
+  border-radius:8px;border:1px solid var(--line);
+  background:var(--surface);color:var(--ink);font-family:inherit;font-weight:700;font-size:.85rem;cursor:pointer;
+}
+.caixa-shell .cx-ctl-item.cx-date input[type=date]{
+  height:38px;min-width:142px;padding:0 10px;
+  border:1px solid var(--line);border-radius:8px;
+  background:var(--surface);color:var(--ink);font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;
+}
+/* Fechar Caixa pequeno, na mesma linha */
+.caixa-shell .cx-ctl .caixa-btn.cx-close{
+  min-height:38px;height:38px;padding:0 16px;margin:0;
+  font-size:.72rem;letter-spacing:.03em;white-space:nowrap;text-transform:uppercase;
+}
+.caixa-shell .cx-ctl .caixa-btn.cx-close:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+@media (max-width: 860px){
+  .caixa-shell .cx-toolbar{align-items:flex-start;flex-wrap:wrap;}
+  .caixa-shell .cx-ctl{flex-wrap:wrap;justify-content:flex-start;}
+  .caixa-shell .cx-ctl-item .stock-select{min-width:150px;}
+}
+@media (max-width: 480px){
+  .caixa-shell .cx-ctl-item.cx-date input[type=date]{min-width:0;width:100%;}
+  .caixa-shell .cx-ctl{display:grid;grid-template-columns:1fr 1fr;width:100%;}
+  .caixa-shell .cx-ctl-item{width:100%;}
+  .caixa-shell .cx-ctl-item.cx-store{grid-column:1/3;order:2;}
+  .caixa-shell .cx-ctl-item .stock-select{width:100%;}
+}
+
+/* ---- Centraliza os elementos da planilha de dados de vendas ---- */
+.caixa-shell .cvtable{text-align:center;}
+.caixa-shell .cvtable thead th,
+.caixa-shell .cvtable th{text-align:center !important;}
+.caixa-shell .cvtable tbody td{text-align:center !important;}
+.caixa-shell .cvtable td.os,
+.caixa-shell .cvtable td.m{text-align:center !important;}
+.caixa-shell .cvtable tfoot .tf-somas td{text-align:center !important;}
+.caixa-shell .cvtable tfoot td{text-align:center !important;}
+.caixa-shell .cvtable .caixa-empty{text-align:center;}
+
+/* ---- Botão de excluir OS (admin/gerente) na planilha do caixa ---- */
+.caixa-shell .cvtable .cx-row-del{
+  min-width:30px;height:26px;padding:0 8px;border:0;border-radius:6px;cursor:pointer;
+  background:rgba(232,44,60,.12);color:#d43333;font-weight:800;font-size:.82rem;line-height:1;
+  transition:background .15s ease,color .15s ease;
+}
+.caixa-shell .cvtable .cx-row-del:hover{background:#e82c3c;color:#fff;}
+[data-theme="dark"] .caixa-shell .cvtable .cx-row-del{background:rgba(232,44,60,.22);color:#f18c90;}
+[data-theme="dark"] .caixa-shell .cvtable .cx-row-del:hover{background:#e82c3c;color:#fff;}
+
+/* ---- Menu flutuante 3 opções (Venda / Entrega / Ordem de Serviço) ---- */
+.caixa-shell .cxfab{position:relative;}
+.cx-fab-menu{
+  position:absolute;right:0;bottom:74px;z-index:60;
+  display:flex;flex-direction:column;gap:6px;min-width:210px;
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:8px;
+}
+.cx-fab-menu button{
+  display:flex;align-items:center;gap:10px;width:100%;
+  padding:10px 12px;border:0;border-radius:9px;cursor:pointer;
+  background:var(--surface);color:var(--ink);
+  font-family:inherit;font-size:.9rem;font-weight:700;text-align:left;
+  transition:background .15s ease,transform .1s ease;
+}
+.cx-fab-menu button:hover{background:rgba(232,44,60,.10);}
+.cx-fab-menu button .dot{width:10px;height:10px;border-radius:50%;background:#e82c3c;flex:none;}
+[data-theme="dark"] .cx-fab-menu button:hover{background:rgba(232,44,60,.22);}
+
+/* ==========================================================================
+   CAIXA · ADAPTAÇÕES PARA MODO ESCURO E DISPOSITIVOS MÓVEIS
+   ========================================================================== */
+
+/* --- Dark Mode Adaptation for Caixa --- */
+[data-theme="dark"] .cx-card {
+  background: var(--surface);
+  border-color: var(--line);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .cx-title {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .cx-sub {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .cx-loja-tag {
+  background: rgba(215, 25, 32, 0.2);
+  border-color: rgba(215, 25, 32, 0.4);
+  color: #f18c90;
+}
+
+[data-theme="dark"] .cx-kpi {
+  background: var(--surface);
+  border-color: var(--line);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .cx-kpi span {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .cx-kpi b {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .cx-kpi.fat {
+  background: linear-gradient(135deg, var(--surface), rgba(34, 197, 94, 0.12));
+  border-left-color: #22c55e;
+}
+
+[data-theme="dark"] .cx-kpi.meta {
+  background: linear-gradient(135deg, var(--surface), rgba(234, 179, 8, 0.12));
+  border-left-color: #eab308;
+}
+
+[data-theme="dark"] .cx-kpi.falta {
+  background: linear-gradient(135deg, var(--surface), rgba(239, 68, 68, 0.12));
+  border-left-color: #ef4444;
+}
+
+[data-theme="dark"] .cx-means-head {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .cm-body {
+  background: var(--surface);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .cm-lb {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .cm-val {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .cx-modal-card {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+}
+
+[data-theme="dark"] .cx-modal-card form label {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .cx-modal-card fieldset {
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .cx-modal-card legend {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .cx-modal-card form input[type=number],
+[data-theme="dark"] .cx-modal-card form input[type=tel],
+[data-theme="dark"] .cx-modal-card form input[type=text],
+[data-theme="dark"] .cx-modal-card form select {
+  background: var(--bg-app);
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .cx-modal-card form input[type=number]:focus,
+[data-theme="dark"] .cx-modal-card form input[type=tel]:focus,
+[data-theme="dark"] .cx-modal-card form input[type=text]:focus,
+[data-theme="dark"] .cx-modal-card form select:focus {
+  border-color: var(--red);
+  outline: none;
+}
+
+[data-theme="dark"] .caixa-btn.ghost {
+  background: var(--bg-muted);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .caixa-btn.ghost:hover {
+  background: var(--line);
+}
+
+[data-theme="dark"] .cli-field select#f_vend {
+  background: var(--bg-app);
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .cli-new {
+  background: var(--bg-muted);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .cli-new:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+[data-theme="dark"] .caixa-shell .cvtable {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .caixa-shell .cvtable thead th {
+  background: var(--bg-muted);
+  color: var(--muted);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .caixa-shell .cvtable td {
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .caixa-shell .cvtable td.os {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .caixa-shell .cvtable tfoot .tf-somas td {
+  background: var(--bg-muted);
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .cx-modal-x {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .cx-modal-x:hover {
+  color: var(--ink);
+}
+
+/* --- Mobile Responsiveness for Caixa --- */
+@media (max-width: 768px) {
+  .caixa-shell {
+    width: 100%;
+    padding: 12px 8px 36px;
+  }
+
+  .caixa-shell .cx-card {
+    padding: 14px 12px;
+    border-radius: 12px;
+  }
+
+  .caixa-shell .cx-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .caixa-shell .cx-tb-info {
+    text-align: center;
+  }
+
+  .caixa-shell .cx-ctl {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .caixa-shell .cx-ctl-item {
+    flex: 1 1 auto;
+  }
+
+  .caixa-shell .cx-ctl-item .stock-select,
+  .caixa-shell .cx-ctl-item.cx-date input[type=date] {
+    width: 100%;
+    min-width: 0;
+    height: 42px;
+    font-size: 0.9rem;
+  }
+
+  .caixa-shell .cx-ctl .caixa-btn.cx-close {
+    width: 100%;
+    height: 42px;
+    justify-content: center;
+  }
+
+  .cx-kpis {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .cx-kpi b {
+    font-size: 1.25rem;
+  }
+
+  .cx-means-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  .cm-val {
+    font-size: 1.05rem;
+  }
+
+  .cvmtab {
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .cvm {
+    padding: 8px 12px;
+    font-size: 0.82rem;
+  }
+
+  .cx-modal {
+    padding: 10px;
+    align-items: flex-end;
+  }
+
+  .cx-modal-card {
+    width: 100%;
+    max-height: 88vh;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    padding: 16px 14px 24px;
+  }
+
+  .cx-modal-card form input[type=number],
+  .cx-modal-card form input[type=tel],
+  .cx-modal-card form input[type=text],
+  .cx-modal-card form select {
+    font-size: 16px;
+    height: 44px;
+  }
+
+  .pay-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .cli-src {
+    flex-direction: column;
+  }
+
+  .cli-new {
+    width: 100%;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* Dark Mode para botões de abas (Vendas, Entregas, O.S feitas) */
+[data-theme="dark"] .caixa-shell .cvm,
+[data-theme="dark"] .cvm {
+  background: var(--bg-muted);
+  border-color: var(--line);
+  color: var(--muted);
+}
+[data-theme="dark"] .caixa-shell .cvm:hover,
+[data-theme="dark"] .cvm:hover {
+  color: var(--ink);
+  background: var(--line);
+}
+[data-theme="dark"] .caixa-shell .cvm.on,
+[data-theme="dark"] .cvm.on {
+  border-color: var(--red);
+  color: #f18c90;
+  background: rgba(215, 25, 32, 0.22);
+}
+
+/* Dark Mode para container do Gráfico no Painel */
+[data-theme="dark"] #storeChartContainer {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+[data-theme="dark"] .chart-ind-group span {
+  color: var(--muted);
+}
+[data-theme="dark"] .chart-ind-group strong {
+  color: var(--ink);
+}
+
+/* Detalhes de texto e formulários do Caixa no Modo Escuro */
+[data-theme="dark"] .cx-meta-text,
+[data-theme="dark"] .cx-meta-header,
+[data-theme="dark"] .cx-sub {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .cx-lanc-title {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .caixa-status-pill.none {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+}
+[data-theme="dark"] .caixa-status-pill.none .dot {
+  background: var(--muted);
+}
+
+[data-theme="dark"] .cx-modal-card textarea {
+  background: var(--bg-app);
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.9);
+}
+
+[data-theme="dark"] .cx-modal-card .cx-sw-opt.on {
+  color: #ffffff;
+  background: var(--red);
+}
+
+[data-theme="dark"] .cx-modal-card .cx-sw-opt:not(.on) {
+  color: var(--muted);
+}
+
+
+

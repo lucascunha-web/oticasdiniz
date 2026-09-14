@@ -1,5 +1,5 @@
 import { initializeApp, getApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { collection, collectionGroup, doc, getDoc, getDocs, getFirestore, initializeFirestore, persistentLocalCache, query, where, addDoc, updateDoc, increment, serverTimestamp, onSnapshot, documentId } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { collection, collectionGroup, doc, getDoc, getDocs, getFirestore, initializeFirestore, persistentLocalCache, query, where, addDoc, updateDoc, increment, serverTimestamp, onSnapshot, documentId, setDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBwE1WFYWOHBZPXhapa-td7NxA3Ndx-P2w",
@@ -52,6 +52,12 @@ const applyTheme = (theme) => {
   localStorage.setItem("theme", theme);
   if (themeCheckbox) {
     themeCheckbox.checked = theme === "dark";
+  }
+  const activeBtn = document.querySelector(".store-tab-btn.active");
+  const storeId = activeBtn ? activeBtn.innerText.trim() : "GERAL";
+  const container = document.getElementById("storeChartContainer");
+  if (container && container.style.display !== "none") {
+    renderStoreHistoryChart(storeId);
   }
 };
 
@@ -1669,20 +1675,25 @@ async function renderStoreHistoryChart(storeId) {
           if (context.tick && context.tick.value >= 3) return { weight: 'bold' };
         },
         color: (context) => {
-          if (!context.tick) return undefined;
+          const isDarkNow = document.documentElement.getAttribute("data-theme") === "dark";
+          const defaultColor = isDarkNow ? '#cbd5e1' : '#475569';
+          if (!context.tick) return defaultColor;
           const val = context.tick.value;
-          if (val === 3) return '#2563EB'; // Meta 100% (Azul)
-          if (val === 4) return '#64748b'; // Prata 115% (Cinza Prata)
-          if (val === 5) return '#d97706'; // Ouro 130% (Dourado)
-          if (val === 6) return '#0284c7'; // Diamante 145% (Azul Diamante)
-          return undefined; // 0, 80% e 90% usam a cor padrão
+          if (val === 3) return isDarkNow ? '#60a5fa' : '#2563EB'; // Meta 100%
+          if (val === 4) return isDarkNow ? '#94a3b8' : '#64748b'; // Prata 115%
+          if (val === 5) return isDarkNow ? '#fbbf24' : '#d97706'; // Ouro 130%
+          if (val === 6) return isDarkNow ? '#38bdf8' : '#0284c7'; // Diamante 145%
+          return defaultColor;
         }
       };
     } else {
       // Comportamento padrão se não houver meta
       faturamentoData = historicalData.map(d => d.faturamento || 0);
       yAxisOptions.beginAtZero = true;
-      yAxisOptions.ticks = { callback: (value) => formatCurrency(value) };
+      yAxisOptions.ticks = {
+        callback: (value) => formatCurrency(value),
+        color: () => document.documentElement.getAttribute("data-theme") === "dark" ? '#cbd5e1' : '#475569'
+      };
     }
 
     const datasets = [
@@ -1785,6 +1796,19 @@ async function renderStoreHistoryChart(storeId) {
       });
     }
 
+    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    yAxisOptions.grid = {
+      color: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.06)"
+    };
+    const xAxisOptions = {
+      ticks: {
+        color: isDark ? "#cbd5e1" : "#64748b"
+      },
+      grid: {
+        color: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.04)"
+      }
+    };
+
     historyChartInstance = new Chart(canvas, {
       type: 'line',
       data: {
@@ -1794,12 +1818,20 @@ async function renderStoreHistoryChart(storeId) {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        scales: { y: yAxisOptions },
+        scales: {
+          x: xAxisOptions,
+          y: yAxisOptions
+        },
         plugins: {
           legend: {
             display: false
           },
           tooltip: {
+            backgroundColor: isDark ? "#1e293b" : "#ffffff",
+            titleColor: isDark ? "#f8fafc" : "#0f172a",
+            bodyColor: isDark ? "#cbd5e1" : "#334155",
+            borderColor: isDark ? "#334155" : "#e2e8f0",
+            borderWidth: 1,
             callbacks: {
               label: function(context) {
                 if (context.datasetIndex !== 0) return null; // Oculta tooltip para as linhas de referência

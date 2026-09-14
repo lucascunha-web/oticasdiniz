@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="painel.css?v=8">
+  <link rel="stylesheet" href="painel.css?v=9">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     .header-identity .brand-mark {
@@ -53,6 +53,7 @@
       <a class="top-nav-button active" href="painel.html">Painel</a>
       <a class="top-nav-button" href="#" id="stockButton">Lentes de Estoque</a>
       <a class="top-nav-button" href="#" id="trainingsButton">Treinamentos</a>
+      <a class="top-nav-button" href="#" id="caixaButton">Caixa</a>
       <div class="nav-dropdown">
         <button class="top-nav-button" id="tabelasToggle">Tabelas</button>
         <div class="nav-dropdown-content" id="tabelasDropdown">
@@ -233,6 +234,9 @@
       </div>
     </section>
   </main>
+
+  <!-- ===== VISÃO PRÓPRIA DO CAIXA (Opção B · sem modal) ===== -->
+  <section id="caixaView" class="caixa-shell" aria-label="Caixa" hidden></section>
 
   <aside class="announcements-panel" id="announcementsPanel" aria-label="Comunicados">
     <div class="announcements-card">
@@ -546,5 +550,6 @@
 
   <script type="module" src="painel.js"></script>
   <script type="module" src="admin.js"></script>
+  <script type="module" src="caixa.js?v=20260601"></script>
 </body>
 </html>
