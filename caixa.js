@@ -8,7 +8,7 @@
  * Etapas 1–3 base aqui; Etapas 4–6 (modal, permissões, fechamento) anexadas.
  * ========================================================================== */
 import { initializeApp, getApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { collection, collectionGroup, doc, setDoc, updateDoc, getDoc, getDocs, deleteDoc, query, where, getFirestore, initializeFirestore, persistentLocalCache, documentId, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { collection, collectionGroup, doc, setDoc, updateDoc, getDoc, getDocs, deleteDoc, query, where, orderBy, limit, getFirestore, initializeFirestore, persistentLocalCache, documentId, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBwE1WFYWOHBZPXhapa-td7NxA3Ndx-P2w",
@@ -29,7 +29,17 @@ const PAD=(n)=>String(n).padStart(2,"0");
 const esc=(v)=>String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
 const norm=(v)=>String(v).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
 function brl(v){const n=Number(v)||0;return n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});}
-function time(d){if(!d)return "--:--";const x=new Date(d);return isNaN(x)?"--:--":`${PAD(x.getHours())}:${PAD(x.getMinutes())}`;}
+function asDate(v){
+  if(!v)return null;
+  if(v instanceof Date){return isNaN(v.getTime())?null:v;}
+  if(typeof v.toDate==="function"){
+    const d=v.toDate();
+    return d instanceof Date && !isNaN(d.getTime()) ? d : null;
+  }
+  const d=new Date(v);
+  return isNaN(d.getTime()) ? null : d;
+}
+function time(d){const x=asDate(d); if(!x)return "--:--"; return `${PAD(x.getHours())}:${PAD(x.getMinutes())}`;}
 function kDate(d){return `${d.getFullYear()}-${PAD(d.getMonth()+1)}-${PAD(d.getDate())}`;}
 const TODAY=kDate(new Date());
 function parseK(x){const a=String(x).split("-").map(Number);return new Date(a[0],a[1]-1,a[2]||1);}
@@ -174,6 +184,17 @@ function paintDay(err){
   if(cbtn){
     cbtn.disabled=!(open&&!(cxDate>TODAY)&&!closed());
     if(open&&!(cxDate>TODAY))cbtn.removeAttribute("disabled");
+  }
+  if(cl){
+    const btnPDF=document.createElement("button");
+    btnPDF.type="button";
+    btnPDF.className="caixa-btn primary";
+    btnPDF.textContent="📥 Baixar PDF";
+    btnPDF.style.marginTop="0";
+    btnPDF.addEventListener("click",()=>{
+      buildCaixaPDF(docV||[],docE||[],docO||[],String(dayDoc?.obsFechamento||""));
+    });
+    s.querySelector(".caixa-actions")?.appendChild(btnPDF);
   }
   drawBody();
 }
@@ -335,6 +356,7 @@ async function reopen(){
 function parseMoney(v){const s=String(v==null?"":v).replace(/[^\d.,-]/g,"").replace(".","").replace(",",".");if(!s)return 0;const n=Number(s);return isNaN(n)?0:Math.max(0,Math.round(n*100)/100);}
 
 let modalMode="venda", modal=null, sellersCache=[], cliAll=[], cliSelId="", editingRow=null, clientsLoaded=false;
+const CLIENTS_PAGE_LIMIT = 200;
 async function loadSellers(){
   if(sellersCache.length)return sellersCache;
   const map={};
@@ -438,20 +460,48 @@ function setMode(tp){
 function show(modal,id,on){const it=modal.querySelector("#"+id);if(!it)return;if(on){it.style.removeProperty("display");}else{it.style.setProperty("display","none","important");}}
 
 /* ---- Cliente já cadastrado + telefone fixo ---- */
-async function loadClients(){
-  if(clientsLoaded)return cliAll;
-  try{const snap=await getDocs(collection(db,"clientes"));cliAll=snap.docs.map(d=>{const x=d.data()||{};return {id:d.id,nome:x.nome||"",contato:x.contato||""};});}catch(e){cliAll=[];}
-  clientsLoaded=true;
-  return cliAll;
+async function loadClients(search=""){
+  const nq=norm(search), dq=onlyDigits(search);
+
+  if(clientsLoaded && !nq && !dq) return cliAll;
+
+  if(!clientsLoaded){
+    try {
+      const snap = await getDocs(query(collection(db, "clientes"), orderBy("nome"), limit(CLIENTS_PAGE_LIMIT)));
+      cliAll = snap.docs.map(d => {
+        const x = d.data() || {};
+        return { id: d.id, nome: x.nome || "", contato: x.contato || "" };
+      });
+      clientsLoaded = true;
+    } catch (e) {
+      cliAll = [];
+      clientsLoaded = true;
+    }
+  }
+
+  if(!nq && !dq) return cliAll;
+
+  return cliAll.filter(c => {
+    const nome = norm(c.nome || "");
+    const contato = onlyDigits(c.contato || "");
+    return (nq && nome.includes(nq)) || (dq && contato.includes(dq));
+  }).slice(0, 5);
 }
 function cliRow(c){const n=String(c.nome||"").trim();const t=maskPhone(c.contato||"");return (n?n:"?")+(t?" • "+t:"");}
+function upsertClientCache(client){
+  if(!client || !client.id) return;
+  const entry={id:client.id,nome:client.nome||"",contato:client.contato||""};
+  const idx=cliAll.findIndex(c=>c.id===entry.id);
+  if(idx>=0){ cliAll[idx]=entry; }
+  else { cliAll.push(entry); }
+  cliAll.sort((a,b)=>(a.nome||"").localeCompare(b.nome||""));
+  clientsLoaded=true;
+}
 function fillCliOptions(q){
   if(!modal)return;
   (async()=>{
-    let list=await loadClients();
-    const nq=norm(q), dq=onlyDigits(q);
-    if(nq)list=list.filter(c=>norm(c.nome).includes(nq)||(dq&&onlyDigits(c.contato).indexOf(dq)>-1));
-    list=list.slice(0,14);
+    const raw=(q||"").trim();
+    const list=await loadClients(raw);
     const dlx=modal.querySelector("#cliOpts"); if(!dlx)return;
     modal._climap={};
     dlx.innerHTML=list.map(c=>{const v=cliRow(c);modal._climap[norm(v)]=c;return `<option value="${esc(v)}"></option>`;}).join("");
@@ -566,9 +616,11 @@ async function saveOS(){
   if(selId){
     cliente=selId;
     try{ await updateDoc(doc(db,"clientes",cliente),{nome:hasNome||undefined,contato:contDig?contSave:undefined}); }catch(e){}
+    upsertClientCache({id:cliente,nome:hasNome,contato:contSave});
   } else if(hasNome){
     cliente="c"+String(Date.now());
     try{ await setDoc(doc(db,"clientes",cliente),{nome:hasNome,contato:contSave,criadoEm:new Date()}); }catch(e){console.error(e);}
+    upsertClientCache({id:cliente,nome:hasNome,contato:contSave});
   }
   const kind=modalMode==="os"?"OrdemServico":modalMode==="venda"?"VendasDia":"EntregasDia";
   const data={n_os:osTxt,os:osTxt,anexo:modalMode==="venda"?annex:false,cliente,clienteNome:hasNome,...pays,criadoEm:editingRow?editingRow.record.criadoEm||new Date():new Date(),criadoPor:USER};

@@ -1636,7 +1636,7 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 .announcements-panel {
   position: fixed;
   inset: 0;
-  z-index: 30;
+  z-index: 150;
   display: flex;
   justify-content: flex-end;
   padding: 96px 24px 24px;
@@ -1651,6 +1651,7 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 .announcements-panel.open {
   opacity: 1;
   visibility: visible;
+  z-index: 150;
   -webkit-backdrop-filter: blur(5px);
   backdrop-filter: blur(5px);
 }
@@ -2755,6 +2756,8 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 /* --- Botoes de acao --- */
 .caixa-actions {
   display: flex;
+  align-items: center;
+  justify-content: flex-start;
   gap: 10px;
   flex-wrap: wrap;
   padding: 16px 0 0;
@@ -3410,11 +3413,28 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 /* Card principal do caixa dentro da view própria */
 .caixa-shell .cx-card {
   background: var(--surface);
-  border: 1px solid rgba(237, 240, 245, 0.92);
+  border: 1px solid var(--line);
   border-radius: 8px;
   box-shadow: var(--soft-shadow);
   padding: 20px 24px;
   animation: pageEnter 0.45s ease both;
+}
+
+[data-theme="dark"] .caixa-shell .cx-card,
+[data-theme="dark"] .caixa-shell .cv-wrap,
+[data-theme="dark"] .caixa-shell .sm,
+[data-theme="dark"] .caixa-shell .cx-row,
+[data-theme="dark"] .caixa-shell .cx-methods .cx-method-card,
+[data-theme="dark"] .caixa-shell .cx-kpi,
+[data-theme="dark"] .caixa-shell .cm-body,
+[data-theme="dark"] .caixa-shell .caixa-cal-nav,
+[data-theme="dark"] .caixa-shell .date-today-btn,
+[data-theme="dark"] .caixa-shell .cx-datechip,
+[data-theme="dark"] .caixa-shell .cxfab .fab-opt,
+[data-theme="dark"] .caixa-shell .cx-modal-card {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--ink);
 }
 
 .caixa-shell .cx-toolbar {
@@ -3740,8 +3760,18 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 }
 
 /* =============== ETAPAS 3–6 · planilha OS + modal + consolidado ============ */
-.caixa-shell .caixa-actions { display:flex; gap:8px; flex-wrap:wrap; }
-.caixa-shell .caixa-actions .caixa-btn.ghost { background:#fff; border:1px solid var(--line); color:var(--ink); }
+.caixa-shell .caixa-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.caixa-shell .caixa-actions > .caixa-btn {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.caixa-shell .caixa-actions .caixa-btn.ghost { background:var(--bg-muted); border:1px solid var(--line); color:var(--ink); }
 [data-theme="dark"] .caixa-shell .caixa-actions .caixa-btn.ghost {
   background:var(--bg-muted);
   border-color:#64748b;
@@ -3773,20 +3803,36 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 .caixa-shell .sm{ margin-top:14px; padding:14px; border:1px solid var(--line); border-radius:10px; background:var(--surface); }
 .caixa-shell .sm h3{ margin:0 0 10px; font-size:.9rem; }
 .caixa-shell table.cvtable.sm{ min-width:600px; }
-.caixa-shell .cvm { border:1px solid var(--line); background:#fff; color:var(--muted); font-weight:800; font-size:.82rem; padding:7px 14px; cursor:pointer; border-radius:8px; }
+.caixa-shell .cvm { border:1px solid var(--line); background:var(--bg-muted); color:var(--muted); font-weight:800; font-size:.82rem; padding:7px 14px; cursor:pointer; border-radius:8px; }
 .caixa-shell .cvm.on { border-color:var(--red); color:var(--red); background:rgba(215,25,32,.06); }
+[data-theme="dark"] .caixa-shell .cvm { background:var(--bg-muted); color:var(--muted); }
 .caixa-shell .daterow{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:12px 0; }
-.caixa-shell .caixa-cal-nav{ background:#fff; border:1px solid var(--line); color:var(--ink); border-radius:8px; cursor:pointer; padding:8px 12px; }
-.caixa-shell .date-today-btn{ min-width:210px; padding:9px 12px; border-radius:8px; border:1px solid var(--line); background:#fff; cursor:pointer; text-transform:capitalize; }
+.caixa-shell .caixa-cal-nav{ background:var(--bg-muted); border:1px solid var(--line); color:var(--ink); border-radius:8px; cursor:pointer; padding:8px 12px; }
+.caixa-shell .date-today-btn{ min-width:210px; padding:9px 12px; border-radius:8px; border:1px solid var(--line); background:var(--bg-muted); cursor:pointer; text-transform:capitalize; color:var(--ink); }
 .caixa-shell .date-today-btn:disabled{ opacity:.6; cursor:default; }
 
 /* MODAL – Novo OS (Etapa 4) */
 .cx-modal{ position:fixed; inset:0; background:rgba(10,12,18,.55); display:flex; align-items:center; justify-content:center; z-index:200; padding:16px; }
-.cx-modal-card{ background:#fff; border-radius:14px; width:min(620px,96vw); max-height:92vh; overflow:auto; padding:20px; box-shadow:0 16px 44px rgba(0,0,0,.3); position:relative; }
+.cx-modal-card{ background:var(--surface); border:1px solid var(--line); border-radius:14px; width:min(620px,96vw); max-height:92vh; overflow:auto; padding:20px; box-shadow:0 16px 44px rgba(0,0,0,.3); position:relative; }
 .cx-modal-x{ position:absolute; top:10px; right:14px; border:none; background:none; font-size:22px; cursor:pointer; color:var(--muted); line-height:1; }
 .cx-modal-card form label{ display:block; margin:10px 0 4px; font-weight:800; font-size:.8rem; color:var(--ink); }
 .cx-modal-card form input[type=number],.cx-modal-card form input[type=tel],.cx-modal-card form input[type=text],.cx-modal-card form select{
-  width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:8px; margin-top:4px; font-size:.9rem; box-sizing:border-box; }
+  width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:8px; margin-top:4px; font-size:.9rem; box-sizing:border-box; background:var(--surface); color:var(--ink); }
+[data-theme="dark"] .cx-modal-card form input[type=number],
+[data-theme="dark"] .cx-modal-card form input[type=tel],
+[data-theme="dark"] .cx-modal-card form input[type=text],
+[data-theme="dark"] .cx-modal-card form select,
+[data-theme="dark"] .cx-modal-card fieldset,
+[data-theme="dark"] .cx-modal-card .cli-new,
+[data-theme="dark"] .caixa-shell .date-nav-btn,
+[data-theme="dark"] .caixa-shell .date-today-btn,
+[data-theme="dark"] .caixa-shell .caixa-cal-nav,
+[data-theme="dark"] .caixa-shell .stock-select,
+[data-theme="dark"] .caixa-shell .cx-ctl-item.cx-date input[type=date] {
+  background: var(--bg-muted);
+  border-color: var(--line);
+  color: var(--ink);
+}
 .cx-modal-card fieldset{ border:1px solid var(--line); border-radius:10px; margin-top:12px; padding:12px 14px; }
 .cx-modal-card legend{ font-weight:900; font-size:.74rem; color:var(--muted); padding:0 6px; text-transform:uppercase; }
 .cvm-tool{ display:flex; gap:6px; margin-bottom:8px; }
@@ -3800,7 +3846,12 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 .cx-modal-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
 .caixa-btn{ border:none; border-radius:9px; padding:10px 16px; font-weight:900; cursor:pointer; }
 .caixa-btn.primary{ background:var(--red); color:#fff; }
-.caixa-btn.ghost{ background:#fff; border:1px solid var(--line); color:var(--ink); }
+.caixa-btn.ghost{ background:var(--bg-muted); border:1px solid var(--line); color:var(--ink); }
+[data-theme="dark"] .caixa-btn.ghost {
+  background: var(--bg-muted);
+  color: var(--ink);
+  border-color: var(--line);
+}
 
 /* refinamentos modal Novos OS — cliente + vendedor + topo */
 .cx-modal-card .cvm-tool{ margin-bottom:6px; }
@@ -3809,8 +3860,9 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 .cli-src{ display:flex; gap:6px; }
 .cli-src input{ flex:1; }
 .cli-field input#f_nome,.cli-field input#f_contato{ width:100%; margin-top:4px; }
-.cli-new{ border:none; background:#fff; border:1px solid var(--line); color:var(--ink); border-radius:8px; padding:8px 12px; font-weight:800; cursor:pointer; flex:0 0 auto; }
+.cli-new{ border:none; background:var(--bg-muted); border:1px solid var(--line); color:var(--ink); border-radius:8px; padding:8px 12px; font-weight:800; cursor:pointer; flex:0 0 auto; }
 .cli-new:hover{border-color:var(--red); color:var(--red);}
+[data-theme="dark"] .cli-new { background: var(--bg-muted); color: var(--ink); }
 .cli-hint{ display:block; margin-top:6px; color:#159a48; font-weight:800; font-size:.76rem; min-height:1em; }
 .cli-field select#f_vend{ width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:8px; margin-top:4px; }
 .cvm-tool.ven-box{ margin-top:10px; }
@@ -3849,27 +3901,28 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 
 /* Cards de totais no topo da planilha do caixa */
 .cx-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:4px 0 6px;}
-.cx-kpi{background:linear-gradient(135deg,#fff,#fbf7f6);border:1px solid var(--line,#e4d8d2);border-left:4px solid #9a1f26;border-radius:10px;padding:12px 10px;text-align:center;box-shadow:0 2px 6px rgba(60,0,8,.06);}
-.cx-kpi span{display:block;font-size:.72rem;letter-spacing:.03em;text-transform:uppercase;color:#8c7c76;font-weight:800;}
-.cx-kpi b{display:block;margin-top:4px;font-size:1.45rem;color:#2b1a15;}
-.cx-kpi.fat{border-left-color:#2e7d32;background:linear-gradient(135deg,#fff,#f3fbf4);}
+.cx-kpi{background:linear-gradient(135deg,var(--surface),var(--bg-muted));border:1px solid var(--line);border-left:4px solid #9a1f26;border-radius:10px;padding:12px 10px;text-align:center;box-shadow:0 2px 6px rgba(60,0,8,.06);}
+.cx-kpi span{display:block;font-size:.72rem;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);font-weight:800;}
+.cx-kpi b{display:block;margin-top:4px;font-size:1.45rem;color:var(--ink);}
+.cx-kpi.fat{border-left-color:#2e7d32;background:linear-gradient(135deg,var(--surface),rgba(33,189,91,.08));}
 .cx-kpi.meta{border-left-color:#8a6d3b;}
 .cx-kpi.falta{border-left-color:#b02a30;}
 .cx-means{margin-top:8px;}
-.cx-means-head{font-weight:800;font-size:.76rem;text-transform:uppercase;letter-spacing:.05em;color:#8c7c76;margin-bottom:6px;}
+.cx-means-head{font-weight:800;font-size:.76rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:6px;}
 .cx-means-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
-.cm-body{border:1px solid var(--line,#e4d8d2);border-top-width:3px;border-radius:9px;background:#fff;padding:8px;text-align:center;}
+.cm-body{border:1px solid var(--line);border-top-width:3px;border-radius:9px;background:var(--surface);padding:8px;text-align:center;}
 .cm-body.dinheiro{border-top-color:#4c9f38;} .cm-body.pix{border-top-color:#26a69a;} .cm-body.cartao{border-top-color:#9a1f26;}
 .cm-body.carne{border-top-color:#8a6d3b;} .cm-body.convenio{border-top-color:#b05a1a;}
-.cm-lb{display:block;font-weight:800;font-size:.72rem;color:#8c7c76;}
-.cm-val{display:block;font-size:1.2rem;margin-top:3px;color:#2b1a15;}
+.cm-lb{display:block;font-weight:800;font-size:.72rem;color:var(--muted);}
+.cm-val{display:block;font-size:1.2rem;margin-top:3px;color:var(--ink);}
 @media(max-width:720px){.cx-means-grid{grid-template-columns:repeat(2,1fr);}.cx-kpis{grid-template-columns:1fr;}}
 
 /* Calendário superior direito + botão flutuante novo OS/Entrega */
 .cx-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-.cx-datechip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line,#e8dcd5);background:#fff;border-radius:999px;padding:5px 8px;color:#8c2a30;font-weight:800;font-size:.72rem;}
-.cx-datechip input{appearance:none;-webkit-appearance:none;border:none;background:transparent;color:#66141a;font-weight:800;font-size:.82rem;font-family:inherit;outline:none;padding:0 2px;}
+.cx-datechip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line,#e8dcd5);background:var(--surface);border-radius:999px;padding:5px 8px;color:var(--muted);font-weight:800;font-size:.72rem;}
+.cx-datechip input{appearance:none;-webkit-appearance:none;border:none;background:transparent;color:var(--ink);font-weight:800;font-size:.82rem;font-family:inherit;outline:none;padding:0 2px;}
 .cx-datechip input::-webkit-calendar-picker-indicator{opacity:.6;cursor:pointer;}
+[data-theme="dark"] .cx-datechip { background: var(--bg-muted); color: var(--ink); }
 
 /* FAB + menu pequeno */
 .cxfab{position:fixed;right:20px;bottom:26px;z-index:140;display:flex;flex-direction:column;align-items:flex-end;gap:0;}
@@ -3879,8 +3932,9 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 .cxfab-main:active{transform:scale(.94);}
 .cxfab-menu{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;visibility:hidden;opacity:0;transform:translateY(6px);transition:.16s ease;}
 .cxfab.open .cxfab-menu{visibility:visible;opacity:1;transform:translateY(0);}
-.fab-opt{border:1px solid var(--line);background:#fff;color:#5c2025;font-weight:800;border-radius:999px;padding:8px 14px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.08);}
+.fab-opt{border:1px solid var(--line);background:var(--surface);color:var(--ink);font-weight:800;border-radius:999px;padding:8px 14px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.08);}
 .fab-opt:hover{background:#7d161d;color:#fff;}
+[data-theme="dark"] .fab-opt { background: var(--bg-muted); color: var(--ink); }
 @media(max-width:760px){ .cxfab{right:14px;bottom:18px;} .cxfab-main{width:54px;height:54px;} }
 
 /* --- FAB único, maior e mais animado (sem submenu) --- */
@@ -3999,390 +4053,3 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
   background:rgba(232,44,60,.12);color:#d43333;font-weight:800;font-size:.82rem;line-height:1;
   transition:background .15s ease,color .15s ease;
 }
-.caixa-shell .cvtable .cx-row-del:hover{background:#e82c3c;color:#fff;}
-[data-theme="dark"] .caixa-shell .cvtable .cx-row-del{background:rgba(232,44,60,.22);color:#f18c90;}
-[data-theme="dark"] .caixa-shell .cvtable .cx-row-del:hover{background:#e82c3c;color:#fff;}
-
-/* ---- Menu flutuante 3 opções (Venda / Entrega / Ordem de Serviço) ---- */
-.caixa-shell .cxfab{position:relative;}
-.cx-fab-menu{
-  position:absolute;right:0;bottom:74px;z-index:60;
-  display:flex;flex-direction:column;gap:6px;min-width:210px;
-  background:var(--surface);border:1px solid var(--line);
-  border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:8px;
-}
-.cx-fab-menu button{
-  display:flex;align-items:center;gap:10px;width:100%;
-  padding:10px 12px;border:0;border-radius:9px;cursor:pointer;
-  background:var(--surface);color:var(--ink);
-  font-family:inherit;font-size:.9rem;font-weight:700;text-align:left;
-  transition:background .15s ease,transform .1s ease;
-}
-.cx-fab-menu button:hover{background:rgba(232,44,60,.10);}
-.cx-fab-menu button .dot{width:10px;height:10px;border-radius:50%;background:#e82c3c;flex:none;}
-[data-theme="dark"] .cx-fab-menu button:hover{background:rgba(232,44,60,.22);}
-
-/* ==========================================================================
-   CAIXA · ADAPTAÇÕES PARA MODO ESCURO E DISPOSITIVOS MÓVEIS
-   ========================================================================== */
-
-/* --- Dark Mode Adaptation for Caixa --- */
-[data-theme="dark"] .cx-card {
-  background: var(--surface);
-  border-color: var(--line);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-}
-
-[data-theme="dark"] .cx-title {
-  color: var(--ink);
-}
-
-[data-theme="dark"] .cx-sub {
-  color: var(--muted);
-}
-
-[data-theme="dark"] .cx-loja-tag {
-  background: rgba(215, 25, 32, 0.2);
-  border-color: rgba(215, 25, 32, 0.4);
-  color: #f18c90;
-}
-
-[data-theme="dark"] .cx-kpi {
-  background: var(--surface);
-  border-color: var(--line);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-[data-theme="dark"] .cx-kpi span {
-  color: var(--muted);
-}
-
-[data-theme="dark"] .cx-kpi b {
-  color: var(--ink);
-}
-
-[data-theme="dark"] .cx-kpi.fat {
-  background: linear-gradient(135deg, var(--surface), rgba(34, 197, 94, 0.12));
-  border-left-color: #22c55e;
-}
-
-[data-theme="dark"] .cx-kpi.meta {
-  background: linear-gradient(135deg, var(--surface), rgba(234, 179, 8, 0.12));
-  border-left-color: #eab308;
-}
-
-[data-theme="dark"] .cx-kpi.falta {
-  background: linear-gradient(135deg, var(--surface), rgba(239, 68, 68, 0.12));
-  border-left-color: #ef4444;
-}
-
-[data-theme="dark"] .cx-means-head {
-  color: var(--muted);
-}
-
-[data-theme="dark"] .cm-body {
-  background: var(--surface);
-  border-color: var(--line);
-}
-
-[data-theme="dark"] .cm-lb {
-  color: var(--muted);
-}
-
-[data-theme="dark"] .cm-val {
-  color: var(--ink);
-}
-
-[data-theme="dark"] .cx-modal-card {
-  background: var(--surface);
-  color: var(--ink);
-  border: 1px solid var(--line);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
-}
-
-[data-theme="dark"] .cx-modal-card form label {
-  color: var(--ink);
-}
-
-[data-theme="dark"] .cx-modal-card fieldset {
-  border-color: var(--line);
-}
-
-[data-theme="dark"] .cx-modal-card legend {
-  color: var(--muted);
-}
-
-[data-theme="dark"] .cx-modal-card form input[type=number],
-[data-theme="dark"] .cx-modal-card form input[type=tel],
-[data-theme="dark"] .cx-modal-card form input[type=text],
-[data-theme="dark"] .cx-modal-card form select {
-  background: var(--bg-app);
-  color: var(--ink);
-  border-color: var(--line);
-}
-
-[data-theme="dark"] .cx-modal-card form input[type=number]:focus,
-[data-theme="dark"] .cx-modal-card form input[type=tel]:focus,
-[data-theme="dark"] .cx-modal-card form input[type=text]:focus,
-[data-theme="dark"] .cx-modal-card form select:focus {
-  border-color: var(--red);
-  outline: none;
-}
-
-[data-theme="dark"] .caixa-btn.ghost {
-  background: var(--bg-muted);
-  border-color: var(--line);
-  color: var(--ink);
-}
-
-[data-theme="dark"] .caixa-btn.ghost:hover {
-  background: var(--line);
-}
-
-[data-theme="dark"] .cli-field select#f_vend {
-  background: var(--bg-app);
-  color: var(--ink);
-  border-color: var(--line);
-}
-
-[data-theme="dark"] .cli-new {
-  background: var(--bg-muted);
-  border-color: var(--line);
-  color: var(--ink);
-}
-
-[data-theme="dark"] .cli-new:hover {
-  border-color: var(--red);
-  color: var(--red);
-}
-
-[data-theme="dark"] .caixa-shell .cvtable {
-  background: var(--surface);
-  color: var(--ink);
-}
-
-[data-theme="dark"] .caixa-shell .cvtable thead th {
-  background: var(--bg-muted);
-  color: var(--muted);
-  border-color: var(--line);
-}
-
-[data-theme="dark"] .caixa-shell .cvtable td {
-  border-color: var(--line);
-  color: var(--ink);
-}
-
-[data-theme="dark"] .caixa-shell .cvtable td.os {
-  color: var(--ink);
-}
-
-[data-theme="dark"] .caixa-shell .cvtable tfoot .tf-somas td {
-  background: var(--bg-muted);
-  color: var(--ink);
-  border-color: var(--line);
-}
-
-[data-theme="dark"] .cx-modal-x {
-  color: var(--muted);
-}
-
-[data-theme="dark"] .cx-modal-x:hover {
-  color: var(--ink);
-}
-
-/* --- Mobile Responsiveness for Caixa --- */
-@media (max-width: 768px) {
-  .caixa-shell {
-    width: 100%;
-    padding: 12px 8px 36px;
-  }
-
-  .caixa-shell .cx-card {
-    padding: 14px 12px;
-    border-radius: 12px;
-  }
-
-  .caixa-shell .cx-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
-
-  .caixa-shell .cx-tb-info {
-    text-align: center;
-  }
-
-  .caixa-shell .cx-ctl {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    width: 100%;
-  }
-
-  .caixa-shell .cx-ctl-item {
-    flex: 1 1 auto;
-  }
-
-  .caixa-shell .cx-ctl-item .stock-select,
-  .caixa-shell .cx-ctl-item.cx-date input[type=date] {
-    width: 100%;
-    min-width: 0;
-    height: 42px;
-    font-size: 0.9rem;
-  }
-
-  .caixa-shell .cx-ctl .caixa-btn.cx-close {
-    width: 100%;
-    height: 42px;
-    justify-content: center;
-  }
-
-  .cx-kpis {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-
-  .cx-kpi b {
-    font-size: 1.25rem;
-  }
-
-  .cx-means-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
-  }
-
-  .cm-val {
-    font-size: 1.05rem;
-  }
-
-  .cvmtab {
-    overflow-x: auto;
-    white-space: nowrap;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .cvm {
-    padding: 8px 12px;
-    font-size: 0.82rem;
-  }
-
-  .cx-modal {
-    padding: 10px;
-    align-items: flex-end;
-  }
-
-  .cx-modal-card {
-    width: 100%;
-    max-height: 88vh;
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-    border-top-left-radius: 20px;
-    border-top-right-radius: 20px;
-    padding: 16px 14px 24px;
-  }
-
-  .cx-modal-card form input[type=number],
-  .cx-modal-card form input[type=tel],
-  .cx-modal-card form input[type=text],
-  .cx-modal-card form select {
-    font-size: 16px;
-    height: 44px;
-  }
-
-  .pay-grid {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-
-  .cli-src {
-    flex-direction: column;
-  }
-
-  .cli-new {
-    width: 100%;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-}
-
-/* Dark Mode para botões de abas (Vendas, Entregas, O.S feitas) */
-[data-theme="dark"] .caixa-shell .cvm,
-[data-theme="dark"] .cvm {
-  background: var(--bg-muted);
-  border-color: var(--line);
-  color: var(--muted);
-}
-[data-theme="dark"] .caixa-shell .cvm:hover,
-[data-theme="dark"] .cvm:hover {
-  color: var(--ink);
-  background: var(--line);
-}
-[data-theme="dark"] .caixa-shell .cvm.on,
-[data-theme="dark"] .cvm.on {
-  border-color: var(--red);
-  color: #f18c90;
-  background: rgba(215, 25, 32, 0.22);
-}
-
-/* Dark Mode para container do Gráfico no Painel */
-[data-theme="dark"] #storeChartContainer {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-}
-[data-theme="dark"] .chart-ind-group span {
-  color: var(--muted);
-}
-[data-theme="dark"] .chart-ind-group strong {
-  color: var(--ink);
-}
-
-/* Detalhes de texto e formulários do Caixa no Modo Escuro */
-[data-theme="dark"] .cx-meta-text,
-[data-theme="dark"] .cx-meta-header,
-[data-theme="dark"] .cx-sub {
-  color: var(--muted);
-}
-
-[data-theme="dark"] .cx-lanc-title {
-  color: var(--ink);
-}
-
-[data-theme="dark"] .caixa-status-pill.none {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--muted);
-}
-[data-theme="dark"] .caixa-status-pill.none .dot {
-  background: var(--muted);
-}
-
-[data-theme="dark"] .cx-modal-card textarea {
-  background: var(--bg-app);
-  color: var(--ink);
-  border-color: var(--line);
-}
-
-[data-theme="dark"] input::placeholder,
-[data-theme="dark"] textarea::placeholder {
-  color: #94a3b8;
-}
-
-[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.9);
-}
-
-[data-theme="dark"] .cx-modal-card .cx-sw-opt.on {
-  color: #ffffff;
-  background: var(--red);
-}
-
-[data-theme="dark"] .cx-modal-card .cx-sw-opt:not(.on) {
-  color: var(--muted);
-}
-
-
-
