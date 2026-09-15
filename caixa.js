@@ -186,27 +186,28 @@ function drawBody(){
   const b=$("#cxBody"); if(!b)return;
   if(!gotL){b.innerHTML=`<p class="caixa-empty">Carregando…</p>`;return;}
   if(!dayDoc){b.innerHTML=`<p class="caixa-empty">Abra o caixa para começar.</p>`;return;}
-  if(closed()){b.innerHTML=`<p class="caixa-empty">Caixa fechado — sem lançamentos novos.</p>`;return;}
-  if(!live()){b.innerHTML=`<p class="caixa-empty">Aguardando abertura.</p>`;return;}
+  if(!live()&&!closed()){b.innerHTML=`<p class="caixa-empty">Aguardando abertura.</p>`;return;}
+  if(!clientsLoaded){loadClients().then(()=>{if($("#cxBody"))drawBody();});}
   const isVen=cxTab==="vendas", isOs=cxTab==="os";
   const rows=tabList().slice().sort((x,y)=>(numOf(x.id)||0)-(numOf(y.id)||0));
   const canDel=isMan; // admin/gerente podem excluir lançamento
+  const actionsLocked=closed();
   let heads=[];
   if(isOs)heads=["OS","Cliente","Vendedor"];
   else if(isVen)heads=["OS","Dinheiro","Pix","Cartão","Convênio","Carnê","Vendedor"];
   else heads=["OS","Dinheiro","Pix","Cartão"];
-  if(canDel)heads.push("Excluir");
+  if(canDel)heads.push("Ações");
   const symp="./"; // unused guard
   const trs=rows.length?rows.map(d=>{
     let c, kind, label;
     if(isOs){ kind="OrdemServico"; label="ordem de serviço";
-      c=[esc(d.id),esc(String(d.cliente||"—")),esc(String(d.vendedor||"—"))];
+      c=[esc(d.id),esc(clientLabel(d)),esc(String(d.vendedor||"—"))];
     } else if(isVen){ kind="VendasDia"; label="venda";
       c=[esc(d.id),fmtCell(d.dinheiro),fmtCell(d.pix),fmtCell(d.cartao),fmtCell(d.convenio),fmtCell(d.carne),esc(String(d.vendedor||"—"))];
     } else { kind="EntregasDia"; label="entrega";
       c=[esc(d.id),fmtCell(d.dinheiro),fmtCell(d.pix),fmtCell(d.cartao)];
     }
-    if(canDel)c.push(`<button type="button" class="cx-row-del" data-kind="${kind}" data-id="${esc(String(d.id))}" title="Excluir ${label}">✕</button>`);
+    if(canDel)c.push(`<span class="cx-row-actions${actionsLocked?" locked":""}"><button type="button" class="cx-row-edit" data-kind="${kind}" data-id="${esc(String(d.id))}" title="${actionsLocked?"Caixa fechado":"Editar "+label}" ${actionsLocked?"disabled aria-disabled=\"true\"":""}>✎</button><button type="button" class="cx-row-del" data-kind="${kind}" data-id="${esc(String(d.id))}" title="${actionsLocked?"Caixa fechado":"Excluir "+label}" ${actionsLocked?"disabled aria-disabled=\"true\"":""}>✕</button></span>`);
     return `<tr>${c.map((x,i)=>`<td class="${i===0?"os":"m"}">${x}</td>`).join("")}</tr>`;}).join("")
     :`<tr><td colspan="${heads.length}" class="caixa-empty">Nenhuma OS neste modo.</td></tr>`;
   const tV=sumRows(docV), tE=sumRows(docE);
@@ -215,7 +216,8 @@ function drawBody(){
   const MEAN5=[["dinheiro","Dinheiro"],["pix","Pix"],["cartao","Cartão"],["carne","Carnê"],["convenio","Convênio"]];
   const meanCards=MEAN5.map(([k,lab],i)=>`<div class="cm-body ${k}"><span class="cm-lb">${lab}</span><strong class="cm-val" id="xM${i}">${brl(M[k])}</strong></div>`).join("");
   b.innerHTML=`
-     <div class="cx-kpis">
+    ${closed()?`<div class="cx-closed-notice" role="alert"><strong>🔒 CAIXA FECHADO</strong><span>Este caixa está encerrado. Novos lançamentos, edições e exclusões estão bloqueados.</span></div>`:""}
+    <div class="cx-kpis">
        <div class="cx-kpi fat"><span>Faturamento</span><b id="txF">${brl(dayFat)}</b></div>
        <div class="cx-kpi meta"><span>Meta do dia</span><b id="txM">—</b></div>
        <div class="cx-kpi falta"><span>Falta p/ meta</span><b id="txL">—</b></div>
@@ -226,8 +228,10 @@ function drawBody(){
        <tbody>${trs}</tbody></table>
      </div>`;
   b.querySelectorAll(".cx-row-del").forEach(btn=>btn.onclick=()=>{const id=btn.getAttribute("data-id");const kind=btn.getAttribute("data-kind");delRow(kind,id);});
+  b.querySelectorAll(".cx-row-edit").forEach(btn=>btn.onclick=()=>{const id=btn.getAttribute("data-id");const kind=btn.getAttribute("data-kind");editRow(kind,id);});
   paintMeta(dayFat);
 }
+function clientLabel(row){return String(row.clienteNome||cliAll.find(c=>c.id===row.cliente)?.nome||row.cliente||"—");}
 function paintMeta(fat){
   const m=$("#txM"),x=$("#txL"); if(!m||!x)return;
   const mk=monthKey(cxDate);
@@ -305,6 +309,16 @@ function delRow(kind,id){
   })();
 }
 
+function editRow(kind,id){
+  if(!isMan)return alert("Sem permissão para editar.");
+  const list=kind==="OrdemServico"?docO:kind==="EntregasDia"?docE:docV;
+  const record=list.find(row=>String(row.id)===String(id));
+  if(!record)return alert("Lançamento não encontrado.");
+  editingRow={kind,id:String(id),record};
+  modalMode=kind==="OrdemServico"?"os":kind==="EntregasDia"?"entrega":"venda";
+  buildModal();
+}
+
 async function openCaixa(){
   if(isEst)return alert("Estoquista tem acesso somente de visualização — não pode abrir o caixa.");
   if(cxDate>TODAY)return alert("Não abre data futura.");
@@ -320,7 +334,7 @@ async function reopen(){
 /* ============================ ETAPA 4 - MODAL ============================ */
 function parseMoney(v){const s=String(v==null?"":v).replace(/[^\d.,-]/g,"").replace(".","").replace(",",".");if(!s)return 0;const n=Number(s);return isNaN(n)?0:Math.max(0,Math.round(n*100)/100);}
 
-let modalMode="venda", modal=null, sellersCache=[], cliAll=[], cliSelId="";
+let modalMode="venda", modal=null, sellersCache=[], cliAll=[], cliSelId="", editingRow=null, clientsLoaded=false;
 async function loadSellers(){
   if(sellersCache.length)return sellersCache;
   const map={};
@@ -338,7 +352,7 @@ function openNewOS(mk){
   if(!cxStore){return;}
   if(!live()){return alert("Abra o caixa antes de lançar.");}
   if(closed()){return alert("Caixa fechado — faça a reabertura para lançar.");}
-  modalMode=(mk==="entrega"?"entrega":mk==="os"?"os":"venda"); cliSelId=""; buildModal();
+  modalMode=(mk==="entrega"?"entrega":mk==="os"?"os":"venda"); cliSelId=""; editingRow=null; buildModal();
 }
 
 function buildModal(){
@@ -368,7 +382,7 @@ function buildModal(){
         </label>
         <datalist id="cliOpts"></datalist>
         <div id="newCliFields" style="display: none; margin-top: 10px; padding: 12px; background: var(--bg-muted); border-radius: 8px; border: 1px dashed var(--line);">
-          <label style="margin-top:0">Nome completo <span style="color:var(--red)">*</span> <input type="text" id="f_nome" autocomplete="off" placeholder="Digite o nome completo"></label>
+          <label style="margin-top:0">Nome completo <span style="cPolor:var(--red)">*</span> <input type="text" id="f_nome" autocomplete="off" placeholder="Digite o nome completo"></label>
           <label style="margin-top:8px">Telefone (00)00000-0000 <span style="color:var(--red)">*</span> <input type="tel" id="f_contato" inputmode="numeric" maxlength="15" autocomplete="off" placeholder="(00) 00000-0000"></label>
         </div>
         <input type="hidden" id="f_cli_id" value="">
@@ -383,12 +397,27 @@ function buildModal(){
       </fieldset>
       <div class="cx-modal-actions">
         <button type="button" class="caixa-btn ghost" id="f_cancel">Cancelar</button>
-        <button type="submit" class="caixa-btn primary">Salvar OS</button>
+        <button type="submit" class="caixa-btn primary">${editingRow?"Salvar alterações":"Salvar OS"}</button>
       </div>
     </form>
    </div>`;
   document.body.appendChild(m);
-  modal=m; setMode("venda"); wireModal();
+  modal=m; setMode(modalMode); wireModal();
+  if(editingRow)fillEditForm(editingRow.record);
+}
+function fillEditForm(record){
+  if(!modal)return;
+  const os=modal.querySelector("#f_os"); if(os)os.value=record.os||record.n_os||record.id||"";
+  const id=modal.querySelector("#f_cli_id"); if(id)id.value=record.cliente||"";
+  const nome=modal.querySelector("#f_nome"); if(nome)nome.value=record.clienteNome||cliAll.find(c=>c.id===record.cliente)?.nome||"";
+  const contato=modal.querySelector("#f_contato"); if(contato)contato.value=maskPhone(cliAll.find(c=>c.id===record.cliente)?.contato||"");
+  cliSelId=record.cliente||"";
+  const hint=modal.querySelector("#f_cliH"); if(hint&&nome?.value)hint.textContent="✔ Cliente existente selecionado: "+nome.value;
+  const queryInput=modal.querySelector("#f_cliq"); if(queryInput&&nome?.value)queryInput.value=nome.value;
+  ["dinheiro","pix","cartao","convenio","carne"].forEach(key=>{const input=modal.querySelector(`.pay[data-p="${key}"]`);if(input)input.value=record[key]||"";});
+  const annex=modal.querySelector("#f_anexo"); if(annex)annex.checked=Boolean(record.anexo);
+  const vendor=modal.querySelector("#f_vend"); if(vendor)vendor.value=record.vendedor||"";
+  refreshTotal();
 }
 function closeModal(silent){if(modal){modal.remove();modal=null;}if(!silent){}}
 
@@ -410,8 +439,9 @@ function show(modal,id,on){const it=modal.querySelector("#"+id);if(!it)return;if
 
 /* ---- Cliente já cadastrado + telefone fixo ---- */
 async function loadClients(){
-  if(cliAll.length)return cliAll;
+  if(clientsLoaded)return cliAll;
   try{const snap=await getDocs(collection(db,"clientes"));cliAll=snap.docs.map(d=>{const x=d.data()||{};return {id:d.id,nome:x.nome||"",contato:x.contato||""};});}catch(e){cliAll=[];}
+  clientsLoaded=true;
   return cliAll;
 }
 function cliRow(c){const n=String(c.nome||"").trim();const t=maskPhone(c.contato||"");return (n?n:"?")+(t?" • "+t:"");}
@@ -488,7 +518,7 @@ function wireModal(){
   modal.querySelector("[data-x]").onclick=()=>closeModal();
   modal.querySelector("#f_cancel").onclick=()=>closeModal();
   modal.querySelectorAll("[data-mode]").forEach(x=>x.onclick=()=>setMode(x.dataset.mode));
-  (async()=>{const sel=await loadSellers();const v=modal.querySelector("#f_vend");if(v){if(!sel.length){v.innerHTML=`<option value="">Selecionar…</option><option value="${esc(USER)}">${esc(USER)}</option>`;}else{v.innerHTML=`<option value="">Selecionar vendedor…</option>`+sel.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("");}}} )();
+  (async()=>{const sel=await loadSellers();const v=modal.querySelector("#f_vend");if(v){if(!sel.length){v.innerHTML=`<option value="">Selecionar…</option><option value="${esc(USER)}">${esc(USER)}</option>`;}else{v.innerHTML=`<option value="">Selecionar vendedor…</option>`+sel.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("");}if(editingRow)v.value=editingRow.record.vendedor||"";}} )();
   modal.querySelectorAll(".pay").forEach(inp=>inp.oninput=refreshTotal);
   modal.querySelector("#f_anexo").onchange=refreshTotal;
   modal.querySelector("#cxForm").onsubmit=async(ev)=>{ev.preventDefault();await saveOS();};
@@ -541,14 +571,15 @@ async function saveOS(){
     try{ await setDoc(doc(db,"clientes",cliente),{nome:hasNome,contato:contSave,criadoEm:new Date()}); }catch(e){console.error(e);}
   }
   const kind=modalMode==="os"?"OrdemServico":modalMode==="venda"?"VendasDia":"EntregasDia";
-  const data={n_os:osTxt,os:osTxt,anexo:modalMode==="venda"?annex:false,cliente,...pays,criadoEm:new Date(),criadoPor:USER};
+  const data={n_os:osTxt,os:osTxt,anexo:modalMode==="venda"?annex:false,cliente,clienteNome:hasNome,...pays,criadoEm:editingRow?editingRow.record.criadoEm||new Date():new Date(),criadoPor:USER};
   if(modalMode!=="entrega"){data.vendedor=(modal.querySelector("#f_vend")&&modal.querySelector("#f_vend").value)||USER;}
   if(!isOS){ data.semValor=false; } else { delete data.anexo; data.semValor=true; }
   try{
-    const col=doc(collection(db,"vendas",`LOJA ${cxStore}`,"caixa",cxDate,kind),osTxt);
+    const col=doc(db,"vendas",`LOJA ${cxStore}`,"caixa",cxDate,kind,editingRow?editingRow.id:osTxt);
     await setDoc(col,data,{merge:true});
+    editingRow=null;
     closeModal();
-    alert("OS "+osTxt+" salva.");
+    alert("OS "+osTxt+(editingRow?" salva.":" salva."));
   }catch(e){console.error(e);alert("Erro ao salvar a OS.");}
 }
 function onlyDigits(v){return String(v==null?"":v).replace(/\D/g,"");}

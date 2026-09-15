@@ -3742,6 +3742,16 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 /* =============== ETAPAS 3–6 · planilha OS + modal + consolidado ============ */
 .caixa-shell .caixa-actions { display:flex; gap:8px; flex-wrap:wrap; }
 .caixa-shell .caixa-actions .caixa-btn.ghost { background:#fff; border:1px solid var(--line); color:var(--ink); }
+[data-theme="dark"] .caixa-shell .caixa-actions .caixa-btn.ghost {
+  background:var(--bg-muted);
+  border-color:#64748b;
+  color:var(--ink);
+}
+[data-theme="dark"] .caixa-shell .caixa-actions .caixa-btn.ghost:hover {
+  background:#334155;
+  border-color:#f18c90;
+  color:#fff;
+}
 .caixa-shell table.cvtable { width:100%; border-collapse:collapse; font-size:.85rem; min-width:520px; }
 .caixa-shell .cvtable th,.caixa-shell .cvtable td { border-bottom:1px solid var(--line); padding:8px 12px; text-align:left; white-space:nowrap; }
 .caixa-shell .cvtable thead th { background:var(--bg-muted); text-transform:uppercase; font-size:.72rem; letter-spacing:.03em; color:var(--muted); font-weight:900; }
@@ -3966,6 +3976,24 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
 .caixa-shell .cvtable .caixa-empty{text-align:center;}
 
 /* ---- Botão de excluir OS (admin/gerente) na planilha do caixa ---- */
+.caixa-shell .cx-closed-notice{
+  display:flex;align-items:center;gap:12px;margin:0 0 16px;padding:15px 16px;
+  border:2px solid var(--red);border-left:8px solid var(--red);
+  border-radius:8px;background:rgba(215,25,32,.14);color:var(--ink);font-size:.88rem;
+  box-shadow:0 3px 10px rgba(215,25,32,.12);
+}
+.caixa-shell .cx-closed-notice strong{color:var(--red);font-size:.96rem;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;}
+.caixa-shell .cx-closed-notice span{font-weight:700;}
+.caixa-shell .cx-row-actions{display:inline-flex;align-items:center;gap:5px;}
+.caixa-shell .cx-row-actions.locked{opacity:.5;}
+.caixa-shell .cvtable .cx-row-edit{
+  min-width:30px;height:26px;padding:0 8px;border:0;border-radius:6px;cursor:pointer;
+  background:rgba(26,115,232,.12);color:#1a73e8;font-weight:800;font-size:.82rem;line-height:1;
+  transition:background .15s ease,color .15s ease;
+}
+.caixa-shell .cvtable .cx-row-edit:hover{background:#1a73e8;color:#fff;}
+.caixa-shell .cvtable button:disabled{cursor:not-allowed;filter:grayscale(1);}
+.caixa-shell .cvtable button:disabled:hover{background:inherit;color:inherit;}
 .caixa-shell .cvtable .cx-row-del{
   min-width:30px;height:26px;padding:0 8px;border:0;border-radius:6px;cursor:pointer;
   background:rgba(232,44,60,.12);color:#d43333;font-weight:800;font-size:.82rem;line-height:1;
