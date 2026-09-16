@@ -65,6 +65,7 @@ function sessionStore(){const m=String(sessionStorage.getItem("usuarioLoja")||""
 /* estado UI */
 let cxStore=null, cxAvail=[], cxDate=TODAY, cxTab="vendas";
 let unDay=null, unV=null, unE=null, unO=null, gotD=false, gotL=false, dayDoc=null, docV=[], docE=[], docO=[];
+let obsSaveTimer=null, obsSavePromise=null, obsPending=null;
 
 function dayRef(s){return doc(db,"vendas",`LOJA ${s}`,"caixa",cxDate);}
 function colV(s){return collection(db,"vendas",`LOJA ${s}`,"caixa",cxDate,"VendasDia");}
@@ -76,6 +77,25 @@ function uns(){unDay&&unDay();unV&&unV();unE&&unE();unO&&unO();unDay=unV=unE=unO
 function resetAll(){uns();gotD=gotL=false;dayDoc=null;docV=[];docE=[];docO=[];}
 function live(){return dayDoc&&dayDoc.status==="aberto";}
 function closed(){return dayDoc&&dayDoc.status==="fechado";}
+function queueObservation(value){
+  const ref=dayRef(cxStore), text=String(value||"").slice(0,2000);
+  if(dayDoc)dayDoc.obsFechamento=text;
+  obsPending={ref,text};
+  clearTimeout(obsSaveTimer);
+  obsSaveTimer=setTimeout(()=>{
+    const pending=obsPending; obsPending=null;
+    obsSavePromise=updateDoc(pending.ref,{obsFechamento:pending.text}).catch(e=>console.error("Erro ao salvar observação do caixa:",e));
+  },500);
+}
+async function flushObservation(){
+  clearTimeout(obsSaveTimer);
+  if(obsPending){
+    const pending=obsPending; obsPending=null;
+    obsSavePromise=updateDoc(pending.ref,{obsFechamento:pending.text}).catch(e=>console.error("Erro ao salvar observação do caixa:",e));
+  }
+  if(obsSavePromise)await obsSavePromise;
+  obsSavePromise=null;
+}
 
 async function discover(){const s=new Set();
   try{(await getDocs(query(collection(db,"lojas"),where(documentId(),"!=","GERAL")))).forEach(d=>{const m=String(d.id).match(/(\d+)/);if(m)s.add(parseInt(m[1],10));});}catch(e){}
@@ -156,7 +176,7 @@ function loadDayState(){
   resetAll();
   st.innerHTML=`<p class="caixa-empty">Carregando…</p>`;
   const tag=`${cxStore}|${cxDate}`;
-  try{unDay=onSnapshot(dayRef(cxStore),(sn)=>{if(tag!==cxStore+"|"+cxDate)return;dayDoc=sn.exists()?sn.data():null;gotD=true;paintDay();},(e)=>{dayDoc=null;gotD=true;paintDay(e);});}catch(e){gotD=true;}
+  try{unDay=onSnapshot(dayRef(cxStore),(sn)=>{if(tag!==cxStore+"|"+cxDate)return;const currentObs=$("#cxObservation");const keepObsFocus=currentObs&&document.activeElement===currentObs&&String(sn.data()?.obsFechamento||"")===currentObs.value;dayDoc=sn.exists()?sn.data():null;gotD=true;if(!keepObsFocus)paintDay();},(e)=>{dayDoc=null;gotD=true;paintDay(e);});}catch(e){gotD=true;}
   try{unV=onSnapshot(colV(cxStore),(sn)=>{if(tag!==cxStore+"|"+cxDate)return;docV=sn.docs.map(d=>({id:d.id,...d.data()}));gotL=true;paintDay();},(e)=>{docV=[];gotL=true;});}catch(e){gotL=true;}
   try{unE=onSnapshot(colE(cxStore),(sn)=>{if(tag!==cxStore+"|"+cxDate)return;docE=sn.docs.map(d=>({id:d.id,...d.data()}));gotL=true;paintDay();},(e)=>{docE=[];gotL=true;});}catch(e){gotL=true;}
   try{unO=onSnapshot(colO(cxStore),(sn)=>{if(tag!==cxStore+"|"+cxDate)return;docO=sn.docs.map(d=>({id:d.id,...d.data()}));gotL=true;paintDay();},(e)=>{docO=[];gotL=true;});}catch(e){gotL=true;}
@@ -174,7 +194,11 @@ function paintDay(err){
     else if(open)acts=``;
     else if(cl&&(isAdmin||isMan))acts=`<button class="caixa-btn ghost" data-a="reopen">Reabrir</button>`;
   }
-  s.innerHTML=`${warn}<div class="cx-statusblock"><div class="cx-meta-text">${esc(head)}</div>${pill}</div><div class="caixa-actions">${acts}</div>`;
+  const obs=String(dayDoc?.obsFechamento||"");
+  const obsField=dayDoc?`<div class="cx-observation"><label for="cxObservation">Observação do dia</label><textarea id="cxObservation" maxlength="2000" spellcheck="false" placeholder="Registre ocorrências, trocos, valores em espécie, quebras ou pendências..." ${isEst?"readonly":""}>${esc(obs)}</textarea><small>Salvo automaticamente</small></div>`:"";
+  s.innerHTML=`${warn}<div class="cx-statusblock"><div class="cx-meta-text">${esc(head)}</div>${pill}</div>${obsField}<div class="caixa-actions">${acts}</div>`;
+  const obsInput=s.querySelector("#cxObservation");
+  if(obsInput&&!isEst)obsInput.addEventListener("input",()=>queueObservation(obsInput.value));
   s.querySelector('[data-a="open"]')?.addEventListener("click",()=>openCaixa());
   s.querySelector('[data-a="close"]')?.addEventListener("click",()=>closeCaixa());
   s.querySelector('[data-a="reopen"]')?.addEventListener("click",()=>reopen());
@@ -708,41 +732,9 @@ async function paintGeral(){
 }
 
 /* ============================ ETAPA 6 - FECHAR ============================ */
-let obsCloseEl=null; // modal de observação do fechamento
-
-/* Modal de observação exibido ao clicar em "Fechar Caixa". */
-function openCloseObsModal(){
-  if(obsCloseEl){obsCloseEl.remove();obsCloseEl=null;}
-  const m=document.createElement("div");
-  m.className="cx-modal";
-  m.innerHTML=`
-   <div class="cx-modal-card" style="max-width:480px">
-    <button type="button" class="cx-modal-x" data-x>×</button>
-    <h3 style="margin:0 0 4px;font-size:1.05rem;color:var(--ink)">Fechar Caixa</h3>
-    <p style="margin:0 0 12px;color:var(--muted);font-size:.82rem;line-height:1.5">
-      LOJA ${cxStore} · ${longFmt(cxDate)}<br>
-      Será gerado o PDF de fechamento com todas as vendas, entregas e O.S. Concluída a confirmação, o caixa ficará <b>fechado</b>.
-    </p>
-    <label style="display:block;font-weight:800;font-size:.78rem;color:var(--ink)">Observação (opcional)
-      <textarea data-obs rows="4" maxlength="2000" spellcheck="false"
-        style="width:100%;margin-top:6px;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:.9rem;font-family:inherit;box-sizing:border-box;resize:vertical;line-height:1.4"
-        placeholder="Descreva ocorrências, trocos, valores em espécie, quebras, pendências, etc. Esse texto será impresso na parte de baixo do PDF."></textarea>
-    </label>
-    <div class="cx-modal-actions">
-      <button type="button" class="caixa-btn ghost" data-cancel>Cancelar</button>
-      <button type="button" class="caixa-btn primary" data-ok>Confirmar e Gerar PDF</button>
-    </div>
-   </div>`;
-  document.body.appendChild(m); obsCloseEl=m;
-  const close=()=>{ if(obsCloseEl){obsCloseEl.remove();obsCloseEl=null;} };
-  m.querySelectorAll("[data-x],[data-cancel]").forEach(b=>b.onclick=close);
-  m.querySelector("[data-ok]").onclick=()=>{
-    const obs=String(m.querySelector("[data-obs]")?.value||"").trim();
-    close(); doCloseCaixa(obs);
-  };
-}
-/* Executa o fechamento e gera o PDF já levando a observação. */
-async function doCloseCaixa(obs){
+async function doCloseCaixa(){
+  await flushObservation();
+  const obs=String(dayDoc?.obsFechamento||"");
   const tot=sumRows(docV); const toe=sumRows(docE);
   try{
     await updateDoc(dayRef(cxStore),{fechado:true,status:"fechado",fechadoEm:new Date(),fechadoPor:USER,saldoFinal:fatOf(tot)+fatOf(toe),obsFechamento:obs});
@@ -753,7 +745,7 @@ async function closeCaixa(){
   if(!canRun)return alert("Sem permissão.");
   if(isEst&&!isMan)return alert("Estoquista tem acesso somente de visualização — não pode fechar o caixa.");
   if(!live())return alert("Só fecha caixa aberto.");
-  openCloseObsModal();
+  doCloseCaixa();
 }
 function buildCSV(V,E,noDL){
   const crlf="\r\n";

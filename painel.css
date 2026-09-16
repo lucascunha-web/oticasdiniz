@@ -3671,6 +3671,48 @@ input:not(:checked) + .slider .moon-icon { opacity: 0; transform: scale(0.5); }
   font-weight: 700;
   line-height: 1.6;
 }
+.caixa-shell .cx-observation {
+  display: grid;
+  gap: 5px;
+  margin: 2px 0 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--red);
+  border-radius: 8px;
+  background: var(--bg-muted);
+}
+.caixa-shell .cx-observation label {
+  color: var(--ink);
+  font-size: .78rem;
+  font-weight: 900;
+}
+.caixa-shell .cx-observation textarea {
+  width: 100%;
+  min-height: 76px;
+  box-sizing: border-box;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  resize: vertical;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: .86rem;
+  line-height: 1.45;
+}
+.caixa-shell .cx-observation textarea:focus {
+  outline: 2px solid rgba(215,25,32,.2);
+  border-color: var(--red);
+}
+.caixa-shell .cx-observation textarea[readonly] {
+  cursor: not-allowed;
+  opacity: .72;
+}
+.caixa-shell .cx-observation small {
+  color: var(--muted);
+  font-size: .7rem;
+  font-weight: 700;
+}
 .caixa-shell .cx-resumo { margin: 6px 0 4px; }
 .caixa-shell .cx-methods {
   display: grid;
