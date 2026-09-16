@@ -568,7 +568,7 @@ function wireModal(){
   modal.querySelector("[data-x]").onclick=()=>closeModal();
   modal.querySelector("#f_cancel").onclick=()=>closeModal();
   modal.querySelectorAll("[data-mode]").forEach(x=>x.onclick=()=>setMode(x.dataset.mode));
-  (async()=>{const sel=await loadSellers();const v=modal.querySelector("#f_vend");if(v){if(!sel.length){v.innerHTML=`<option value="">Selecionar…</option><option value="${esc(USER)}">${esc(USER)}</option>`;}else{v.innerHTML=`<option value="">Selecionar vendedor…</option>`+sel.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("");}if(editingRow)v.value=editingRow.record.vendedor||"";}} )();
+  (async()=>{const sel=await loadSellers();const v=modal.querySelector("#f_vend");if(v){const options=["PADRÃO",...sel.filter(s=>s!==USER)];v.innerHTML=`<option value="">Selecionar vendedor…</option>`+options.filter((s,i,a)=>s&&a.indexOf(s)===i).map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("");if(editingRow)v.value=editingRow.record.vendedor||"";}} )();
   modal.querySelectorAll(".pay").forEach(inp=>inp.oninput=refreshTotal);
   modal.querySelector("#f_anexo").onchange=refreshTotal;
   modal.querySelector("#cxForm").onsubmit=async(ev)=>{ev.preventDefault();await saveOS();};
