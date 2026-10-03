@@ -1,0 +1,249 @@
+:root {
+  --red: #d71920;
+  --red-dark: #a80f16;
+  --ink: #162033;
+  --muted: #6b7280;
+  --line: #d9e1ec;
+  --surface: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+img {
+  max-width: 100%;
+}
+
+html {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: "Inter", Arial, sans-serif;
+  color: var(--ink);
+  background: var(--red);
+  animation: loginEnter 0.45s ease both;
+}
+
+body.page-leaving {
+  animation: loginLeave 0.28s ease both;
+}
+
+.login-page {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  background:
+    linear-gradient(135deg, rgba(215, 25, 32, 0.97), rgba(168, 15, 22, 0.94)),
+    url("wallpaper-oculos-16x9.jpg") center/cover no-repeat;
+}
+
+@keyframes loginEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes loginLeave {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(1.015);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.login-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(40, 0, 3, 0.2);
+  backdrop-filter: blur(1.5px);
+  pointer-events: none;
+}
+
+.login-card {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  width: 100%;
+  max-width: 390px;
+  padding: 42px 36px 34px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 14px;
+  box-shadow: 0 24px 70px rgba(50, 0, 4, 0.32);
+  backdrop-filter: blur(18px);
+}
+
+.form-logo {
+  display: block;
+  width: 214px;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto 26px;
+  object-fit: contain;
+}
+
+.login-heading {
+  margin-bottom: 26px;
+  text-align: center;
+}
+
+.login-heading h1 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.34rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.field {
+  margin-bottom: 18px;
+}
+
+input[type="text"],
+input[type="password"] {
+  width: 100%;
+  height: 50px;
+  padding: 0 16px;
+  color: var(--ink);
+  font: inherit;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  outline: none;
+  background: #ffffff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+input[name="login"] {
+  text-transform: uppercase;
+}
+
+input::placeholder {
+  color: #9aa4b2;
+}
+
+input:focus {
+  border-color: var(--red);
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(215, 25, 32, 0.12);
+}
+
+.remember {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  margin: 4px 0 24px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.remember input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--red);
+}
+
+button {
+  width: 100%;
+  height: 52px;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--red), var(--red-dark));
+  box-shadow: 0 14px 26px rgba(215, 25, 32, 0.24);
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+button:hover {
+  background: linear-gradient(135deg, #e51f27, var(--red-dark));
+  box-shadow: 0 18px 34px rgba(168, 15, 22, 0.3);
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+  transform: none;
+}
+
+.login-message {
+  min-height: 20px;
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.login-message.error {
+  color: var(--red-dark);
+}
+
+.login-message.success {
+  color: #137a3a;
+}
+
+@media (max-width: 480px) {
+  .login-page {
+    padding: 24px 16px;
+  }
+
+  .login-card {
+    padding: 34px 24px 30px;
+    border-radius: 12px;
+    width: 95%;
+  }
+  input[type="text"], input[type="password"], button {
+    height: 56px; /* Aumenta área de toque no mobile */
+  }
+
+  .form-logo {
+    width: 200px;
+    margin-bottom: 24px;
+  }
+}

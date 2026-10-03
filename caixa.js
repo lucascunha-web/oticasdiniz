@@ -1,0 +1,1806 @@
+/* ==========================================================================
+ * CAIXA — visão própria (sem modal do painel).
+ * Schema (migrado):
+ *   vendas/LOJA {n}/caixa/{YYYY-MM-DD}                      doc do dia
+ *   vendas/LOJA {n}/caixa/{YYYY-MM-DD}/VendasDia/{OS}       venda por OS
+ *   vendas/LOJA {n}/caixa/{YYYY-MM-DD}/EntregasDia/{OS}     entrega por OS
+ *   clientes/{cliId}   |   vendedores/{id}->{ativo:true}
+ * Etapas 1–3 base aqui; Etapas 4–6 (modal, permissões, fechamento) anexadas.
+ * ========================================================================== */
+import { initializeApp, getApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { collection, collectionGroup, doc, setDoc, updateDoc, getDoc, getDocs, deleteDoc, query, where, orderBy, limit, getFirestore, initializeFirestore, persistentLocalCache, documentId, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+import { loadVerifiedAccessProfile } from "./access-profile.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBwE1WFYWOHBZPXhapa-td7NxA3Ndx-P2w",
+  authDomain: "diniz-5e4af.firebaseapp.com",
+  projectId: "diniz-5e4af",
+  storageBucket: "diniz-5e4af.firebasestorage.app",
+  messagingSenderId: "473285890866",
+  appId: "1:473285890866:web:3715d02b32fac942a37d2b",
+  measurementId: "G-4HBMBK0GWD"
+};
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+if (["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname)) {
+  window.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+}
+let db;
+try { db = initializeFirestore(app, { localCache: persistentLocalCache() }); } catch (e) { db = getFirestore(app); }
+const verifiedAccess = await loadVerifiedAccessProfile(getAuth(app), db);
+if (!verifiedAccess) {
+  window.location.href = "login.html";
+  throw new Error("Acesso negado: autenticação ou perfil ausente.");
+}
+const accessProfile = verifiedAccess.profile;
+sessionStorage.setItem("usuarioLogado", accessProfile.nomeUsuario);
+sessionStorage.setItem("usuarioCargo", accessProfile.cargo);
+sessionStorage.setItem("usuarioLoja", accessProfile.loja);
+const storage=getStorage(app);
+
+/* utilitários */
+const $=(id)=>document.getElementById(String(id).replace(/^#/,""));
+const PAD=(n)=>String(n).padStart(2,"0");
+const esc=(v)=>String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+const norm=(v)=>String(v).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+function brl(v){const n=Number(v)||0;return n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});}
+function asDate(v){
+  if(!v)return null;
+  if(v instanceof Date){return isNaN(v.getTime())?null:v;}
+  if(typeof v.toDate==="function"){
+    const d=v.toDate();
+    return d instanceof Date && !isNaN(d.getTime()) ? d : null;
+  }
+  const d=new Date(v);
+  return isNaN(d.getTime()) ? null : d;
+}
+function time(d){const x=asDate(d); if(!x)return "--:--"; return `${PAD(x.getHours())}:${PAD(x.getMinutes())}`;}
+function kDate(d){return `${d.getFullYear()}-${PAD(d.getMonth()+1)}-${PAD(d.getDate())}`;}
+const TODAY=kDate(new Date());
+function parseK(x){const a=String(x).split("-").map(Number);return new Date(a[0],a[1]-1,a[2]||1);}
+function toISODate(value){
+  const raw=String(value??"").trim();
+  if(/^\d{4}-\d{2}-\d{2}$/.test(raw))return raw;
+  const br=raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if(br)return `${br[3]}-${br[2]}-${br[1]}`;
+  const parsed=asDate(value);
+  return parsed?kDate(parsed):"";
+}
+function formatNoteDate(value){
+  const iso=toISODate(value);
+  if(!iso)return String(value??"");
+  const [year,month,day]=iso.split("-");
+  return `${day}/${month}/${year}`;
+}
+function numOf(os){const m=String(os).match(/\d+/);return m?parseInt(m[0],10):null;}
+function normalizeOs(os){const value=String(os||"").trim();return /^\d+$/.test(value)?value.replace(/^0+(?=\d)/,""):value.toUpperCase();}
+function money(v){const s=String(v==null?"":v).replace(/[^\d.,-]/g,"");if(!s)return 0;const n=Number(s.replace(",","."));return isNaN(n)?0:Math.round(n*100)/100;}
+function fmtCell(x){const n=Number(x)||0;return n?brl(n):"—";}
+
+const PAY=["dinheiro","pix","cartao","convenio","carne","outros"];
+const PAYL={dinheiro:"Dinheiro",pix:"Pix",cartao:"Cartão",convenio:"Convênio",carne:"Carnê",outros:"Outro"};
+const FATm=["dinheiro","pix","cartao","convenio","outros"];
+const out={dinheiro:0,pix:0,cartao:0,convenio:0,carne:0,outros:0};
+const WARRANTY_TYPES={
+  lente:["Alteração médica","Riscos","Defeito no ar","Não adaptação","Erro de grau","Outros"],
+  armacao:["Mola","Oxidação","Quebra / trinco","Manchas","Defeitos de fabricação","Outros"]
+};
+function warrantyTypesFor(material){
+  return norm(material)==="armacao"?WARRANTY_TYPES.armacao:WARRANTY_TYPES.lente;
+}
+
+/* sessão / permissão (Etapa5) */
+const U_role=norm(accessProfile.cargo);
+const isAdmin=["admin","administrador"].includes(U_role);
+const isEst=["estoquista","estoque","almoxarifado"].includes(U_role);
+const isCashier=U_role==="caixa";
+const isMan=isAdmin||U_role==="gerente";
+const canManageCaixa=isMan||isCashier;
+const canRun=(isMan||U_role==="vendedor"||isCashier)||isEst; // pode abrir a tela do Caixa
+const mayAdd=isMan||U_role==="vendedor"||isCashier;    // lança venda/entrega
+const USER=accessProfile.nomeUsuario.toUpperCase();
+function sessionStore(){
+  const value=accessProfile.loja.trim();
+  if(!/^\d+$/.test(value))return null;
+  const store=Number(value);
+  return Number.isSafeInteger(store)&&store>0?store:null;
+}
+function hasStoreAccess(store=cxStore){
+  if(isAdmin)return true;
+  const ownStore=sessionStore();
+  return ownStore!==null&&store!=="GERAL"&&Number(store)===ownStore;
+}
+
+/* estado UI */
+let cxStore=null, cxAvail=[], cxDate=TODAY, cxTab="vendas";
+let unDay=null, unV=null, unE=null, unO=null, gotD=false, gotL=false, dayDoc=null, docV=[], docE=[], docO=[];
+let obsSaveTimer=null, obsSavePromise=null, obsPending=null;
+
+function dayRef(s){return doc(db,"vendas",`LOJA ${s}`,"caixa",cxDate);}
+function colV(s){return collection(db,"vendas",`LOJA ${s}`,"caixa",cxDate,"VendasDia");}
+function colE(s){return collection(db,"vendas",`LOJA ${s}`,"caixa",cxDate,"EntregasDia");}
+function colO(s){return collection(db,"vendas",`LOJA ${s}`,"caixa",cxDate,"OrdemServico");}
+function osCol(cat){return cat==="entrega"?colE(cxStore):colV(cxStore);}
+
+function uns(){unDay&&unDay();unV&&unV();unE&&unE();unO&&unO();unDay=unV=unE=unO=null;}
+function resetAll(){uns();gotD=gotL=false;dayDoc=null;docV=[];docE=[];docO=[];}
+function live(){return dayDoc&&dayDoc.status==="aberto";}
+function closed(){return dayDoc&&dayDoc.status==="fechado";}
+function queueObservation(value){
+  if(!hasStoreAccess())return;
+  const ref=dayRef(cxStore), text=String(value||"").slice(0,2000);
+  if(dayDoc)dayDoc.obsFechamento=text;
+  obsPending={ref,text};
+  clearTimeout(obsSaveTimer);
+  obsSaveTimer=setTimeout(()=>{
+    const pending=obsPending; obsPending=null;
+    obsSavePromise=updateDoc(pending.ref,{obsFechamento:pending.text}).catch(e=>console.error("Erro ao salvar observação do caixa:",e));
+  },500);
+}
+async function flushObservation(){
+  clearTimeout(obsSaveTimer);
+  if(obsPending){
+    const pending=obsPending; obsPending=null;
+    obsSavePromise=updateDoc(pending.ref,{obsFechamento:pending.text}).catch(e=>console.error("Erro ao salvar observação do caixa:",e));
+  }
+  if(obsSavePromise)await obsSavePromise;
+  obsSavePromise=null;
+}
+
+async function discover(){const s=new Set();
+  try{(await getDocs(query(collection(db,"lojas"),where(documentId(),"!=","GERAL")))).forEach(d=>{const m=String(d.id).match(/(\d+)/);if(m)s.add(parseInt(m[1],10));});}catch(e){}
+  try{(await getDocs(collection(db,"vendas"))).forEach(d=>{const m=String(d.id).match(/LOJA\s*(\d+)/i);if(m)s.add(parseInt(m[1],10));});}catch(e){}
+  if(!s.size){const my=sessionStore();if(my)s.add(my);else s.add(1);}
+  return [...s].sort((a,b)=>a-b);}
+
+/* view-shell */
+function viewCls(){$("#caixaView")&&($("main.panel-main").style.display="none");$("#caixaView").removeAttribute("hidden");}
+
+function drawShell(){
+  const v=$("#caixaView"); if(!v)return;
+  if(!canRun||!hasStoreAccess()){blocked();return;}
+  const canPick=isAdmin;
+  const isG = cxStore==="GERAL";
+  const selOpt=(n,lab,sel)=>`<option value="${n}" ${sel?"selected":""}>${lab}</option>`;
+  const pick=canPick&&cxAvail.length
+    ?`<select id="cxStorePk" class="stock-select" title="Loja em foco">${cxAvail.map(n=>selOpt(n,`LOJA ${n}`,(!isG&&cxStore===n))).join("")}${selOpt("GERAL","GERAL",isG)}</select>`
+    :`<span class="cx-loja-tag">${isG?"GERAL":`LOJA ${cxStore}`}</span>`;
+  const canClose=(isAdmin||canManageCaixa||U_role==="vendedor"); // vendedor também pode fechar o caixa
+  const closeBtn = (!isG&&canClose)
+    ?`<span class="cx-ctl-item cx-act"><button type="button" class="caixa-btn ghost cx-close" id="cxCloseBtn" title="Fechar caixa" disabled>Fechar Caixa</button></span>`
+    :"";
+  const isT=cxDate===TODAY,isF=cxDate>TODAY;
+  const dnote=isT?`Hoje · ${longFmt(cxDate)}`:isF?`Data: ${longFmt(cxDate)} (futura)`:`Data: ${longFmt(cxDate)}`;
+  const roleL=isAdmin?"Administração":isCashier?"Caixa":isMan?"Gerência":isEst?"Estoquista":"Operação";
+  v.innerHTML=`
+   <div class="cx-card">
+    <div class="cx-toolbar">
+      <div class="cx-tb-info">
+        <h2 class="cx-title">Caixa</h2>
+        <div class="cx-sub">${esc(USER)} · ${roleL} · ${esc(dnote)}</div>
+      </div>
+      <div class="cx-grow"></div>
+      <div class="cx-ctl">
+        <span class="cx-ctl-item"><button type="button" class="caixa-btn ghost cx-postsale-open" id="cxPostSaleOpen">Pós Venda</button></span>
+        <span class="cx-ctl-item cx-date" title="Calendário para escolher o dia"><input type="date" id="cxDateInput" value="${cxDate}"></span>
+        <span class="cx-ctl-item cx-store">${pick}</span>
+        ${closeBtn}
+      </div>
+    </div>
+    <div id="cxStatus"></div>
+    ${isG?"":`
+    <div class="cvmtab">
+      <button type="button" class="cvm ${cxTab==="vendas"?"on":""}" data-cv="vendas">Vendas</button>
+      <button type="button" class="cvm ${cxTab==="entregas"?"on":""}" data-cv="entregas">Entregas</button>
+      <button type="button" class="cvm ${cxTab==="os"?"on":""}" data-cv="os">O.S feitas</button>
+    </div>`}
+    <div id="cxBody"></div>
+   </div>
+   <div class="cxfab" id="cxFab" hidden aria-label="Novo lançamento">
+      <button type="button" id="cxFabBtn" class="cxfab-main" aria-label="Novo OS">＋</button>
+   </div>`;
+  wireStatic();
+  if(cxStore==="GERAL"){ paintGeral(); }
+  else loadDayState();
+}
+function longFmt(x){const d=parseK(x);const D=["dom","seg","ter","qua","qui","sex","sáb"],M=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];return `${D[d.getDay()]}, ${d.getDate()} ${M[d.getMonth()]} ${d.getFullYear()}`;}
+function blocked(){$("#caixaView").innerHTML=`<div class="cx-card"><p class="cx-coming" style="text-align:center">⚠️ Acesso ao Caixa não liberado<br><small>vínculo de loja/cargo necessário</small></p></div>`;}
+
+function wireStatic(){
+  const pk=$("#cxStorePk");
+  if(pk)pk.onchange=()=>{
+    const v=pk.value;
+    const n=Number(v);
+    const nv=(v==="GERAL"?v:(!isNaN(n)?n:null));
+    if(nv!==null&&hasStoreAccess(nv)&&nv!==cxStore){
+      cxStore=nv;
+      if(typeof nv === "number" && !cxAvail.includes(nv)){
+        cxAvail.push(nv);
+        cxAvail.sort((a,b)=>a-b);
+      }
+      refocus();
+    }
+  };
+  document.querySelectorAll("[data-cv]").forEach(x=>x.onclick=()=>{const tp=x.dataset.cv;if(tp!==cxTab){cxTab=tp;refocus();}});
+  document.querySelectorAll("[data-nav]").forEach(b=>b.onclick=()=>{
+    const a=b.dataset.nav;
+    if(a==="today"&&cxDate!==TODAY){cxDate=TODAY;refocus();}
+    else if(a==="prev"){const d=parseK(cxDate);d.setDate(d.getDate()-1);cxDate=kDate(d);refocus();}
+    else if(a==="next"){const d=parseK(cxDate);d.setDate(d.getDate()+1);cxDate=kDate(d);refocus();}});
+  const dt=$("#cxDateInput"); if(dt){dt.value=cxDate;dt.onchange=()=>{const nv=dt.value;if(nv&&nv!==cxDate){cxDate=nv;refocus();}};}
+  $("#cxPostSaleOpen")?.addEventListener("click",openPostSaleModal);
+  const cbtn=$("#cxCloseBtn"); if(cbtn)cbtn.addEventListener("click",closeCaixa);
+  const fab=$("#cxFab"), fb=$("#cxFabBtn");
+  if(fb&&fab){fb.addEventListener("click",(ev)=>{ev.stopPropagation();openNewOS("venda");});}
+}
+
+let postSaleModal=null;
+function openPostSaleModal(){
+  if(cxStore==="GERAL"||!Number.isFinite(Number(cxStore))||!hasStoreAccess()){
+    return alert("Selecione uma loja autorizada para consultar o pós-venda.");
+  }
+  postSaleModal?.remove();
+  const modalEl=document.createElement("div");
+  modalEl.className="cx-modal cx-postsale-modal";
+  modalEl.innerHTML=`
+    <section class="cx-modal-card cx-postsale-card" role="dialog" aria-modal="true" aria-labelledby="cxPostSaleTitle">
+      <button type="button" class="cx-modal-x" data-postsale-close aria-label="Fechar">×</button>
+      <h2 class="cx-postsale-title" id="cxPostSaleTitle">Pós Venda · Loja ${esc(cxStore)}</h2>
+      <p class="cx-postsale-hint">Selecione o período para consultar as entregas.</p>
+      <form id="cxPostSaleForm" class="cx-postsale-filters">
+        <label>Data inicial<input type="date" id="cxPostSaleStart" value="${cxDate}" required></label>
+        <label>Data final<input type="date" id="cxPostSaleEnd" value="${cxDate}" required></label>
+        <button type="submit" class="caixa-btn primary">Consultar</button>
+      </form>
+      <div id="cxPostSaleStatus" class="cx-postsale-status" aria-live="polite">Escolha um período e clique em Consultar.</div>
+      <div class="cx-postsale-table-wrap" id="cxPostSaleResults"></div>
+      <div class="cx-postsale-footer"><button type="button" class="caixa-btn primary" id="cxPostSalePdf" disabled>Baixar PDF</button></div>
+    </section>`;
+  document.body.appendChild(modalEl);
+  postSaleModal=modalEl;
+  const close=()=>{modalEl.remove();if(postSaleModal===modalEl)postSaleModal=null;};
+  modalEl.querySelector("[data-postsale-close]").addEventListener("click",close);
+  modalEl.addEventListener("click",event=>{if(event.target===modalEl)close();});
+  const rangeStart=modalEl.querySelector("#cxPostSaleStart");
+  const rangeEnd=modalEl.querySelector("#cxPostSaleEnd");
+  const syncRangeBounds=(changed)=>{
+    if(changed===rangeStart&&rangeStart.value){
+      rangeEnd.min=rangeStart.value;
+      rangeEnd.max=shiftDateKey(rangeStart.value,5);
+      if(rangeEnd.value<rangeEnd.min)rangeEnd.value=rangeEnd.min;
+      if(rangeEnd.value>rangeEnd.max)rangeEnd.value=rangeEnd.max;
+    }else if(rangeEnd.value){
+      rangeStart.min=shiftDateKey(rangeEnd.value,-5);
+      rangeStart.max=rangeEnd.value;
+      if(rangeStart.value>rangeStart.max)rangeStart.value=rangeStart.max;
+      if(rangeStart.value<rangeStart.min)rangeStart.value=rangeStart.min;
+    }
+  };
+  rangeStart.addEventListener("change",()=>syncRangeBounds(rangeStart));
+  rangeEnd.addEventListener("change",()=>syncRangeBounds(rangeEnd));
+  syncRangeBounds(rangeStart);
+  modalEl.querySelector("#cxPostSaleForm").addEventListener("submit",event=>{
+    event.preventDefault();
+    loadPostSaleRows(modalEl);
+  });
+  modalEl.querySelector("#cxPostSalePdf").addEventListener("click",()=>downloadPostSalePDF(modalEl));
+}
+
+function shiftDateKey(date,offset){const value=parseK(date);value.setDate(value.getDate()+offset);return kDate(value);}
+function dateRange(start,end){
+  const dates=[];
+  const current=parseK(start), last=parseK(end);
+  while(current<=last&&dates.length<=6){dates.push(kDate(current));current.setDate(current.getDate()+1);}
+  return dates;
+}
+
+async function loadPostSaleRows(modalEl){
+  const start=modalEl.querySelector("#cxPostSaleStart").value;
+  const end=modalEl.querySelector("#cxPostSaleEnd").value;
+  const status=modalEl.querySelector("#cxPostSaleStatus");
+  const results=modalEl.querySelector("#cxPostSaleResults");
+  const pdfButton=modalEl.querySelector("#cxPostSalePdf");
+  const store=cxStore;
+  if(!start||!end||start>end){status.textContent="Informe um intervalo de datas válido.";return;}
+  if(!hasStoreAccess(store)){status.textContent="Acesso permitido somente à loja vinculada ao seu usuário.";return;}
+  const dates=dateRange(start,end);
+  if(dates.length>6){status.textContent="O período máximo para consulta é de 6 dias.";return;}
+  status.textContent="Consultando entregas…";
+  results.innerHTML="";
+  pdfButton.disabled=true;
+  pdfButton._rows=[];
+  try{
+    const records=[];
+    const sellerByDateAndOS=new Map();
+    const sellerByOS=new Map();
+    const dailyData=await Promise.all(dates.map(async date=>{
+      const dayPath=["vendas",`LOJA ${store}`,"caixa",date];
+      const [deliverySnapshot,salesSnapshot,ordersSnapshot]=await Promise.all([
+        getDocs(collection(db,...dayPath,"EntregasDia")),
+        getDocs(collection(db,...dayPath,"VendasDia")),
+        getDocs(collection(db,...dayPath,"OrdemServico"))
+      ]);
+      return {date,deliverySnapshot,salesSnapshot,ordersSnapshot};
+    }));
+    dailyData.forEach(({date,deliverySnapshot,salesSnapshot,ordersSnapshot},index)=>{
+      const sourceRows=[...salesSnapshot.docs,...ordersSnapshot.docs].map(item=>({id:item.id,...item.data()}));
+      sourceRows.forEach(row=>{
+        const seller=String(row.vendedor||"").trim();
+        const key=normalizeOs(row.os||row.n_os||row.id);
+        if(!seller||!key)return;
+        sellerByDateAndOS.set(`${date}|${key}`,seller);
+        if(!sellerByOS.has(key))sellerByOS.set(key,seller);
+      });
+      deliverySnapshot.docs.forEach(item=>records.push({date,id:item.id,...item.data()}));
+      status.textContent=`Consultando entregas… ${index+1}/${dates.length} dias`;
+    });
+
+    const clientIds=[...new Set(records.map(row=>String(row.cliente||"")).filter(Boolean))];
+    const clientEntries=[];
+    for(let i=0;i<clientIds.length;i+=20){
+      const batch=clientIds.slice(i,i+20);
+      clientEntries.push(...await Promise.all(batch.map(async id=>{
+        try{const snap=await getDoc(doc(db,"clientes",id));return [id,snap.exists()?snap.data():{}];}
+        catch(e){return [id,{}];}
+      })));
+    }
+    const clients=new Map(clientEntries);
+    const rows=records.map(row=>{
+      const client=clients.get(String(row.cliente||""))||{};
+      return {
+        date:row.date,
+        name:row.clienteNome||client.nome||"—",
+        phone:row.clienteContato||row.contato||row.telefone||client.contato||client.telefone||"—",
+        seller:row.vendedor||sellerByDateAndOS.get(`${row.date}|${normalizeOs(row.os||row.n_os||row.id)}`)||sellerByOS.get(normalizeOs(row.os||row.n_os||row.id))||"—",
+        os:row.os||row.n_os||row.id||"—"
+      };
+    }).sort((a,b)=>a.date.localeCompare(b.date)||(numOf(a.os)||0)-(numOf(b.os)||0));
+    pdfButton._rows=rows;
+    pdfButton._range={start,end,store};
+    pdfButton.disabled=false;
+    if(!rows.length){
+      status.textContent="Nenhuma entrega encontrada neste período.";
+      return;
+    }
+    status.textContent=`${rows.length} entrega${rows.length===1?"":"s"} encontrada${rows.length===1?"":"s"}.`;
+    results.innerHTML=`<table class="cx-postsale-table"><thead><tr><th>Data de entrega</th><th>Nome do cliente</th><th>Número do cliente</th><th>Vendedor</th><th>OS</th></tr></thead><tbody>${rows.map(row=>`<tr><td>${esc(longFmt(row.date))}</td><td>${esc(row.name)}</td><td>${esc(row.phone)}</td><td>${esc(row.seller)}</td><td>${esc(row.os)}</td></tr>`).join("")}</tbody></table>`;
+  }catch(error){
+    console.error("Erro ao consultar entregas para pós-venda:",error);
+    status.textContent="Não foi possível consultar as entregas. Verifique a conexão e tente novamente.";
+  }
+}
+
+async function downloadPostSalePDF(modalEl){
+  const button=modalEl.querySelector("#cxPostSalePdf");
+  const rows=button._rows||[];
+  const range=button._range;
+  if(!range||!hasStoreAccess(range.store))return alert("Acesso permitido somente à loja vinculada ao seu usuário.");
+  await ensurePdfLibs();
+  if(!(window.jspdf&&window.jspdf.jsPDF))return alert("Não foi possível abrir o gerador de PDF.");
+  const {jsPDF:J}=window.jspdf;
+  const pdf=new J("landscape","pt","a4");
+  const width=pdf.internal.pageSize.getWidth();
+  pdf.setFont("helvetica","bold");
+  pdf.setFontSize(16);
+  pdf.text(`PÓS-VENDA · LOJA ${range.store}`,36,38);
+  pdf.setFont("helvetica","normal");
+  pdf.setFontSize(10);
+  pdf.text(`Período: ${longFmt(range.start)} a ${longFmt(range.end)}`,36,56);
+  if(typeof pdf.autoTable!=="function")return alert("O componente de tabela do PDF não foi carregado. Tente novamente.");
+  pdf.autoTable({
+    startY:72,
+    theme:"grid",
+    head:[["Data de entrega","Nome do cliente","Número do cliente","Vendedor","OS"]],
+    body:rows.map(row=>[longFmt(row.date),String(row.name),String(row.phone),String(row.seller),String(row.os)]),
+    headStyles:{fillColor:[215,25,32],textColor:255,fontStyle:"bold"},
+    styles:{font:"helvetica",fontSize:9,cellPadding:6,overflow:"linebreak"},
+    columnStyles:{0:{cellWidth:100},2:{cellWidth:120},4:{cellWidth:60}},
+    margin:{left:36,right:36}
+  });
+  pdf.save(`pos_venda_loja_${range.store}_${range.start}_a_${range.end}.pdf`);
+}
+
+function refocus(){resetAll();drawShell();}
+
+function loadDayState(){
+  const st=$("#cxStatus"); if(!st)return;
+  if(cxStore==null){return;}
+  resetAll();
+  st.innerHTML=`<p class="caixa-empty">Carregando…</p>`;
+  const tag=`${cxStore}|${cxDate}`;
+  try{unDay=onSnapshot(dayRef(cxStore),(sn)=>{if(tag!==cxStore+"|"+cxDate)return;const currentObs=$("#cxObservation");const keepObsFocus=currentObs&&document.activeElement===currentObs&&String(sn.data()?.obsFechamento||"")===currentObs.value;dayDoc=sn.exists()?sn.data():null;gotD=true;if(!keepObsFocus)paintDay();},(e)=>{dayDoc=null;gotD=true;paintDay(e);});}catch(e){gotD=true;}
+  try{unV=onSnapshot(colV(cxStore),(sn)=>{if(tag!==cxStore+"|"+cxDate)return;docV=sn.docs.map(d=>({id:d.id,...d.data()}));gotL=true;paintDay();},(e)=>{docV=[];gotL=true;});}catch(e){gotL=true;}
+  try{unE=onSnapshot(colE(cxStore),(sn)=>{if(tag!==cxStore+"|"+cxDate)return;docE=sn.docs.map(d=>({id:d.id,...d.data()}));gotL=true;paintDay();},(e)=>{docE=[];gotL=true;});}catch(e){gotL=true;}
+  try{unO=onSnapshot(colO(cxStore),(sn)=>{if(tag!==cxStore+"|"+cxDate)return;docO=sn.docs.map(d=>({id:d.id,...d.data()}));gotL=true;paintDay();},(e)=>{docO=[];gotL=true;});}catch(e){gotL=true;}
+}
+
+function paintDay(err){
+  const s=$("#cxStatus"); if(!s)return;
+  const status=dayDoc&&dayDoc.status; const open=status==="aberto"; const cl=status==="fechado";
+  const warn=err?`<div class="caixa-warn">⚠️ ${esc(String(err&&err.message?err.message:err).slice(0,200))}</div>`:"";
+  let head=!dayDoc?"Nenhum caixa nesta data.":open?`Aberto por ${esc(String(dayDoc.abertoPor||"--"))} · ${time(dayDoc.abertoEm)}`:`Fechado por ${esc(String(dayDoc.fechadoPor||"--"))} às ${time(dayDoc.fechadoEm)}`;
+  let pill=!dayDoc?`<span class="caixa-status-pill none"><i class="dot"></i>${cxDate>TODAY?"Futuro":"Não aberto"}</span>`:open?`<span class="caixa-status-pill open"><i class="dot"></i>Caixa Aberto</span>`:`<span class="caixa-status-pill closed"><i class="dot"></i>Caixa Fechado</span>`;
+  let acts="";
+  if(!isEst && !(cxDate>TODAY)){ // estoquista: somente visualização
+    if(!dayDoc||(!open&&!cl))acts=`<button class="caixa-btn primary" data-a="open">Abrir Caixa</button>`;
+    else if(open)acts=``;
+    else if(cl&&canManageCaixa)acts=`<button class="caixa-btn ghost" data-a="reopen">Reabrir</button>`;
+  }
+  const obs=String(dayDoc?.obsFechamento||"");
+  const obsField=dayDoc?`<div class="cx-observation"><label for="cxObservation">Observação do dia</label><textarea id="cxObservation" maxlength="2000" spellcheck="false" placeholder="Registre ocorrências, trocos, valores em espécie, quebras ou pendências..." ${isEst?"readonly":""}>${esc(obs)}</textarea><small>Salvo automaticamente</small></div>`:"";
+  s.innerHTML=`${warn}<div class="cx-statusblock"><div class="cx-meta-text">${esc(head)}</div>${pill}</div>${obsField}<div class="caixa-actions">${acts}</div>`;
+  const obsInput=s.querySelector("#cxObservation");
+  if(obsInput&&!isEst)obsInput.addEventListener("input",()=>queueObservation(obsInput.value));
+  s.querySelector('[data-a="open"]')?.addEventListener("click",()=>openCaixa());
+  s.querySelector('[data-a="close"]')?.addEventListener("click",()=>closeCaixa());
+  s.querySelector('[data-a="reopen"]')?.addEventListener("click",()=>reopen());
+  const fab=$("#cxFab");
+  if(fab)fab.hidden= !(mayAdd&& open && !(cxDate>TODAY)); // estoquista não pode lançar
+  const cbtn=$("#cxCloseBtn");
+  if(cbtn){
+    cbtn.disabled=!(open&&!(cxDate>TODAY)&&!closed());
+    if(open&&!(cxDate>TODAY))cbtn.removeAttribute("disabled");
+  }
+  if(cl){
+    const btnPDF=document.createElement("button");
+    btnPDF.type="button";
+    btnPDF.className="caixa-btn primary";
+    btnPDF.textContent="📥 Baixar PDF";
+    btnPDF.style.marginTop="0";
+    btnPDF.addEventListener("click",()=>{
+      buildCaixaPDF(docV||[],docE||[],docO||[],String(dayDoc?.obsFechamento||""));
+    });
+    s.querySelector(".caixa-actions")?.appendChild(btnPDF);
+  }
+  drawBody();
+}
+/* planilha Etapa3 */
+function tabList(){return cxTab==="entregas"?docE:cxTab==="os"?docO:docV;}
+function sumRows(list){const o={...out};list.forEach(d=>PAY.forEach(p=>o[p]+=(Number(d[p])||0)));return o;}
+function fatOf(o){return FATm.reduce((a,k)=>a+o[k],0);}
+
+function drawBody(){
+  const b=$("#cxBody"); if(!b)return;
+  if(!gotL){b.innerHTML=`<p class="caixa-empty">Carregando…</p>`;return;}
+  if(!dayDoc){b.innerHTML=`<p class="caixa-empty">Abra o caixa para começar.</p>`;return;}
+  if(!live()&&!closed()){b.innerHTML=`<p class="caixa-empty">Aguardando abertura.</p>`;return;}
+  if(!clientsLoaded){loadClients().then(()=>{if($("#cxBody"))drawBody();});}
+  const isVen=cxTab==="vendas", isOs=cxTab==="os";
+  const rows=tabList().slice().sort((x,y)=>(numOf(x.id)||0)-(numOf(y.id)||0));
+  const canDel=canManageCaixa; // admin, gerente e caixa podem editar/excluir lançamento
+  const actionsLocked=closed();
+  let heads=[];
+  if(isOs)heads=["OS","Cliente","Vendedor"];
+  else if(isVen)heads=["OS","Dinheiro","Pix","Cartão","Convênio","Carnê","Vendedor"];
+  else heads=["OS","Dinheiro","Pix","Cartão"];
+  if(canDel||isOs)heads.push("Ações");
+  const numericHeads=new Set(["Dinheiro","Pix","Cartão","Convênio","Carnê","Outros","Faturado"]);
+  const symp="./"; // unused guard
+  const trs=rows.length?rows.map(d=>{
+    let c, kind, label;
+    if(isOs){ kind="OrdemServico"; label="ordem de serviço";
+      c=[esc(d.id),esc(clientLabel(d)),esc(String(d.vendedor||"—"))];
+    } else if(isVen){ kind="VendasDia"; label="venda";
+      c=[esc(d.id),fmtCell(d.dinheiro),fmtCell(d.pix),fmtCell(d.cartao),fmtCell(d.convenio),fmtCell(d.carne),esc(String(d.vendedor||"—"))];
+    } else { kind="EntregasDia"; label="entrega";
+      c=[esc(d.id),fmtCell(d.dinheiro),fmtCell(d.pix),fmtCell(d.cartao)];
+    }
+    if(canDel||isOs)c.push(`<span class="cx-row-actions${actionsLocked?" locked":""}">${isOs?`<button type="button" class="cx-row-generate" data-id="${esc(String(d.id))}" title="${actionsLocked?"Visualizar OS":"Gerar ordem de serviço"}" aria-label="${actionsLocked?"Visualizar":"Gerar"} ordem de serviço ${esc(String(d.id))}">▤</button>`:""}${canDel?`<button type="button" class="cx-row-edit" data-kind="${kind}" data-id="${esc(String(d.id))}" title="${actionsLocked?"Caixa fechado":"Editar "+label}" ${actionsLocked?"disabled aria-disabled=\"true\"":""}>✎</button><button type="button" class="cx-row-del" data-kind="${kind}" data-id="${esc(String(d.id))}" title="${actionsLocked?"Caixa fechado":"Excluir "+label}" ${actionsLocked?"disabled aria-disabled=\"true\"":""}>✕</button>`:""}</span>`);
+    return `<tr>${c.map((x,i)=>{const head=heads[i]||"";const cls=head==="OS"?"os":numericHeads.has(head)?"m":head==="Ações"?"actions":"text";return `<td class="${cls}" data-label="${esc(head)}">${x}</td>`;}).join("")}</tr>`;}).join("")
+    :`<tr><td colspan="${heads.length}" class="caixa-empty">Nenhuma OS neste modo.</td></tr>`;
+  const tV=sumRows(docV), tE=sumRows(docE);
+  const M={dinheiro:tV.dinheiro+tE.dinheiro,pix:tV.pix+tE.pix,cartao:tV.cartao+tE.cartao,carne:tV.carne+tE.carne,convenio:tV.convenio+tE.convenio};
+  const dayFat=M.dinheiro+M.pix+M.cartao+M.convenio;
+  const MEAN5=[["dinheiro","Dinheiro"],["pix","Pix"],["cartao","Cartão"],["carne","Carnê"],["convenio","Convênio"]];
+  const meanCards=MEAN5.map(([k,lab],i)=>`<div class="cm-body ${k}"><span class="cm-lb">${lab}</span><strong class="cm-val" id="xM${i}">${brl(M[k])}</strong></div>`).join("");
+  b.innerHTML=`
+    ${closed()?`<div class="cx-closed-notice" role="alert"><strong>🔒 CAIXA FECHADO</strong><span>Este caixa está encerrado. Novos lançamentos, edições e exclusões estão bloqueados.</span></div>`:""}
+    <div class="cx-kpis">
+       <div class="cx-kpi fat"><span>Faturamento</span><b id="txF">${brl(dayFat)}</b></div>
+       <div class="cx-kpi meta"><span>Meta do dia</span><b id="txM">—</b></div>
+       <div class="cx-kpi falta"><span>Falta p/ meta</span><b id="txL">—</b></div>
+     </div>
+     <div class="cx-means"><div class="cx-means-head">Meios de pagamento do dia</div><div class="cx-means-grid">${meanCards}</div></div>
+    <div class="cx-table-wrap" style="overflow-x:auto;margin-top:14px">
+      <table class="cvtable"><thead><tr>${heads.map(h=>`<th class="${numericHeads.has(h)?"numeric":h==="Ações"?"actions":"text"}">${esc(h)}</th>`).join("")}</tr></thead>
+       <tbody>${trs}</tbody></table>
+     </div>`;
+  b.querySelectorAll(".cx-row-del").forEach(btn=>btn.onclick=()=>{const id=btn.getAttribute("data-id");const kind=btn.getAttribute("data-kind");delRow(kind,id);});
+  b.querySelectorAll(".cx-row-edit").forEach(btn=>btn.onclick=()=>{const id=btn.getAttribute("data-id");const kind=btn.getAttribute("data-kind");editRow(kind,id);});
+  b.querySelectorAll(".cx-row-generate").forEach(btn=>btn.onclick=()=>openGeneratedOS(btn.getAttribute("data-id")));
+  paintMeta(dayFat);
+}
+function clientLabel(row){return String(row.clienteNome||cliAll.find(c=>c.id===row.cliente)?.nome||row.cliente||"—");}
+function paintMeta(fat){
+  const m=$("#txM"),x=$("#txL"); if(!m||!x)return;
+  const mk=monthKey(cxDate);
+  (async()=>{
+    try{
+      const [yr,mo]=mk.split("-"),tdays=new Date(+yr,+mo,0).getDate();
+      let dtg=1,fer=4,metaF=0,acum=0;
+      const isG=cxStore==="GERAL";
+      const listN=isG?(cxAvail&&cxAvail.length?cxAvail:[1]):[cxStore];
+      for(const n0 of listN){
+        const sid="LOJA "+n0;
+        try{
+          const md=await getDoc(doc(db,"lojas",sid,"metricas",mk));
+          if(md.exists()){metaF+=Number(md.data().metaFaturamento)||0;acum+=Number(md.data().faturamento)||0;}
+        }catch(e){}
+        if(!isG){
+          try{const cfg=await getDoc(doc(db,"lojas",sid));if(cfg.exists()){dtg=Number(cfg.data().diasTrabalhados)||dtg;fer=Number(cfg.data().feriados)||fer;}}catch(e){}
+        }
+      }
+      if(isG){
+        try{const cfg=await getDoc(doc(db,"lojas","GERAL"));if(cfg.exists()){dtg=Number(cfg.data().diasTrabalhados)||dtg;fer=Number(cfg.data().feriados)||fer;}}catch(e){}
+      }
+      const rest=tdays-fer-dtg;
+      const meta=(rest>0)?Math.max(0,(metaF-acum)/rest):0;
+      m.textContent=brl(meta);
+      m.title=`metaF ${Math.round(metaF)} - fat ${Math.round(acum)} / ${rest} dias`;
+      x.textContent=brl(Math.max(0,meta-fat));
+    }catch(e){m.textContent="—";x.textContent="—";}
+  })();
+}
+
+function monthKey(dateStr){const d=parseK(dateStr);return `${d.getFullYear()}-${PAD(d.getMonth()+1)}`;}
+
+/* Meta/falta para a visão consolidada (todas as lojas) — mesmo cálculo da visão por loja */
+function paintGeralMeta(fat){
+  const m=$("#gMeta"), x=$("#gFalta"); if(!m||!x)return;
+  const mk=monthKey(cxDate);
+  (async()=>{
+    try{
+      const [yr,mo]=mk.split("-"),tdays=new Date(+yr,+mo,0).getDate();
+      let dtg=1,fer=4,metaF=0,acum=0;
+      const isG=cxStore==="GERAL";
+      const listN=isG?(cxAvail&&cxAvail.length?cxAvail:[1]):[cxStore];
+      for(const n0 of listN){
+        const sid="LOJA "+n0;
+        try{
+          const md=await getDoc(doc(db,"lojas",sid,"metricas",mk));
+          if(md.exists()){metaF+=Number(md.data().metaFaturamento)||0;acum+=Number(md.data().faturamento)||0;}
+        }catch(e){}
+        if(!isG){
+          try{const cfg=await getDoc(doc(db,"lojas",sid));if(cfg.exists()){dtg=Number(cfg.data().diasTrabalhados)||dtg;fer=Number(cfg.data().feriados)||fer;}}catch(e){}
+        }
+      }
+      if(isG){
+        try{const cfg=await getDoc(doc(db,"lojas","GERAL"));if(cfg.exists()){dtg=Number(cfg.data().diasTrabalhados)||dtg;fer=Number(cfg.data().feriados)||fer;}}catch(e){}
+      }
+      const rest=tdays-fer-dtg;
+      const meta=(rest>0)?Math.max(0,(metaF-acum)/rest):0;
+      const fatToday=Number(fat)||0;
+      m.textContent=brl(meta);
+      x.textContent=brl(Math.max(0,meta-fatToday));
+    }catch(e){m.textContent="—";x.textContent="—";}
+  })();
+}
+
+function openGeneratedOS(osId){
+  if(!hasStoreAccess())return alert("Acesso permitido somente à loja vinculada ao seu usuário.");
+  const record=docO.find(row=>String(row.id)===String(osId));
+  if(!record)return alert("Ordem de serviço não encontrada.");
+  void ensurePdfLibs(); // pré-carrega para o download da via cliente responder direto ao clique
+  const osReadOnly=closed()||isEst;
+  const kind=String(record.tipoNota||"").toLowerCase();
+  const detail={...(record.detalhesOS||{})};
+  if(!detail.dataPrevisao&&record.dataPrevisao)detail.dataPrevisao=record.dataPrevisao;
+  if(!detail.tipoGarantia&&record.tipoGarantia)detail.tipoGarantia=record.tipoGarantia;
+  const lens=kind==="garantia"&&String(record.garantiaAorL||"").toLowerCase()==="lente";
+  const frame=kind==="garantia"&&String(record.garantiaAorL||"").toLowerCase()==="armação";
+  const root=document.createElement("div");
+  root.className="cx-modal";
+  const cleanNumeric=(raw,mode)=>{
+    const text=String(raw??"").replace(/,/g,".").replace(mode==="signed"?/[^\d.+-]/g:mode==="negative"?/[^\d.-]/g:mode==="axis"?/[^\d]/g:/[^\d.]/g,"");
+    const sign=mode==="signed"?text.match(/^[+-]/)?.[0]||"":mode==="negative"?text.match(/^-/)?.[0]||"":"";
+    if(mode==="axis")return text.slice(0,3);
+    const unsigned=text.replace(/[+-]/g,"");
+    const parts=unsigned.split(".");
+    const hasDecimal=parts.length>1;
+    const whole=(parts.shift()||"").replace(/\D/g,"").slice(0,2);
+    const fraction=parts.join("").replace(/\D/g,"").slice(0,2);
+    if(!whole&&!fraction)return "";
+    return sign+(whole||(hasDecimal?"0":""))+(hasDecimal?"."+fraction:"");
+  };
+  const field=(label,name,type="text",value="")=>{
+    const isDate=type==="date";
+    const numericMode=/_esf$|_ad$/.test(name)?"signed":/_cil$/.test(name)?"negative":/_eixo$/.test(name)?"axis":/^armacao_|_(dnp|alt)$/.test(name)?"measure":"";
+    const numeric=Boolean(numericMode);
+    const pattern=numericMode==="signed"?"[+-]?[0-9]{1,2}([.,][0-9]{1,2})?":numericMode==="negative"?"(-[0-9]{1,2}([.,][0-9]{1,2})?|0([.,]0{1,2})?)":numericMode==="axis"?"[0-9]{1,3}":numeric?"[0-9]{1,2}([.,][0-9]{1,2})?":"";
+    let inputValue=isDate?toISODate(value):String(value??"");
+    if(numeric){
+      inputValue=cleanNumeric(inputValue,numericMode);
+      if((numericMode==="signed"||numericMode==="negative")&&inputValue&&/^[+-]?\d{1,2}(?:\.\d{1,2})?$/.test(inputValue))inputValue=Number(inputValue).toFixed(2);
+    }
+    const maxLength=numericMode==="axis"?3:6;
+    const inputMode=numericMode==="axis"?"numeric":"decimal";
+    const title=numericMode==="signed"?"Até 2 dígitos antes do decimal, com sinal opcional.":numericMode==="negative"?"Somente valores negativos (ou zero), com até 2 dígitos antes do decimal.":numericMode==="axis"?"Somente números inteiros, até 3 dígitos.":"Somente números, até 2 dígitos antes do decimal.";
+    const inputAttrs=numeric?` inputmode="${inputMode}" maxlength="${maxLength}" data-os-numeric="${numericMode}" pattern="${pattern}" title="${title}"`:"";
+    const fieldClass=name==="dataPrevisao"?" cx-os-field--forecast":name==="produto"?" cx-os-field--wide":name==="tipoGarantia"?" cx-os-field--tipo":name==="dataCompra"?" cx-os-field--purchase":name==="osOriginal"?" cx-os-field--original":"";
+    return `<label class="cx-os-field${fieldClass}"><span class="cx-os-label">${esc(label)}<span class="cx-os-required" aria-hidden="true">*</span></span><input name="${name}" type="${type}" value="${esc(inputValue)}"${inputAttrs} required></label>`;
+  };
+  const guaranteeOptions=warrantyTypesFor(record.garantiaAorL);
+  const select=(label,name,options,value="")=>`<label class="cx-os-field${name==="tipoGarantia"?" cx-os-field--tipo":""}"><span class="cx-os-label">${esc(label)}<span class="cx-os-required" aria-hidden="true">*</span></span><select name="${name}" required><option value="">Selecione…</option>${options.map(o=>`<option value="${esc(o)}" ${value===o?"selected":""}>${esc(o)}</option>`).join("")}</select></label>`;
+  const yesNo=(label,name,value="")=>`<fieldset class="cx-os-choice${name==="garantiaAntecipada"?" cx-os-choice--advance":name==="trocaArmacao"?" cx-os-choice--frame":name==="trocaMedidas"?" cx-os-choice--measures":""}"><legend>${esc(label)}<span class="cx-os-required" aria-hidden="true"> *</span></legend><div class="cx-os-choice-options">${["Sim","Não"].map(option=>`<label class="cx-os-choice-option"><input type="radio" name="${name}" value="${option}" ${value===option?"checked":""} required><span>${option}</span></label>`).join("")}</div></fieldset>`;
+  const textarea=(label,name,value="")=>`<label class="cx-os-field cx-os-field--wide"><span class="cx-os-label">${esc(label)}<span class="cx-os-required" aria-hidden="true">*</span></span><textarea name="${name}" rows="4" required>${esc(value)}</textarea></label>`;
+  const side=(sideName,tag)=>`<fieldset class="cx-os-eye"><legend>${sideName}</legend><div class="cx-os-grid cx-os-grid--measure">${[["ESF","esf"],["CIL","cil"],["EIXO","eixo"],["ADIÇÃO","ad"],["DNP","dnp"],["ALT","alt"]].map(([label,k])=>field(label,`${tag}_${k}`,"text",detail[`${tag}_${k}`]||"")).join("")}</div></fieldset>`;
+  const existingFiles=Array.isArray(detail.anexos)?detail.anexos:[];
+  let body="";
+  if(lens){
+    body=`<fieldset><legend>Dados da garantia de lente</legend><div class="cx-os-grid cx-os-grid--lens">${select("Tipo de garantia","tipoGarantia",guaranteeOptions,detail.tipoGarantia||"")}${yesNo("Garantia antecipada?","garantiaAntecipada",detail.garantiaAntecipada||"")}${yesNo("Troca de armação?","trocaArmacao",detail.trocaArmacao||"")}${yesNo("Troca de medidas?","trocaMedidas",detail.trocaMedidas||"")}${field("Data da compra","dataCompra","date",detail.dataCompra||"")}${field("OS original","osOriginal","text",detail.osOriginal||"")}${field("Produto","produto","text",detail.produto||"")}</div></fieldset>
+      <fieldset><legend>Dioptria e medidas — todos os campos obrigatórios</legend>${side("Olho direito","od")}${side("Olho esquerdo","oe")}</fieldset>
+      <fieldset><legend>Medidas da armação</legend><div class="cx-os-grid cx-os-grid--frame">${["aro","md","vertical","ponte"].map(k=>field(k.toUpperCase(),`armacao_${k}`,"text",detail[`armacao_${k}`]||"")).join("")}</div></fieldset>`;
+  }else if(frame){
+    body=`<fieldset><legend>Dados da garantia de armação</legend><div class="cx-os-grid">${select("Tipo de garantia","tipoGarantia",guaranteeOptions,detail.tipoGarantia||"")}${field("OS original","osOriginal","text",detail.osOriginal||"")}${field("Produto","produto","text",detail.produto||"")}</div></fieldset>`;
+  }else if(kind==="reparo"){
+    body=`<fieldset><legend>Dados do reparo</legend><div class="cx-os-grid">${field("Produto","produto","text",detail.produto||"")}${textarea("Serviço / defeito relatado","servicoSolicitado",detail.servicoSolicitado||"")}</div></fieldset>`;
+  }else{
+    body=`<fieldset><legend>Dados da assistência</legend><div class="cx-os-grid">${field("Produto","produto","text",detail.produto||"")}${textarea("Serviço / problema relatado","servicoSolicitado",detail.servicoSolicitado||"")}</div></fieldset>`;
+  }
+  root.innerHTML=`<section class="cx-modal-card cx-os-card" role="dialog" aria-modal="true" aria-labelledby="cxGeneratedTitle"><button type="button" class="cx-modal-x" data-os-close aria-label="Fechar">×</button><h2 id="cxGeneratedTitle">Ordem de serviço</h2><p class="cx-os-hint">${esc(kind==="garantia"?`Garantia de ${record.garantiaAorL||""}`:kind||"Tipo não definido")}</p><div class="cx-os-summary" aria-label="Identificação da ordem de serviço"><div class="cx-os-summary-card"><span>Número da OS</span><strong>${esc(record.os||record.id||osId)}</strong></div><div class="cx-os-summary-card"><span>Cliente</span><strong>${esc(clientLabel(record))}</strong></div></div><form id="cxGeneratedForm"><div class="cx-os-topline">${field("Prazo / Data prevista","dataPrevisao","date",detail.dataPrevisao||"")}</div>${body}<fieldset><legend>Observações</legend>${textarea("Observações detalhadas","observacoes",detail.observacoes||"")}</fieldset>${lens?`<fieldset><legend>Anexos · fotos</legend>${existingFiles.length?`<div class="cx-os-files">${existingFiles.map(f=>`<a href="${esc(f.url||"")}" target="_blank" rel="noopener">${esc(f.nome||"Foto anexada")}</a>`).join("")}</div>`:""}<label class="cx-os-upload"><input type="file" name="fotos" accept="image/*" multiple><span class="cx-os-upload-icon" aria-hidden="true">↑</span><span class="cx-os-upload-copy"><strong>Adicionar fotos</strong><small>JPG, PNG ou outra imagem · até 10 MB por arquivo</small></span><span class="cx-os-upload-button">Escolher arquivos</span></label><div class="cx-os-upload-names" aria-live="polite">Nenhum arquivo selecionado</div></fieldset>`:""}<div class="cx-modal-actions"><button type="button" class="caixa-btn ghost" data-os-close>Fechar</button><button type="submit" class="caixa-btn primary">Salvar</button><button type="submit" class="caixa-btn primary" data-print="full">Salvar e imprimir OS completa</button><button type="button" class="caixa-btn ghost" data-client-pdf>Baixar via do cliente (PDF)</button></div></form></section>`;
+  document.body.appendChild(root);
+  const close=()=>root.remove();
+  root.querySelectorAll("[data-os-close]").forEach(b=>b.onclick=close);
+  root.addEventListener("click",e=>{if(e.target===root)close();});
+  const generatedForm=root.querySelector("#cxGeneratedForm");
+  generatedForm.querySelector("[data-client-pdf]")?.addEventListener("click",async event=>{
+    const button=event.currentTarget;
+    button.disabled=true;
+    const originalText=button.textContent;
+    button.textContent="Gerando PDF…";
+    try{await downloadClientOSPdf(record);}
+    catch(error){console.error(error);alert("Não foi possível baixar a via do cliente em PDF. Tente novamente.");}
+    finally{button.disabled=false;button.textContent=originalText;}
+  });
+  const photoInput=generatedForm.querySelector('input[name="fotos"]');
+  photoInput?.addEventListener("change",()=>{
+    const names=[...(photoInput.files||[])].map(file=>file.name);
+    const summary=generatedForm.querySelector(".cx-os-upload-names");
+    if(summary)summary.textContent=names.length?names.join(" · "):"Nenhum arquivo selecionado";
+    photoInput.closest(".cx-os-upload")?.classList.toggle("has-files",names.length>0);
+  });
+  generatedForm.querySelectorAll("[data-os-numeric]").forEach(input=>{
+    input.addEventListener("input",()=>{
+      const mode=input.dataset.osNumeric;
+      let raw=input.value;
+      if(/_(esf|cil)$/.test(input.name)&&!/[.,]/.test(raw)){
+        const sign=raw.match(/^[+-]/)?.[0]||"";
+        const digits=raw.slice(sign.length).replace(/\D/g,"");
+        if(digits.length===3)raw=sign+digits[0]+"."+digits.slice(1);
+      }
+      input.value=cleanNumeric(raw,mode);
+    });
+    input.addEventListener("blur",()=>{
+      const value=input.value.trim().replace(",",".");
+      if(!value)return;
+      if((input.dataset.osNumeric==="signed"||input.dataset.osNumeric==="negative")&&/^[+-]?\d{1,2}(?:\.\d{1,2})?$/.test(value))input.value=Number(value).toFixed(2);
+      else if(input.dataset.osNumeric==="measure"&&/^\d{1,2}(?:\.\d{1,2})?$/.test(value))input.value=value;
+    });
+  });
+  if(osReadOnly){
+    generatedForm.querySelectorAll("input,select,textarea,button[type=submit]").forEach(el=>el.disabled=true);
+    generatedForm.querySelectorAll("button[type=submit]").forEach(el=>el.style.display="none");
+  }
+  generatedForm.onsubmit=async ev=>{
+    ev.preventDefault();
+    const form=ev.currentTarget;
+    const printMode=ev.submitter?.dataset.print||"";
+    const printWindow=printMode?window.open("about:blank","_blank"):null;
+    const submitButtons=form.querySelectorAll("button[type=submit]");submitButtons.forEach(b=>b.disabled=true);
+    try{
+      const values=Object.fromEntries(new FormData(form).entries());
+      for(const input of form.querySelectorAll("[data-os-numeric]")){
+        const raw=String(values[input.name]||"").trim().replace(",",".");
+        if(input.dataset.osNumeric==="signed"||input.dataset.osNumeric==="negative"){
+          const pattern=input.dataset.osNumeric==="negative"?/^(?:-\d{1,2}(?:\.\d{1,2})?|0(?:\.0{1,2})?)$/:/^[+-]?\d{1,2}(?:\.\d{1,2})?$/;
+          if(!pattern.test(raw))throw new Error(`${input.name.toUpperCase()}: use até 2 dígitos antes do decimal${input.dataset.osNumeric==="negative"?", somente valores negativos ou zero":", com sinal opcional"}.`);
+          const value=Number(raw);
+          if(!Number.isFinite(value))throw new Error(`${input.name.toUpperCase()}: informe somente números.`);
+          values[input.name]=value.toFixed(2);
+        }else if(input.dataset.osNumeric==="axis"){
+          if(!/^\d{1,3}$/.test(raw))throw new Error(`${input.name.toUpperCase()}: informe um número inteiro com no máximo 3 dígitos.`);
+          values[input.name]=raw;
+        }else{
+          if(!/^\d{1,2}(?:\.\d{1,2})?$/.test(raw))throw new Error(`${input.name.toUpperCase()}: informe números com no máximo 2 dígitos antes do decimal.`);
+          values[input.name]=raw;
+        }
+      }
+      const fotos=[...(form.querySelector('input[name="fotos"]')?.files||[])];
+      for(const file of fotos){if(!file.type.startsWith("image/"))throw new Error("Selecione apenas arquivos de imagem.");if(file.size>10*1024*1024)throw new Error(`A foto ${file.name} ultrapassa 10 MB.`);}
+      const anexos=existingFiles.slice();
+      let photoIndex=0;
+      for(const file of fotos){
+        const path=`ordens-servico/LOJA-${cxStore}/${cxDate}/${encodeURIComponent(String(osId))}/${Date.now()}-${photoIndex++}-${encodeURIComponent(file.name)}`;
+        const fileRef=storageRef(storage,path);
+        await uploadBytes(fileRef,file,{contentType:file.type});
+        anexos.push({nome:file.name,url:await getDownloadURL(fileRef),caminho:path});
+      }
+      const details={...detail,...values,anexos,atualizadoEm:new Date(),atualizadoPor:USER};delete details.fotos;
+      await setDoc(doc(db,"vendas",`LOJA ${cxStore}`,"caixa",cxDate,"OrdemServico",String(osId)),{
+        detalhesOS:details,
+        tipoGarantia:details.tipoGarantia||record.tipoGarantia||"",
+        dataPrevisao:details.dataPrevisao||record.dataPrevisao||""
+      },{merge:true});
+      record.detalhesOS=details;
+      if(printWindow){
+        printWindow.document.open();
+        printWindow.document.write(osPrintHtml(record,details));
+        printWindow.document.close();
+        await Promise.all(Array.from(printWindow.document.images,image=>image.decode().catch(()=>undefined)));
+        printWindow.focus();
+        printWindow.print();
+      }
+      else alert("Ordem de serviço salva.");
+      close();
+    }catch(err){console.error(err);if(printWindow)printWindow.close();alert("Não foi possível salvar a ordem de serviço: "+(err.message||err));submitButtons.forEach(b=>b.disabled=false);}
+  };
+}
+async function downloadClientOSPdf(record){
+  await ensurePdfLibs();
+  const JsPDF=window.jspdf?.jsPDF;
+  if(!JsPDF)throw new Error("Gerador de PDF indisponível.");
+  const noteKind=String(record.tipoNota||"").toLowerCase();
+  const guaranteeKind=String(record.garantiaAorL||"").toLowerCase();
+  const isGuarantee=noteKind==="garantia"||Boolean(record.garantiaAorL);
+  const attendanceType=noteKind==="reparo"?"Reparo":guaranteeKind==="armação"?"Garantia · Armação":guaranteeKind==="lente"?"Garantia · Lente":"Garantia";
+  let customerName=String(record.clienteNome||"").trim();
+  if(!customerName&&record.cliente){
+    try{const customer=await getDoc(doc(db,"clientes",String(record.cliente)));if(customer.exists())customerName=String(customer.data().nome||"").trim();}catch(error){console.warn("Não foi possível carregar o nome do cliente para o PDF:",error);}
+  }
+  if(!customerName)customerName=String(record.cliente||"—");
+  const osNumber=record.os||record.n_os||record.id||"—";
+  const fields=[
+    ["Nome",customerName],
+    ["Ordem de serviço",osNumber],
+    ["Prazo",(record.dataPrevisao||record.detalhesOS?.dataPrevisao)?formatNoteDate(record.dataPrevisao||record.detalhesOS.dataPrevisao):"Não informado"],
+    ["Tipo de atendimento",attendanceType]
+  ];
+  if(isGuarantee)fields.push(["Tipo de garantia",record.tipoGarantia||record.detalhesOS?.tipoGarantia||"Não informado"]);
+  const pageWidth=80, margin=5, cardWidth=pageWidth-margin*2, textWidth=cardWidth-8;
+  let logoData=null,logoWidth=38,logoHeight=0;
+  try{
+    const response=await fetch("logodiniz.png");
+    if(response.ok){
+      const blob=await response.blob();
+      logoData=await new Promise(resolve=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>resolve(null);reader.readAsDataURL(blob);});
+    }
+  }catch(error){console.warn("Não foi possível carregar a logo no PDF:",error);}
+  const measure=new JsPDF({orientation:"portrait",unit:"mm",format:[80,160],compress:true});
+  if(logoData){try{const dimensions=measure.getImageProperties(logoData);logoHeight=Math.min(12,logoWidth*dimensions.height/dimensions.width);}catch(error){logoData=null;logoHeight=0;}}
+  const cards=fields.map(([label,value],index)=>{
+    const highlighted=label==="Ordem de serviço";
+    const valueFontSize=highlighted?15:11;
+    measure.setFont("helvetica","bold");
+    measure.setFontSize(valueFontSize);
+    const wrapped=measure.splitTextToSize(String(value||"—"),textWidth);
+    const lineHeight=highlighted?6.2:5;
+    const cardHeight=3+3.2+1.5+wrapped.length*lineHeight+3;
+    return {label,highlighted,valueFontSize,wrapped,lineHeight,cardHeight};
+  });
+  const headerTop=5;
+  const separatorY=headerTop+(logoData?logoHeight:0)+3;
+  let y=separatorY+4;
+  const pageHeight=y+cards.reduce((total,card)=>total+card.cardHeight+2.5,0)+4;
+  const pdf=new JsPDF({orientation:"portrait",unit:"mm",format:[80,pageHeight],compress:true});
+  if(logoData)pdf.addImage(logoData,"PNG",(pageWidth-logoWidth)/2,headerTop,logoWidth,logoHeight);
+  pdf.setDrawColor(0,0,0);
+  pdf.setLineWidth(.45);
+  pdf.line(margin,separatorY,pageWidth-margin,separatorY);
+  cards.forEach(card=>{
+    const {label,highlighted,valueFontSize,wrapped,lineHeight,cardHeight}=card;
+    pdf.setDrawColor(highlighted?0:110,highlighted?0:110,highlighted?0:110);
+    pdf.setLineWidth(highlighted ? .55 : .3);
+    if(highlighted){
+      pdf.setFillColor(20,20,20);
+      pdf.roundedRect(margin,y,cardWidth,cardHeight,1.5,1.5,"FD");
+    }else{
+      pdf.roundedRect(margin,y,cardWidth,cardHeight,1.5,1.5,"S");
+    }
+    pdf.setFont("helvetica","bold");
+    pdf.setFontSize(7.5);
+    pdf.setTextColor(highlighted?255:75,highlighted?255:75,highlighted?255:75);
+    pdf.text(label.toUpperCase(),margin+4,y+5.5);
+    pdf.setFontSize(valueFontSize);
+    pdf.setTextColor(highlighted?255:0,highlighted?255:0,highlighted?255:0);
+    pdf.text(wrapped,margin+4,y+5.5+1.5+lineHeight);
+    y+=cardHeight+2.5;
+  });
+  const safeOS=String(osNumber||"OS").replace(/[^a-z0-9_-]/gi,"_");
+  pdf.save(`OS_${safeOS}_via_cliente.pdf`);
+}
+
+function osPrintHtml(record, detail) {
+  const noteKind=String(record.tipoNota||"").toLowerCase();
+  const guaranteeKind=String(record.garantiaAorL||"").toLowerCase();
+  const isRepair=noteKind==="reparo";
+  const isLens=!isRepair&&guaranteeKind==="lente";
+  const isFrame=!isRepair&&guaranteeKind==="armação";
+  const os=record.os||record.id||"—";
+  const display=(key)=>{
+    const value=detail[key];
+    if(value==null||String(value).trim()==="")return "—";
+    return /^data/i.test(key)?formatNoteDate(value):String(value);
+  };
+  const dataCard=(label,value,extra="")=>`<div class="data-card ${extra}"><span>${esc(label)}</span><strong>${esc(value||"—")}</strong></div>`;
+  const opticalTable=isLens?`
+    <section class="print-section">
+      <h2 class="section-heading"><span>02</span> Prescrição e medidas ópticas</h2>
+      <table class="optical-table">
+        <thead><tr><th>Olho</th><th>ESF</th><th>CIL</th><th>Eixo</th><th>Adição</th><th>DNP</th><th>Altura</th></tr></thead>
+        <tbody>
+          <tr><th>OD · Direito</th><td>${esc(display("od_esf"))}</td><td>${esc(display("od_cil"))}</td><td>${esc(display("od_eixo"))}</td><td>${esc(display("od_ad"))}</td><td>${esc(display("od_dnp"))}</td><td>${esc(display("od_alt"))}</td></tr>
+          <tr><th>OE · Esquerdo</th><td>${esc(display("oe_esf"))}</td><td>${esc(display("oe_cil"))}</td><td>${esc(display("oe_eixo"))}</td><td>${esc(display("oe_ad"))}</td><td>${esc(display("oe_dnp"))}</td><td>${esc(display("oe_alt"))}</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <section class="print-section">
+      <h2 class="section-heading"><span>03</span> Medidas da armação</h2>
+      <div class="measure-cards">
+        ${dataCard("Aro",display("armacao_aro"))}${dataCard("MD",display("armacao_md"))}${dataCard("Vertical",display("armacao_vertical"))}${dataCard("Ponte",display("armacao_ponte"))}
+      </div>
+    </section>`:"";
+  const detailEntries=isRepair
+      ?[["Produto",display("produto")]]
+      :[["OS original",display("osOriginal")],["Produto",display("produto")]];
+  const detailCards=detailEntries.map(([label,value])=>dataCard(label,value)).join("");
+  const attendanceType=isRepair?"Reparo":isFrame?"Garantia de armação":isLens?"Garantia de lente":"Garantia";
+  const lensDetails=isLens?`
+    <div class="lens-details">
+      <div class="detail-grid detail-grid--lens-types">
+        ${dataCard("Tipo de atendimento",attendanceType)}
+        ${dataCard("Tipo de garantia",display("tipoGarantia"))}
+      </div>
+      <div class="detail-grid detail-grid--lens-choices">
+        ${dataCard("Garantia antecipada",display("garantiaAntecipada"))}
+        ${dataCard("Troca de armação",display("trocaArmacao"))}
+        ${dataCard("Troca de medidas",display("trocaMedidas"))}
+      </div>
+      <div class="detail-grid detail-grid--lens-product">
+        ${dataCard("OS original",display("osOriginal"))}
+        ${dataCard("Data da compra",display("dataCompra"))}
+        ${dataCard("Produto",display("produto"))}
+      </div>
+    </div>`:"";
+  const photos=(Array.isArray(detail.anexos)?detail.anexos:[]).map((file,index)=>`<li>${esc(file?.nome||`Imagem ${index+1}`)}</li>`).join("");
+  const detailsTitle=isRepair?"Dados do reparo":isFrame?"Dados da garantia de armação":isLens?"Dados da garantia de lente":"Dados da garantia";
+  const observationTitle=isRepair?"Observações adicionais":isFrame?"Observações da armação":isLens?"Observações da lente":"Relato e observações";
+  const observationNumber=isLens?"04":isRepair?"03":"02";
+  const photosSectionNumber=isLens?"05":isRepair?"04":"03";
+  const title=isRepair?"Ordem de serviço · Reparo":isFrame?"Ordem de serviço · Garantia de armação":isLens?"Ordem de serviço · Garantia de lente":"Ordem de serviço · Garantia";
+  const serviceRequested=String(detail.servicoSolicitado||"").trim();
+  const observation=String(detail.observacoes||"").trim()||"Nenhuma observação adicional registrada.";
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${esc(title)} ${esc(os)}</title>
+  <style>
+    * { box-sizing:border-box; }
+    body { margin:0; padding:28px; background:#edf0f4; color:#202938; font:12px/1.45 Inter,Arial,sans-serif; }
+    .sheet { width:min(100%,850px); margin:0 auto; padding:34px 38px; background:#fff; border:1px solid #d8dee8; box-shadow:0 8px 28px rgba(25,35,50,.12); }
+    .brand-header { display:flex; align-items:center; justify-content:space-between; gap:24px; padding-bottom:18px; border-bottom:3px solid #b21f2d; }
+    .brand { display:flex; align-items:center; gap:14px; min-width:0; }
+    .brand img { display:block; width:auto; max-width:170px; max-height:52px; object-fit:contain; }
+    .brand-caption { color:#6b7280; font-size:9px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
+    .document-title { text-align:right; }
+    .document-title h1 { margin:0; color:#a51d2a; font-size:20px; line-height:1.15; font-weight:900; text-transform:uppercase; }
+    .document-title p { margin:5px 0 0; color:#555f6e; font-size:11px; font-weight:700; }
+    .identity-grid { display:grid; grid-template-columns:.7fr 1.5fr 1fr; gap:10px; margin:18px 0 20px; }
+    .identity-card { min-width:0; padding:12px 14px; border:1px solid #dce1e8; border-radius:8px; background:#f7f8fa; }
+    .identity-card span,.data-card span { display:block; margin-bottom:4px; color:#687385; font-size:9px; font-weight:900; letter-spacing:.07em; text-transform:uppercase; }
+    .identity-card strong { display:block; color:#202938; font-size:13px; font-weight:800; overflow-wrap:anywhere; }
+    .identity-card.os-number { border-color:#b21f2d; background:#fff8f8; }
+    .identity-card.os-number strong { color:#a51d2a; font-size:18px; }
+    .meta-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-bottom:20px; }
+    .meta-item { padding:9px 11px; border-left:3px solid #b21f2d; background:#f7f8fa; }
+    .meta-item span { display:block; color:#687385; font-size:8px; font-weight:900; letter-spacing:.06em; text-transform:uppercase; }
+    .meta-item strong { display:block; margin-top:3px; color:#283244; font-size:10px; }
+    .print-section { margin-top:20px; page-break-inside:avoid; }
+    .section-heading { display:flex; align-items:center; gap:9px; margin:0 0 11px; padding-bottom:7px; border-bottom:1px solid #dce1e8; color:#263244; font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.035em; }
+    .section-heading span { display:grid; width:22px; height:22px; place-items:center; border-radius:50%; background:#a51d2a; color:#fff; font-size:9px; }
+    .detail-grid { display:grid; grid-template-columns:repeat(${isLens?3:2},minmax(0,1fr)); gap:8px; }
+    .lens-details { display:grid; gap:8px; }
+    .detail-grid--lens-types { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .detail-grid--lens-choices,.detail-grid--lens-product { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .data-card { min-width:0; padding:10px 12px; border:1px solid #e0e4ea; border-radius:7px; background:#fff; }
+    .data-card strong { display:block; color:#202938; font-size:11px; font-weight:750; overflow-wrap:anywhere; }
+    .optical-table { width:100%; border-collapse:collapse; table-layout:fixed; }
+    .optical-table th,.optical-table td { padding:9px 5px; border:1px solid #dce1e8; text-align:center; overflow-wrap:anywhere; }
+    .optical-table thead th { background:#f1f3f6; color:#566174; font-size:8px; font-weight:900; text-transform:uppercase; }
+    .optical-table tbody th { width:100px; background:#fafbfc; color:#283244; font-size:9px; text-align:left; }
+    .optical-table td { color:#202938; font-size:10px; font-weight:750; font-variant-numeric:tabular-nums; }
+    .measure-cards { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+    .note-box { min-height:72px; padding:13px 14px; border:1px solid #dce1e8; border-radius:7px; background:#fbfbfc; white-space:pre-wrap; overflow-wrap:anywhere; color:#303a49; font-size:11px; }
+    .photo-list { display:flex; flex-wrap:wrap; gap:7px; margin:0; padding:0; list-style:none; }
+    .photo-list li { padding:6px 9px; border:1px solid #dce1e8; border-radius:6px; color:#4e5969; background:#f7f8fa; font-size:9px; font-weight:700; overflow-wrap:anywhere; }
+    .signature-grid { display:grid; grid-template-columns:1fr 1fr; gap:42px; margin:62px 12px 0; page-break-inside:avoid; }
+    .signature { padding-top:8px; border-top:1px solid #454d59; color:#414a58; font-size:9px; font-weight:800; text-align:center; text-transform:uppercase; }
+    .footer { margin-top:22px; padding-top:10px; border-top:1px solid #dce1e8; color:#778191; font-size:8px; text-align:center; }
+    @media(max-width:600px) {
+      body { padding:10px; }
+      .sheet { padding:20px 16px; }
+      .brand-header { align-items:flex-start; flex-direction:column; }
+      .document-title { text-align:left; }
+      .identity-grid { grid-template-columns:1fr 1fr; }
+      .identity-card:nth-child(2) { grid-column:1/-1; grid-row:2; }
+      .meta-grid,.detail-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    }
+    @page { size:A4; margin:14mm; }
+    @media print {
+      body { padding:0; background:#fff; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+      .sheet { width:100%; max-width:none; margin:0; padding:0; border:0; box-shadow:none; }
+      .identity-card,.meta-item,.data-card,.optical-table th,.note-box,.photo-list li { print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+      .print-section { break-inside:avoid; }
+      .signature-grid { break-inside:avoid; }
+    }
+  </style>
+</head>
+<body>
+  <main class="sheet">
+    <header class="brand-header">
+      <div class="brand"><img src="logodiniz.png" alt="Óticas Diniz"><span class="brand-caption">Assistência técnica óptica</span></div>
+      <div class="document-title"><h1>${esc(title)}</h1><p>Registro de atendimento e acompanhamento</p></div>
+    </header>
+    <section class="identity-grid" aria-label="Identificação">
+      <div class="identity-card os-number"><span>Ordem de serviço</span><strong>${esc(os)}</strong></div>
+      <div class="identity-card"><span>Cliente</span><strong>${esc(clientLabel(record))}</strong></div>
+      <div class="identity-card"><span>Unidade</span><strong>LOJA ${esc(cxStore)}</strong></div>
+    </section>
+    <section class="meta-grid" aria-label="Dados do atendimento">
+      <div class="meta-item"><span>Data de abertura</span><strong>${esc(formatNoteDate(cxDate))}</strong></div>
+      <div class="meta-item"><span>${isFrame?"Previsão de entrega":"Previsão de conclusão"}</span><strong>${esc(detail.dataPrevisao?formatNoteDate(detail.dataPrevisao):"Não informada")}</strong></div>
+      <div class="meta-item"><span>Atendente</span><strong>${esc(record.vendedor||"—")}</strong></div>
+    </section>
+    <section class="print-section">
+      <h2 class="section-heading"><span>01</span> ${detailsTitle}</h2>
+      ${isLens?lensDetails:`<div class="detail-grid">${dataCard("Tipo de atendimento",attendanceType)}${detailCards}</div>`}
+    </section>
+    ${opticalTable}
+    ${isRepair?`<section class="print-section"><h2 class="section-heading"><span>02</span> Serviço solicitado</h2><div class="note-box">${esc(serviceRequested||"Não informado")}</div></section>`:""}
+    <section class="print-section">
+      <h2 class="section-heading"><span>${observationNumber}</span> ${observationTitle}</h2>
+      <div class="note-box">${esc(observation)}</div>
+    </section>
+    ${photos?`<section class="print-section"><h2 class="section-heading"><span>${photosSectionNumber}</span> Anexos recebidos</h2><ul class="photo-list">${photos}</ul></section>`:""}
+    <section class="signature-grid" aria-label="Assinaturas">
+      <div class="signature">Responsável · LOJA ${esc(cxStore)}</div>
+      <div class="signature">Assinatura do cliente</div>
+    </section>
+    <footer class="footer">Documento gerado em ${esc(new Date().toLocaleString("pt-BR"))} por ${esc(USER)} · Guarde este comprovante para acompanhar sua ordem de serviço.</footer>
+  </main>
+</body>
+</html>`;
+}
+
+/* exclusão de OS por admin/gerente */
+function delRow(kind,id){
+  if(!canManageCaixa||!hasStoreAccess())return alert("Sem permissão para excluir nesta loja.");
+  const tipo=String(kind)==="OrdemServico"?"ordem de serviço":String(kind)==="EntregasDia"?"entrega":"venda";
+  if(!confirm(`Excluir de forma DEFINITIVA a ${tipo} OS ${id} de LOJA ${cxStore} (${cxDate})?\nEssa ação não pode ser desfeita.`))return;
+  (async()=>{
+    try{
+      const rowRef=doc(db,"vendas",`LOJA ${cxStore}`,"caixa",cxDate,String(kind),String(id));
+      if(String(kind)==="OrdemServico"){
+        const snapshot=await getDoc(rowRef);
+        const attachments=snapshot.exists()&&Array.isArray(snapshot.data().detalhesOS?.anexos)?snapshot.data().detalhesOS.anexos:[];
+        for(const attachment of attachments){
+          const location=String(attachment?.caminho||attachment?.url||"").trim();
+          if(!location)continue;
+          try{await deleteObject(storageRef(storage,location));}
+          catch(storageError){
+            if(storageError?.code!=="storage/object-not-found")throw storageError;
+          }
+        }
+      }
+      await deleteDoc(rowRef);
+    }catch(e){
+      console.error(e);
+      const storageDenied=String(e?.code||"").startsWith("storage/");
+      alert(storageDenied
+        ?"Não foi possível excluir os anexos da OS no Firebase Storage. A OS foi mantida para evitar deixar arquivos órfãos. Verifique se as regras do Storage permitem excluir arquivos para usuários autorizados."
+        :"Não foi possível excluir a "+tipo+".");
+    }
+  })();
+}
+
+function editRow(kind,id){
+  if(!canManageCaixa||!hasStoreAccess())return alert("Sem permissão para editar nesta loja.");
+  const list=kind==="OrdemServico"?docO:kind==="EntregasDia"?docE:docV;
+  const record=list.find(row=>String(row.id)===String(id));
+  if(!record)return alert("Lançamento não encontrado.");
+  editingRow={kind,id:String(id),record};
+  modalMode=kind==="OrdemServico"?"os":kind==="EntregasDia"?"entrega":"venda";
+  buildModal();
+}
+
+async function openCaixa(){
+  if(!hasStoreAccess())return alert("Acesso permitido somente à loja vinculada ao seu usuário.");
+  if(isEst)return alert("Estoquista tem acesso somente de visualização — não pode abrir o caixa.");
+  if(cxDate>TODAY)return alert("Não abre data futura.");
+  if(dayDoc&&(live()||closed()))return alert(live()?"Já aberto.":"Já fechado — use Reabrir.");
+  try{await setDoc(dayRef(cxStore),{status:"aberto",fechado:false,saldoInicial:0,abertoEm:new Date(),abertoPor:USER,criadoEm:new Date()},{merge:true});}catch(e){console.error(e);alert("Erro ao abrir.");}
+}
+async function reopen(){
+  if(!canManageCaixa||!hasStoreAccess())return alert("Sem permissão para reabrir o caixa nesta loja.");
+  if(!confirm("Reabrir este dia fechado? Novo OS voltará a ser permitido."))return;
+  try{await updateDoc(dayRef(cxStore),{status:"aberto",fechado:false});}catch(e){alert("Erro.");}
+}
+
+/* ============================ ETAPA 4 - MODAL ============================ */
+function parseMoney(v){const s=String(v==null?"":v).replace(/[^\d.,-]/g,"").replace(".","").replace(",",".");if(!s)return 0;const n=Number(s);return isNaN(n)?0:Math.max(0,Math.round(n*100)/100);}
+
+let modalMode="venda", modal=null, sellersCache=[], cliAll=[], cliSelId="", editingRow=null, clientsLoaded=false;
+const CLIENTS_PAGE_LIMIT = 200;
+async function loadSellers(){
+  if(sellersCache.length)return sellersCache;
+  const map={};
+  try{(await getDocs(collection(db,"vendedores"))).forEach(d=>{map[d.id]=(d.data()&&d.data().ativo);});}catch(e){}
+  const set=new Set();
+  Object.keys(map).forEach(id=>{ if(map[id]!==false)set.add(id); });
+  const seen=Object.keys(map).length?null:set; // unused
+  try{(await getDocs(query(collectionGroup(db,"metricas")))).forEach(md=>{const p=md.ref.parent.parent;const id=p&&p.id;if(id&&id!=="LOJA"&&p&&p.parent&&p.parent.id==="vendedores"){if(map[id]===undefined)set.add(id);}});}catch(e){}
+  sellersCache=[...set].filter(Boolean);
+  if(!sellersCache.length)sellersCache=[USER];
+  return sellersCache;
+}
+
+function openNewOS(mk){
+  if(!cxStore){return;}
+  if(!live()){return alert("Abra o caixa antes de lançar.");}
+  if(closed()){return alert("Caixa fechado — faça a reabertura para lançar.");}
+  modalMode=(mk==="entrega"?"entrega":mk==="os"?"os":"venda"); cliSelId=""; editingRow=null; buildModal();
+}
+
+function buildModal(){
+  closeModal(true);
+  const m=document.createElement("div");
+  m.className="cx-modal";
+  m.innerHTML=`
+   <div class="cx-modal-card">
+    <button type="button" class="cx-modal-x" data-x>×</button>
+    <div class="cx-mode">
+      <span class="cx-mode-cap">Tipo de lançamento</span>
+      <div class="cx-switch">
+        <span class="cx-sw-thumb"></span>
+        <button type="button" class="cx-sw-opt on" data-mode="venda">Venda</button>
+        <button type="button" class="cx-sw-opt" data-mode="entrega">Entrega</button>
+        <button type="button" class="cx-sw-opt" data-mode="os">Ordem de Serviço</button>
+      </div>
+    </div>
+    <form id="cxForm">
+      <label>OS<input type="number" step="1" min="1" id="f_os" required></label>
+      <fieldset id="f_osTypeFs" class="cli-field" style="display:none"><legend>Tipo de ordem de serviço</legend>
+        <label>Tipo
+          <select id="f_tipoNota" required>
+            <option value="">Selecione…</option>
+            <option value="garantia">Garantia</option>
+            <option value="reparo">Reparo</option>
+          </select>
+        </label>
+        <label id="f_garantiaL" style="display:none">Garantia de
+          <select id="f_garantiaAorL">
+            <option value="">Selecione…</option>
+            <option value="Lente">Lente</option>
+            <option value="Armação">Armação</option>
+          </select>
+        </label>
+        <label id="f_tipoGarantiaL" style="display:none">Tipo de garantia
+          <select id="f_tipoGarantia">
+            <option value="">Selecione…</option>
+            <option value="Alteração médica">Alteração médica</option>
+            <option value="Riscos">Riscos</option>
+            <option value="Defeito">Defeito</option>
+            <option value="Não adaptação">Não adaptação</option>
+            <option value="Erro de grau">Erro de grau</option>
+            <option value="Outros">Outros</option>
+          </select>
+        </label>
+        <label id="f_dataPrevisaoL" class="cx-os-deadline" style="display:none">Prazo / Data prevista
+          <input type="date" id="f_dataPrevisao" required>
+        </label>
+      </fieldset>
+      <label class="chk" id="f_anexoL"><input type="checkbox" id="f_anexo"> Anexo</label>
+      <label id="f_venL">Vendedor <span style="color:var(--red)">*</span> <select id="f_vend"></select></label>
+      <fieldset id="cliFs" class="cli-field"><legend>Cliente</legend>
+        <label class="cli-srclb">Buscar cliente já cadastrado
+          <span class="cli-src"><input type="text" id="f_cliq" list="cliOpts" placeholder="🔍 Digite nome ou telefone…" autocomplete="off">
+          <button type="button" class="cli-new" id="f_newB">＋ Novo Cliente</button></span>
+        </label>
+        <datalist id="cliOpts"></datalist>
+        <div id="newCliFields" style="display: none; margin-top: 10px; padding: 12px; background: var(--bg-muted); border-radius: 8px; border: 1px dashed var(--line);">
+          <label style="margin-top:0">Nome completo <span style="cPolor:var(--red)">*</span> <input type="text" id="f_nome" autocomplete="off" placeholder="Digite o nome completo"></label>
+          <label style="margin-top:8px">Telefone (00)00000-0000 <span style="color:var(--red)">*</span> <input type="tel" id="f_contato" inputmode="numeric" maxlength="15" autocomplete="off" placeholder="(00) 00000-0000"></label>
+        </div>
+        <input type="hidden" id="f_cli_id" value="">
+        <span class="cli-hint" id="f_cliH"></span>
+      </fieldset>
+      <fieldset id="f_payFs"><legend>Meios de pagamento</legend>
+       <div class="pay-grid">
+         ${["dinheiro","pix","cartao","convenio"].map(k=>`<label>${PAYL[k]} <input type="text" class="pay" data-p="${k}" inputmode="decimal"></label>`).join("")}
+         <label id="f_carL">Carnê <input type="text" class="pay" data-p="carne" inputmode="decimal"></label>
+       </div>
+       <div class="tot-row">Total <b id="f_tot">R$ 0,00</b> <span class="nota" id="f_nota"></span></div>
+      </fieldset>
+      <div class="cx-modal-actions">
+        <button type="button" class="caixa-btn ghost" id="f_cancel">Cancelar</button>
+        <button type="submit" class="caixa-btn primary">${editingRow?"Salvar alterações":"Salvar OS"}</button>
+      </div>
+    </form>
+   </div>`;
+  document.body.appendChild(m);
+  modal=m; setMode(modalMode); wireModal();
+  if(editingRow)fillEditForm(editingRow.record);
+}
+function fillEditForm(record){
+  if(!modal)return;
+  const os=modal.querySelector("#f_os"); if(os)os.value=record.os||record.n_os||record.id||"";
+  const tipoNota=modal.querySelector("#f_tipoNota"); if(tipoNota)tipoNota.value=record.tipoNota||"";
+  const garantiaAorL=modal.querySelector("#f_garantiaAorL"); if(garantiaAorL)garantiaAorL.value=record.garantiaAorL||"";
+  const tipoGarantia=modal.querySelector("#f_tipoGarantia"); if(tipoGarantia)tipoGarantia.value=record.tipoGarantia||record.detalhesOS?.tipoGarantia||"";
+  const dataPrevisao=modal.querySelector("#f_dataPrevisao"); if(dataPrevisao)dataPrevisao.value=toISODate(record.dataPrevisao||record.detalhesOS?.dataPrevisao||"");
+  updateOsTypeFields();
+  const id=modal.querySelector("#f_cli_id"); if(id)id.value=record.cliente||"";
+  const nome=modal.querySelector("#f_nome"); if(nome)nome.value=record.clienteNome||cliAll.find(c=>c.id===record.cliente)?.nome||"";
+  const contato=modal.querySelector("#f_contato"); if(contato)contato.value=maskPhone(cliAll.find(c=>c.id===record.cliente)?.contato||"");
+  cliSelId=record.cliente||"";
+  const hint=modal.querySelector("#f_cliH"); if(hint&&nome?.value)hint.textContent="✔ Cliente existente selecionado: "+nome.value;
+  const queryInput=modal.querySelector("#f_cliq"); if(queryInput&&nome?.value)queryInput.value=nome.value;
+  ["dinheiro","pix","cartao","convenio","carne"].forEach(key=>{const input=modal.querySelector(`.pay[data-p="${key}"]`);if(input)input.value=record[key]||"";});
+  const annex=modal.querySelector("#f_anexo"); if(annex)annex.checked=Boolean(record.anexo);
+  const vendor=modal.querySelector("#f_vend"); if(vendor)vendor.value=record.vendedor||"";
+  refreshTotal();
+}
+function closeModal(silent){if(modal){modal.remove();modal=null;}if(!silent){}}
+
+function setMode(tp){
+  if(!modal)return;
+  const caps=modal.querySelectorAll("[data-mode]");
+  if(caps.length&&caps.length>2)caps.forEach(b=>b.style.flex="0 0 33.3333%");
+  modalMode=tp;
+  modal.querySelectorAll("[data-mode]").forEach(b=>b.classList.toggle("on",b.dataset.mode===tp));
+  const th=modal.querySelector(".cx-sw-thumb"); if(th)th.style.display="none"; // visual fica nos botões .on
+  const isV=tp==="venda", isE=tp==="entrega", isOs=tp==="os";
+  if(!isV){const ax=modal.querySelector("#f_anexo"); if(ax)ax.checked=false;}
+  show(modal,"f_anexoL",isV); show(modal,"f_carL",isV);
+  show(modal,"f_osTypeFs",isOs);
+  updateOsTypeFields();
+  show(modal,"f_venL",true);
+  show(modal,"f_payFs",isV||isE); // Ordem de Serviço não tem meios de pagamento
+  refreshTotal();
+}
+function show(modal,id,on){const it=modal.querySelector("#"+id);if(!it)return;if(on){it.style.removeProperty("display");}else{it.style.setProperty("display","none","important");}}
+function updateOsTypeFields(){
+  if(!modal)return;
+  const tipo=modal.querySelector("#f_tipoNota")?.value||"";
+  const isOS=modalMode==="os", isGuarantee=isOS&&tipo==="garantia";
+  const garantiaDe=modal.querySelector("#f_garantiaAorL")?.value||"";
+  show(modal,"f_garantiaL",isGuarantee);
+  show(modal,"f_tipoGarantiaL",isGuarantee);
+  show(modal,"f_dataPrevisaoL",isOS);
+  const tipoNota=modal.querySelector("#f_tipoNota"); if(tipoNota)tipoNota.required=isOS;
+  const garantia=modal.querySelector("#f_garantiaAorL"); if(garantia)garantia.required=isGuarantee;
+  const tipoGarantia=modal.querySelector("#f_tipoGarantia");
+  if(tipoGarantia){
+    tipoGarantia.required=isGuarantee;
+    const previous=tipoGarantia.value;
+    const choices=warrantyTypesFor(garantiaDe);
+    tipoGarantia.innerHTML=`<option value="">Selecione…</option>${choices.map(value=>`<option value="${esc(value)}">${esc(value)}</option>`).join("")}`;
+    if(choices.includes(previous))tipoGarantia.value=previous;
+  }
+  const prazo=modal.querySelector("#f_dataPrevisao"); if(prazo)prazo.required=isOS;
+}
+
+/* ---- Cliente já cadastrado + telefone fixo ---- */
+async function loadClients(search=""){
+  const nq=norm(search), dq=onlyDigits(search);
+
+  // Carregamento inicial sem termo de busca: define clientsLoaded como true sem ler o Firestore para evitar loops
+  if(!clientsLoaded && !nq && !dq){
+    clientsLoaded = true;
+    return cliAll;
+  }
+
+  if(clientsLoaded && !nq && !dq) return cliAll;
+
+  // Só realiza a busca no Firestore se houver no mínimo 3 caracteres ou 3 dígitos
+  if((!clientsLoaded || cliAll.length === 0) && (nq.length >= 3 || dq.length >= 3)){
+    try {
+      const snap = await getDocs(query(collection(db, "clientes"), orderBy("nome"), limit(CLIENTS_PAGE_LIMIT)));
+      cliAll = snap.docs.map(d => {
+        const x = d.data() || {};
+        return { id: d.id, nome: x.nome || "", contato: x.contato || "" };
+      });
+      clientsLoaded = true;
+    } catch (e) {
+      cliAll = [];
+      clientsLoaded = true;
+    }
+  }
+
+  if(!nq && !dq) return cliAll;
+
+  return cliAll.filter(c => {
+    const nome = norm(c.nome || "");
+    const contato = onlyDigits(c.contato || "");
+    return (nq && nome.includes(nq)) || (dq && contato.includes(dq));
+  }).slice(0, 5);
+}
+function cliRow(c){const n=String(c.nome||"").trim();const t=maskPhone(c.contato||"");return (n?n:"?")+(t?" • "+t:"");}
+function upsertClientCache(client){
+  if(!client || !client.id) return;
+  const entry={id:client.id,nome:client.nome||"",contato:client.contato||""};
+  const idx=cliAll.findIndex(c=>c.id===entry.id);
+  if(idx>=0){ cliAll[idx]=entry; }
+  else { cliAll.push(entry); }
+  cliAll.sort((a,b)=>(a.nome||"").localeCompare(b.nome||""));
+  clientsLoaded=true;
+}
+let cliSearchTimer = null;
+function fillCliOptions(q){
+  if(!modal)return;
+  const raw=(q||"").trim();
+  const digits=onlyDigits(raw);
+
+  // Economia de leituras: Exige no mínimo 3 caracteres (ou 3 dígitos no telefone) para iniciar a busca no Firestore
+  if(raw.length < 3 && digits.length < 3) {
+    const dlx = modal.querySelector("#cliOpts");
+    if(dlx) dlx.innerHTML = "";
+    return;
+  }
+
+  clearTimeout(cliSearchTimer);
+  cliSearchTimer = setTimeout(() => {
+    (async()=>{
+      const list=await loadClients(raw);
+      const dlx=modal.querySelector("#cliOpts"); if(!dlx)return;
+      modal._climap={};
+      dlx.innerHTML=list.map(c=>{const v=cliRow(c);modal._climap[norm(v)]=c;return `<option value="${esc(v)}"></option>`;}).join("");
+    })();
+  }, 250); // Debounce de 250ms para evitar requisições a cada tecla digitada rápida
+}
+function pickClientRow(v){
+  if(!modal||!modal._climap)return false;
+  const c=modal._climap[norm(v)]; if(!c)return false;
+  cliSelId=c.id;
+  const idEl=modal.querySelector("#f_cli_id"); if(idEl)idEl.value=c.id;
+  const nameEl=modal.querySelector("#f_nome"); if(nameEl)nameEl.value=c.nome||"";
+  const ph=modal.querySelector("#f_contato"); if(ph)ph.value=maskPhone(c.contato||"");
+  const h=modal.querySelector("#f_cliH"); if(h)h.textContent="✔ Cliente existente selecionado: "+(c.nome||"");
+  const wrap=modal.querySelector("#newCliFields"); if(wrap) wrap.style.display="none";
+  const nb=modal.querySelector("#f_newB"); if(nb) nb.textContent="＋ Novo Cliente";
+  return true;
+}
+function toggleNewClientFields(){
+  if(!modal) return;
+  const wrap = modal.querySelector("#newCliFields");
+  const nb = modal.querySelector("#f_newB");
+  if(!wrap) return;
+  const isHidden = wrap.style.display === "none";
+  if(isHidden){
+    wrap.style.display = "block";
+    if(nb) nb.textContent = "✕ Ocultar";
+    cliSelId = "";
+    const q = modal.querySelector("#f_cliq"); if(q) q.value = "";
+    const id = modal.querySelector("#f_cli_id"); if(id) id.value = "";
+    const h = modal.querySelector("#f_cliH"); if(h) h.textContent = "📝 Cadastrando novo cliente";
+    const fn = modal.querySelector("#f_nome"); if(fn) fn.focus();
+  } else {
+    wrap.style.display = "none";
+    if(nb) nb.textContent = "＋ Novo Cliente";
+    const fn = modal.querySelector("#f_nome"); if(fn) fn.value = "";
+    const fc = modal.querySelector("#f_contato"); if(fc) fc.value = "";
+    const h = modal.querySelector("#f_cliH"); if(h) h.textContent = "";
+  }
+}
+function resetClientFields(){
+  cliSelId="";
+  if(!modal)return;
+  const q=modal.querySelector("#f_cliq"); if(q)q.value="";
+  const on=modal.querySelector("#f_nome"); if(on)on.value="";
+  const pt=modal.querySelector("#f_contato"); if(pt)pt.value="";
+  const id=modal.querySelector("#f_cli_id"); if(id)id.value="";
+  const h=modal.querySelector("#f_cliH"); if(h)h.textContent="";
+  const wrap=modal.querySelector("#newCliFields"); if(wrap) wrap.style.display="none";
+  const nb=modal.querySelector("#f_newB"); if(nb) nb.textContent="＋ Novo Cliente";
+  fillCliOptions("");
+}
+function bindClientUI(){
+  if(!modal)return;
+  const q=modal.querySelector("#f_cliq"), ph=modal.querySelector("#f_contato"), nb=modal.querySelector("#f_newB");
+  if(q){q.addEventListener("focus",()=>fillCliOptions(q.value||""));
+    q.addEventListener("input",()=>fillCliOptions(q.value));
+    q.addEventListener("change",()=>pickClientRow(q.value));}
+  if(ph)ph.addEventListener("input",()=>{ph.value=maskPhone(ph.value);});
+  if(nb)nb.onclick=()=>toggleNewClientFields();
+}
+
+function wireModal(){
+  if(!modal)return;
+  modal.querySelector("[data-x]").onclick=()=>closeModal();
+  modal.querySelector("#f_cancel").onclick=()=>closeModal();
+  modal.querySelectorAll("[data-mode]").forEach(x=>x.onclick=()=>setMode(x.dataset.mode));
+  modal.querySelector("#f_tipoNota")?.addEventListener("change",()=>{
+    const garantia=modal.querySelector("#f_garantiaAorL");
+    const tipoGarantia=modal.querySelector("#f_tipoGarantia");
+    if(modal.querySelector("#f_tipoNota")?.value!=="garantia"){
+      if(garantia)garantia.value="";
+      if(tipoGarantia)tipoGarantia.value="";
+    }
+    updateOsTypeFields();
+  });
+  modal.querySelector("#f_garantiaAorL")?.addEventListener("change",updateOsTypeFields);
+  modal.querySelector("#f_garantiaAorL")?.addEventListener("input",updateOsTypeFields);
+  (async()=>{const sel=await loadSellers();const v=modal.querySelector("#f_vend");if(v){const options=["PADRÃO",USER,...sel];v.innerHTML=`<option value="">Selecionar vendedor…</option>`+options.filter((s,i,a)=>s&&a.indexOf(s)===i).map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("");if(editingRow)v.value=editingRow.record.vendedor||"";else prefillSellerFromOS();}} )();
+  modal.querySelector("#f_os")?.addEventListener("input",prefillSellerFromOS);
+  modal.querySelectorAll(".pay").forEach(inp=>inp.oninput=refreshTotal);
+  modal.querySelector("#f_anexo").onchange=refreshTotal;
+  modal.querySelector("#cxForm").onsubmit=async(ev)=>{ev.preventDefault();await saveOS();};
+  bindClientUI();
+}
+function prefillSellerFromOS(){
+  if(!modal||editingRow)return;
+  const os=modal.querySelector("#f_os")?.value.trim();
+  const vendor=modal.querySelector("#f_vend");
+  if(!os||!vendor)return;
+  const match=[...docV,...docO].find(row=>normalizeOs(row.os||row.n_os||row.id)===normalizeOs(os));
+  const seller=String(match?.vendedor||"").trim();
+  if(seller){
+    if(![...vendor.options].some(option=>option.value===seller))vendor.add(new Option(seller,seller));
+    vendor.value=seller;
+  }
+}
+function readonlyMeans(){return ["dinheiro","pix","cartao","convenio"].concat(modalMode==="venda"?["carne"]:[]);}
+function refreshTotal(){
+  if(!modal)return;
+  const annex=modal.querySelector("#f_anexo").checked;
+  let sum=0, any=0;
+  ["dinheiro","pix","cartao","convenio","carne"].forEach(k=>{
+    const it=modal.querySelector(`.pay[data-p="${k}"]`);const val=parseMoney(it.value); any+=val;if(k!=="carne")sum+=val;});
+  const el=modal.querySelector("#f_tot"); if(el)el.textContent=brl(sum);
+  const nt=modal.querySelector("#f_nota"); if(nt)nt.textContent=annex?"Evidência (anexo) — valores zerados.":((sum>0&&modalMode==="venda")?"(Total não inclui Carnê)":"");
+}
+
+async function saveOS(){
+  if(!modal)return;
+  if(!hasStoreAccess())return alert("Acesso permitido somente à loja vinculada ao seu usuário.");
+  const osEl=modal.querySelector("#f_os"); const nome=modal.querySelector("#f_nome"); const cont=modal.querySelector("#f_contato");
+  const annexEl=modal.querySelector("#f_anexo"); const annex=annexEl.checked;
+  const osTxt=osEl?osEl.value.trim():"";
+  if(!/^\d+$/.test(osTxt))return alert("Informe a OS com número inteiro (sem letras/pontos).");
+  
+  if (modalMode === "venda" || modalMode === "entrega") {
+    const vendEl = modal.querySelector("#f_vend");
+    const vendVal = vendEl ? vendEl.value.trim() : "";
+    if (!vendVal) {
+      alert("Selecione o vendedor responsável pelo lançamento.");
+      vendEl?.focus();
+      return;
+    }
+  }
+
+  const pays={}; let paid=0;
+  const isOS=modalMode==="os";
+  const tipoNota=isOS?(modal.querySelector("#f_tipoNota")?.value||""):"";
+  const garantiaAorL=isOS&&tipoNota==="garantia"?(modal.querySelector("#f_garantiaAorL")?.value||""):"";
+  const tipoGarantia=isOS&&tipoNota==="garantia"?(modal.querySelector("#f_tipoGarantia")?.value||""):"";
+  const dataPrevisao=isOS?(modal.querySelector("#f_dataPrevisao")?.value||""):"";
+  if(isOS&&!tipoNota)return alert("Selecione o tipo da ordem de serviço: Garantia ou Reparo.");
+  if(isOS&&tipoNota==="garantia"&&!garantiaAorL)return alert("Selecione se a garantia é de Lente ou Armação.");
+  if(isOS&&tipoNota==="garantia"&&!tipoGarantia)return alert("Selecione o tipo de garantia (riscos, alteração médica, defeito etc.).");
+  if(isOS&&tipoNota==="garantia"&&!warrantyTypesFor(garantiaAorL).includes(tipoGarantia))return alert("Selecione um tipo de garantia válido para o material escolhido.");
+  if(isOS&&!dataPrevisao)return alert("Informe o prazo / data prevista da ordem de serviço.");
+  if(!isOS){ readonlyMeans().forEach(k=>{const it=modal.querySelector(`.pay[data-p="${k}"]`);const v=parseMoney(it?it.value:"" );pays[k]=v;if(v>0)paid=1;}); }
+  if(annex&&!isOS&&modalMode!=="venda")return alert("Anexo só se aplica a Vendas.");
+  if(!annex&&!paid&&modalMode==="venda")return alert("Venda sem anexo: informe ao menos um meio de pagamento maior que zero (Carnê conta como meio).");
+  const cidEl=modal.querySelector("#f_cli_id"); const selId=(cidEl&&cidEl.value)||cliSelId||"";
+  const hasNome=(nome?nome.value.trim():""); const rawCont=(cont?cont.value:""); const contDig=onlyDigits(rawCont);
+  if(!selId && !hasNome)return alert("O cliente é obrigatório — busque um cadastrado ou clique em '＋ Novo Cliente' para cadastrar.");
+  if(contDig.length!==10&&contDig.length!==11)return alert("Telefone obrigatório — formato (00)00000-0000.");
+  const contSave=maskPhone(contDig);
+  let cliente="";
+  if(selId){
+    cliente=selId;
+    try{ await updateDoc(doc(db,"clientes",cliente),{nome:hasNome||undefined,contato:contDig?contSave:undefined}); }catch(e){}
+    upsertClientCache({id:cliente,nome:hasNome,contato:contSave});
+  } else if(hasNome){
+    cliente="c"+String(Date.now());
+    try{ await setDoc(doc(db,"clientes",cliente),{nome:hasNome,contato:contSave,criadoEm:new Date()}); }catch(e){console.error(e);}
+    upsertClientCache({id:cliente,nome:hasNome,contato:contSave});
+  }
+  const kind=modalMode==="os"?"OrdemServico":modalMode==="venda"?"VendasDia":"EntregasDia";
+  const data={n_os:osTxt,os:osTxt,anexo:modalMode==="venda"?annex:false,cliente,clienteNome:hasNome,...pays,criadoEm:editingRow?editingRow.record.criadoEm||new Date():new Date(),criadoPor:USER};
+  if(isOS){data.tipoNota=tipoNota;data.garantiaAorL=garantiaAorL;data.tipoGarantia=tipoGarantia;data.dataPrevisao=dataPrevisao;}
+  data.vendedor=(modal.querySelector("#f_vend")&&modal.querySelector("#f_vend").value)||USER;
+  if(!isOS){ data.semValor=false; } else { delete data.anexo; data.semValor=true; }
+  try{
+    const col=doc(db,"vendas",`LOJA ${cxStore}`,"caixa",cxDate,kind,editingRow?editingRow.id:osTxt);
+    await setDoc(col,data,{merge:true});
+    editingRow=null;
+    closeModal();
+    alert("OS "+osTxt+(editingRow?" salva.":" salva."));
+  }catch(e){console.error(e);alert("Erro ao salvar a OS.");}
+}
+function onlyDigits(v){return String(v==null?"":v).replace(/\D/g,"");}
+function maskPhone(v){let d=onlyDigits(v).slice(0,11);if(d.length>10)return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`;if(d.length>6)return `(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`;if(d.length>2)return `(${d.slice(0,2)}) ${d.slice(2)}`;return d;}
+function isPhone(s){const d=onlyDigits(s);return d.length===10||d.length===11;}
+
+/* ========================= ETAPA 5 - CONSOLIDADO (admin) ================== */
+function toggleConsolid(){
+  const w=$("#cxConsolidWrap");
+  if(!w)return;
+  if(w.style.display!=="none"){w.style.display="none";return;}
+  (async()=>{
+    w.style.display="block";
+    w.innerHTML=`<p class="caixa-empty">Carregando consolidado…</p>`;
+    const stores=cxAvail&&cxAvail.length?cxAvail:[cxStore];
+    const per=[];
+    for(const st of stores){
+      let v={...out},e={...out};
+      try{(await getDocs(collection(db,"vendas",`LOJA ${st}`,"caixa",cxDate,"VendasDia"))).forEach(d=>{const o={...out};PAY.forEach(p=>o[p]+=Number(d.data()[p])||0);Object.keys(out).forEach(k=>v[k]+=o[k]);});}catch(err){}
+      try{(await getDocs(collection(db,"vendas",`LOJA ${st}`,"caixa",cxDate,"EntregasDia"))).forEach(d=>{const o={...out};PAY.forEach(p=>o[p]+=Number(d.data()[p])||0);Object.keys(out).forEach(k=>e[k]+=o[k]);});}catch(err){}
+      const fat=fatOf(v)+fatOf(e);
+      per.push({st,v,e,fat});
+    }
+    let gb={...out};
+    per.forEach(p=>{["dinheiro","pix","cartao","carne","convenio","outros"].forEach(k=>gb[k]+=p.v[k]+p.e[k]);});
+    const rows=per.map(p=>`<tr><td class="os">LOJA ${p.st}</td><td>${brl(p.v.dinheiro+p.e.dinheiro)}</td><td>${brl(p.v.pix+p.e.pix)}</td><td>${brl(p.v.cartao+p.e.cartao)}</td><td>${brl(p.v.carne+p.e.carne)}</td><td>${brl(p.fat)}</td></tr>`).join("");
+    w.innerHTML=`<div class="sm">
+      <h3>Consolidado do dia · ${esc(longFmt(cxDate))}</h3>
+      <table class="cvtable sm"><thead><tr><th>Loja</th><th>Dinheiro</th><th>Pix</th><th>Cartão</th><th>Carnê</th><th>Faturado</th></tr></thead>
+      <tbody>${rows}<tr class="tf-somas"><td>TOTAL</td><td>${brl(gb.dinheiro)}</td><td>${brl(gb.pix)}</td><td>${brl(gb.cartao)}</td><td class="c-carne">${brl(gb.carne)}</td><td>${brl(fatOf(gb))}</td></tr></tbody></table>
+      <button type="button" class="caixa-btn ghost" id="consClose">Fechar</button></div>`;
+    w.querySelector("#consClose").onclick=()=>w.style.display="none";
+  })();
+}
+async function paintGeral(){
+  const st=$("#cxStatus"), fb=$("#cxFab");
+  if(st)st.innerHTML=`<div class="cx-statusblock"><div class="cx-meta-text">Visão Geral · ${esc(longFmt(cxDate))} — todas as lojas</div><span class="caixa-status-pill open"><i class="dot"></i>Consolidado</span></div>`;
+  if(fb)fb.hidden=true;
+  const b=$("#cxBody"); if(!b)return;
+  const stores=(cxAvail&&cxAvail.length)?cxAvail.filter(s=>s!=="GERAL"):[cxStore];
+  b.innerHTML=`<p class="caixa-empty">Carregando consolidado…</p>`;
+  const per=[];
+  for(const s of stores){
+    let v={...out},e={...out};
+    try{(await getDocs(collection(db,"vendas",`LOJA ${s}`,"caixa",cxDate,"VendasDia"))).forEach(d=>{PAY.forEach(p=>v[p]=v[p]+(Number(d.data()[p])||0));});}catch(err){}
+    try{(await getDocs(collection(db,"vendas",`LOJA ${s}`,"caixa",cxDate,"EntregasDia"))).forEach(d=>{PAY.forEach(p=>e[p]=e[p]+(Number(d.data()[p])||0));});}catch(err){}
+    const din=v.dinheiro+e.dinheiro, pix=v.pix+e.pix, cart=v.cartao+e.cartao, conv=v.convenio+e.convenio, carn=v.carne+e.carne, outr=v.outros+e.outros, fat=fatOf(v)+fatOf(e);
+    per.push({st:s,din,pix,cart,conv,carn,outr,fat});
+  }
+  let gd={...out};
+  per.forEach(p=>PAY.forEach(k=>gd[k]+= (k==="dinheiro"?p.din:(k==="pix"?p.pix:(k==="cartao"?p.cart:(k==="convenio"?p.conv:(k==="carne"?p.carn:p.outr))))) ));
+  const fatT=per.reduce((a,p)=>a+Number(p.fat||0),0);
+  const trs=per.length?per.map(p=>`<tr><td class="os" data-label="Loja">LOJA ${esc(p.st)}</td><td class="m" data-label="Dinheiro">${brl(p.din)}</td><td class="m" data-label="Pix">${brl(p.pix)}</td><td class="m" data-label="Cartão">${brl(p.cart)}</td><td class="m" data-label="Convênio">${brl(p.conv)}</td><td class="m c-carne" data-label="Carnê">${brl(p.carn)}</td><td class="m" data-label="Outros">${brl(p.outr)}</td><td class="m fat-col" data-label="Faturado">${brl(p.fat)}</td></tr>`).join("")
+    :`<tr><td colspan="8" class="caixa-empty">Nenhuma loja disponível.</td></tr>`;
+  const MG=[["dinheiro","Dinheiro"],["pix","Pix"],["cartao","Cartão"],["carne","Carnê"],["convenio","Convênio"]];
+  const gdCards=MG.map(([k,lab])=>`<div class="cm-body ${k}"><span class="cm-lb">${lab}</span><strong class="cm-val">${brl(gd[k])}</strong></div>`).join("");
+  b.innerHTML=`
+    <div class="cx-kpis">
+      <div class="cx-kpi fat"><span>Faturamento hoje</span><b>${brl(fatT)}</b></div>
+      <div class="cx-kpi meta"><span>Meta do dia · geral</span><b id="gMeta">—</b></div>
+      <div class="cx-kpi falta"><span>Falta p/ meta</span><b id="gFalta">—</b></div>
+    </div>
+    <div class="cx-meta-header" style="font-size:.86rem;font-weight:700;color:var(--muted);margin:2px 0 2px">Visão consolidada de todas as lojas em ${esc(longFmt(cxDate))}</div>
+    <div class="cx-means"><div class="cx-means-head">Meios de pagamento do dia · todas as lojas</div><div class="cx-means-grid">${gdCards}</div></div>
+    <div class="cx-lanc-title">Detalhamento por loja</div>
+    <div class="cv-wrap" style="overflow-x:auto">
+      <table class="cvtable planilha">
+        <thead><tr><th>Loja</th><th>Dinheiro</th><th>Pix</th><th>Cartão</th><th>Convênio</th><th>Carnê</th><th>Outros</th><th>Faturado</th></tr></thead>
+        <tbody>${trs}</tbody>
+        <tfoot><tr class="tf-somas"><td class="os" data-label="Loja">TOTAL</td><td class="m" data-label="Dinheiro">${brl(gd.dinheiro)}</td><td class="m" data-label="Pix">${brl(gd.pix)}</td><td class="m" data-label="Cartão">${brl(gd.cartao)}</td><td class="m" data-label="Convênio">${brl(gd.convenio)}</td><td class="m c-carne" data-label="Carnê">${brl(gd.carne)}</td><td class="m" data-label="Outros">${brl(gd.outros)}</td><td class="m fat-col" data-label="Faturado">${brl(fatT)}</td></tr></tfoot>
+      </table>
+    </div>`;
+  paintGeralMeta(fatT);
+}
+
+/* ============================ ETAPA 6 - FECHAR ============================ */
+async function doCloseCaixa(){
+  if(!hasStoreAccess())return alert("Acesso permitido somente à loja vinculada ao seu usuário.");
+  await flushObservation();
+  const obs=String(dayDoc?.obsFechamento||"");
+  const tot=sumRows(docV); const toe=sumRows(docE);
+  try{
+    await updateDoc(dayRef(cxStore),{fechado:true,status:"fechado",fechadoEm:new Date(),fechadoPor:USER,saldoFinal:fatOf(tot)+fatOf(toe),obsFechamento:obs});
+    buildCaixaPDF(docV, docE, docO, obs); // gera o PDF no fechamento
+  }catch(e){console.error(e);alert("Erro ao fechar caixa.");}
+}
+async function closeCaixa(){
+  if(!hasStoreAccess())return alert("Acesso permitido somente à loja vinculada ao seu usuário.");
+  if(!canRun)return alert("Sem permissão.");
+  if(isEst&&!isMan)return alert("Estoquista tem acesso somente de visualização — não pode fechar o caixa.");
+  if(!live())return alert("Só fecha caixa aberto.");
+  doCloseCaixa();
+}
+function buildCSV(V,E,noDL){
+  const crlf="\r\n";
+  let csv="";
+  csv+="CAIXA LOJA "+cxStore+" — "+cxDate+crlf;
+  csv+=["Tipo","OS","Cliente","Vendedor","Dinheiro","Pix","Cartão","Convênio","Carnê","Faturado"].join(";")+crlf;
+  [...V].concat(V&&false?[]:[]).forEach(d=>csv+=["Venda",d.os||d.id,esc(d.cliente||""),esc(d.vendedor||""),d.dinheiro||0,d.pix||0,d.cartao||0,d.convenio||0,d.carne||0,( (Number(d.dinheiro)||0)+(Number(d.pix)||0)+(Number(d.cartao)||0)+(Number(d.convenio)||0) ) ].join(";")+crlf);
+  E.forEach(d=>csv+=["Entrega",d.os||d.id,esc(d.cliente||""),"",d.dinheiro||0,d.pix||0,d.cartao||0,d.convenio||0,0,( (Number(d.dinheiro)||0)+(Number(d.pix)||0)+(Number(d.cartao)||0)+(Number(d.convenio)||0) ) ].join(";")+crlf);
+  const tV=sumRows(V),tE=sumRows(E);const fatV=fatOf(tV),fatE=fatOf(tE);
+  csv+=["TOTAL","","","",tV.dinheiro+tE.dinheiro,tV.pix+tE.pix,tV.cartao+tE.cartao,tV.convenio+tE.convenio,tV.carne+tE.carne,fatV+fatE].join(";")+crlf;
+  const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8;"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+  a.download=`caixa_LOJA${cxStore}_${cxDate}.csv`;
+  document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},300);
+}
+
+/* ---- Geração do PDF de entregas (planilha) ao fechar o caixa ---- */
+function f2(v){const n=Number(v)||0;return n.toFixed(2).replace(".",",");}
+let pdfLibsLoading=null;
+function ensurePdfLibs(){
+  if(window.jspdf&&window.jspdf.jsPDF)return Promise.resolve();
+  if(pdfLibsLoading)return pdfLibsLoading;
+  pdfLibsLoading=new Promise(res=>{
+    const js=document.createElement("script");
+    js.src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js";
+    js.onload=()=>{
+      const at=document.createElement("script");
+      at.src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js";
+      at.onload=()=>res(); at.onerror=()=>res(); document.head.appendChild(at);
+    };
+    js.onerror=()=>res(); document.head.appendChild(js);
+  });
+  return pdfLibsLoading;
+}
+async function buildEntregasPDF(E){
+  await ensurePdfLibs();
+  if(!(window.jspdf&&window.jspdf.jsPDF)){alert("Não foi possível abrir o gerador de PDF.");return;}
+  let cliMap={};
+  try{ if(cliAll.length){cliAll.forEach(c=>cliMap[c.id]=c.nome||"");} else {const lst=await loadClients();lst.forEach(c=>cliMap[c.id]=c.nome||"");} }catch(e){}
+  const { jsPDF: J } = window.jspdf;
+  const doc=new J("portrait","pt","a4");
+  const W=doc.internal.pageSize.getWidth(), M=14;
+  const cls=(E||[]).slice().sort((a,b)=>(numOf(a.os||a.id)||0)-(numOf(b.os||b.id)||0));
+  const totals=cls.reduce((acc,e)=>{
+      acc.din=r2(acc.din+e.dinheiro,0);acc.pix=r2(acc.pix+e.pix,0);acc.cart=r2(acc.cart+e.cartao,0);acc.conv=r2(acc.conv+e.convenio,0);return acc;
+  },{din:0,pix:0,cart:0,conv:0});
+  totals.fat=totals.din+totals.pix+totals.cart+totals.conv;
+  
+  /* Topo branco */
+  doc.setFillColor(255,255,255);doc.rect(0,0,W,86,"F");
+  doc.setDrawColor(0);doc.setLineWidth(1.5);doc.line(M,86,W-M,86);
+  
+  let lgData=null;
+  try{const r=await fetch("logodiniz.png");const b=await r.blob();lgData=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.readAsDataURL(b);});}catch(e){lgData=null;}
+  if(lgData){try{doc.addImage(lgData,"PNG",M,15,110,38,"","FAST");}catch(e){}}
+  
+  doc.setTextColor(0);doc.setFont("helvetica","bold");doc.setFontSize(22);
+  doc.text(`LOJA ${cxStore}`,W-M,32,{align:"right"});
+  doc.setFontSize(13);
+  doc.text("CONSOLIDADO DE ENTREGAS",W-M,50,{align:"right"});
+  doc.setFont("helvetica","bold");doc.setTextColor(215,25,32);doc.setFontSize(11);
+  doc.text(`DATA: ${longFmt(cxDate).toUpperCase()}`,W-M,68,{align:"right"});
+  
+  doc.autoTable({
+    startY:100,
+    theme:"grid",
+    headStyles:{ fillColor:[240,240,240], textColor:0, halign:"center", fontStyle:"bold", fontSize:8.5, lineWidth:0.5, drawColor:[0,0,0] },
+    alternateRowStyles:{ fillColor:[255,255,255] },
+    head:[["OS","Cliente","Dinheiro","Pix","Cartão","Convênio","Total"]],
+    body: cls.map(rec=>[
+      String(rec.os||rec.id||"")||"—",
+      (cliMap[rec.cliente]||rec.cliente||"—"),
+      brl(rec.dinheiro), brl(rec.pix), brl(rec.cartao), brl(rec.convenio),
+      brl((Number(rec.dinheiro)||0)+(Number(rec.pix)||0)+(Number(rec.cartao)||0)+(Number(rec.convenio)||0))
+    ]),
+    foot:[[ "TOTAL", cls.length+" entregas", brl(totals.din), brl(totals.pix), brl(totals.cart), brl(totals.conv), brl(totals.fat) ]],
+    footStyles:{ fillColor:[220,220,220], textColor:0, fontStyle:"bold", halign:"center" },
+    columnStyles:{ 0:{halign:"center"},2:{halign:"right"},3:{halign:"right"},4:{halign:"right"},5:{halign:"right"},6:{halign:"right",fontStyle:"bold"} },
+    margin:{ left:14, right:14 }
+  });
+  const y=(doc.lastAutoTable&&doc.lastAutoTable.finalY||96)+48;
+  doc.setFontSize(9);doc.setFont("helvetica","normal");
+  doc.text(`Resumo (R$):  Dinheiro ${f2(totals.din)}  •  Pix ${f2(totals.pix)}  •  Cartão ${f2(totals.cart)}  •  Convênio ${f2(totals.conv)}  •  FATURADO ${f2(totals.fat)}`,14,y);
+  doc.setFontSize(8);doc.text(`Gerado por ${USER} em ${new Date().toLocaleString("pt-BR")}`,14,y+18);
+  doc.save(`Entregas_LOJA${cxStore}_${cxDate}.pdf`);
+}
+function r2(a,b){return (Number(a)||0)+(Number(b)||0);}
+
+/* ---- PDF bonito de fechamento do caixa (no lugar do CSV) ---- */
+function caixaCliName(cliMap,id){const t=cliMap[id]||id||"—";return t.length>22?t.slice(0,21)+"…":t;}
+function secBar(doc,y,title){
+  const w=doc.internal.pageSize.getWidth(), M=14;
+  doc.setFillColor(255,255,255);
+  doc.setDrawColor(0);
+  doc.setLineWidth(1);
+  doc.line(M, y, w-M, y); // Linha superior
+  doc.line(M, y+24, w-M, y+24); // Linha inferior
+  
+  doc.setTextColor(0,0,0);doc.setFont("helvetica","bold");doc.setFontSize(10);
+  doc.text(title.toUpperCase(),w/2,y+16,{align:"center"});
+  return y+32;
+}
+async function buildCaixaPDF(V,E,O,obs){
+  await ensurePdfLibs();
+  if(!(window.jspdf&&window.jspdf.jsPDF)){alert("Não foi possível abrir o gerador de PDF.");return;}
+  const { jsPDF: J }=window.jspdf;
+  const doc=new J("portrait","pt","a4");
+  const W=doc.internal.pageSize.getWidth(), M=14;
+  const H=doc.internal.pageSize.getHeight();   // altura útil da folha
+  const bottomMax=H-M;                          // ponto de segurança do rodapé
+  const sV=sumRows(V||[]), sE=sumRows(E||[]);
+  const din=sV.dinheiro+sE.dinheiro, pix=sV.pix+sE.pix, cart=sV.cartao+sE.cartao, conv=sV.convenio+sE.convenio, carn=sV.carne+sE.carne;
+  const fatV=fatOf(sV), fatE=fatOf(sE), fatT=fatV+fatE;
+  
+  /* topo - Totalmente branco para impressão */
+  doc.setFillColor(255,255,255);doc.rect(0,0,W,86,"F");
+  doc.setDrawColor(0);doc.setLineWidth(1.5);doc.line(M,86,W-M,86);
+  
+  let lgData=null;
+  try{const r=await fetch("logodiniz.png");const b=await r.blob();lgData=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.readAsDataURL(b);});}catch(e){lgData=null;}
+  if(lgData){try{doc.addImage(lgData,"PNG",M,15,110,38,"","FAST");}catch(e){}}
+  
+  doc.setTextColor(0);doc.setFont("helvetica","bold");doc.setFontSize(22);
+  doc.text(`LOJA ${cxStore}`,W-M,32,{align:"right"});
+  doc.setFontSize(13);
+  doc.text("FECHAMENTO DE CAIXA",W-M,50,{align:"right"});
+  doc.setFont("helvetica","bold");doc.setTextColor(215,25,32);doc.setFontSize(11);
+  doc.text(`DATA: ${longFmt(cxDate).toUpperCase()}`,W-M,68,{align:"right"});
+  
+  /* meios de pagamento em cards (Clean: apenas bordas) */
+  const chips=["DINHEIRO","PIX","CARTÃO","CONVÊNIO","CARNÊ"];
+  const vals=[din,pix,cart,conv,carn];
+  const gap=8, usable=W-2*M, bw=(usable-gap*4)/5;
+  let x=M;
+  chips.forEach((name,i)=>{
+    doc.setFillColor(255,255,255);doc.setDrawColor(0);doc.setLineWidth(0.5);
+    doc.roundedRect(x,100,bw,45,3,3,"D");
+    doc.setTextColor(80);doc.setFont("helvetica","bold");doc.setFontSize(7);doc.text(name,x+bw/2,115,{align:"center"});
+    doc.setFont("helvetica","bold");doc.setTextColor(0);doc.setFontSize(10);doc.text(brl(vals[i]),x+bw/2,132,{align:"center"});
+    x+=bw+gap;
+  });
+  
+  /* faturamento total */
+  doc.setDrawColor(0);doc.setLineWidth(1);
+  doc.rect(M,155,W-2*M,40,"D");
+  doc.setTextColor(0);doc.setFont("helvetica","bold");doc.setFontSize(10);
+  doc.text("FATURAMENTO TOTAL (VENDAS + ENTREGAS)",M+10,172);
+  doc.setFontSize(14);
+  doc.text(brl(fatT),M+10,188);
+  
+  const no=(a)=>numOf(a.os||a.id)||0;
+  const vendas=(V||[]).slice().sort((a,b)=>no(a)-no(b));
+  const entregas=(E||[]).slice().sort((a,b)=>no(a)-no(b));
+  const ordems=(O||[]).slice().sort((a,b)=>no(a)-no(b));
+  let y=210;
+  
+  /* vendas */
+  if(vendas.length){
+    y=secBar(doc,y,"VENDAS DO DIA");
+    doc.autoTable({
+      startY:y,
+      theme:"grid",
+      headStyles:{fillColor:[240,240,240],textColor:0,fontStyle:"bold",fontSize:8,halign:"center",lineWidth:0.5},
+      bodyStyles:{halign:"center",fontSize:8},
+      head:[["OS","Dinheiro","Pix","Cartão","Convênio","Carnê","Total"]],
+      body:vendas.map(d=>[String(d.os||d.id||""),brl(d.dinheiro),brl(d.pix),brl(d.cartao),brl(d.convenio),brl(d.carne),brl((Number(d.dinheiro)||0)+(Number(d.pix)||0)+(Number(d.cartao)||0)+(Number(d.convenio)||0))]),
+      foot:[[ "SUBTOTAL VENDAS",brl(sV.dinheiro),brl(sV.pix),brl(sV.cartao),brl(sV.convenio),brl(sV.carne),brl(fatV)]],
+      footStyles:{fillColor:[245,245,245],textColor:0,fontStyle:"bold",halign:"center",fontSize:8},
+      columnStyles:{0:{halign:"center"},6:{fontStyle:"bold"}},
+      margin:{left:M,right:M}
+    });
+    y=(doc.lastAutoTable&&doc.lastAutoTable.finalY)||y; y+=15;
+  }
+  
+  /* entregas */
+  if(entregas.length){
+    if(y > 700) { doc.addPage(); y = 40; }
+    y=secBar(doc,y,"ENTREGAS DO DIA");
+    doc.autoTable({
+      startY:y,
+      theme:"grid",
+      headStyles:{fillColor:[240,240,240],textColor:0,fontStyle:"bold",fontSize:8,halign:"center",lineWidth:0.5},
+      bodyStyles:{halign:"center",fontSize:8},
+      head:[["OS","Dinheiro","Pix","Cartão","Convênio","Total"]],
+      body:entregas.map(d=>[String(d.os||d.id||""),brl(d.dinheiro),brl(d.pix),brl(d.cartao),brl(d.convenio),brl((Number(d.dinheiro)||0)+(Number(d.pix)||0)+(Number(d.cartao)||0)+(Number(d.convenio)||0))]),
+      foot:[[ "SUBTOTAL ENTREGAS",brl(sE.dinheiro),brl(sE.pix),brl(sE.cartao),brl(sE.convenio),brl(fatE)]],
+      footStyles:{fillColor:[245,245,245],textColor:0,fontStyle:"bold",halign:"center",fontSize:8},
+      columnStyles:{0:{halign:"center"},5:{fontStyle:"bold"}},
+      margin:{left:M,right:M}
+    });
+    y=(doc.lastAutoTable&&doc.lastAutoTable.finalY)||y; y+=15;
+  }
+  
+  /* ordens de serviço */
+  if(ordems.length){
+    if(y > 700) { doc.addPage(); y = 40; }
+    y=secBar(doc,y,"ORDENS DE SERVIÇO FEITAS");
+    doc.autoTable({
+      startY:y,
+      theme:"grid",
+      headStyles:{fillColor:[240,240,240],textColor:0,fontStyle:"bold",fontSize:8,halign:"center",lineWidth:0.5},
+      bodyStyles:{halign:"center",fontSize:8},
+      head:[["OS","Vendedor"]],
+      body:ordems.map(o=>[String(o.os||o.id||""),String(o.vendedor||"—")]),
+      margin:{left:M,right:M}
+    });
+    y=(doc.lastAutoTable&&doc.lastAutoTable.finalY)||y; y+=15;
+  }
+  
+  /* ===== Observações + rodapé (parte de baixo, na identidade) ===== */
+  const needNew=()=>{ doc.addPage(); return 40; };
+  const obsTxt=String(obs||"").trim();
+
+  if(obsTxt){
+    // garante espaço para o cabeçalho da seção; senão começa nova página
+    if(y + 56 > bottomMax) y=needNew();
+
+    // barras do título (mesmo estilo das demais seções)
+    doc.setDrawColor(0);doc.setLineWidth(1);
+    doc.line(M,y,W-M,y);
+    doc.line(M,y+24,W-M,y+24);
+    doc.setFont("helvetica","bold");doc.setTextColor(0);doc.setFontSize(10);
+    doc.text("OBSERVAÇÕES DO FECHAMENTO",W/2,y+12,{align:"center"});
+    y+=34;
+
+    // quebra o texto e desenha, abrindo nova página quando atingir o fim
+    const lines=doc.splitTextToSize(obsTxt,W-2*M-24);
+    doc.setFont("helvetica","normal");doc.setTextColor(60);doc.setFontSize(9);
+    const lh=12, inset=M+12;
+    for(let i=0;i<(lines.length||0);i++){
+      if(y + lh > bottomMax){
+        y=needNew();
+        doc.setFont("helvetica","normal");doc.setTextColor(60);doc.setFontSize(9);
+        doc.setDrawColor(0);doc.setLineWidth(0.8);doc.line(M,y,W-M,y);
+        y+=12;
+      }
+      doc.text(lines[i],inset,y);
+      y+=lh;
+    }
+    y+=8;
+    doc.setDrawColor(0);doc.setLineWidth(1);doc.line(M,y,W-M,y);
+    y+=16;
+  }
+
+  /* Rodapé com o resumo final e metadados */
+  if(y + 46 > bottomMax) y=needNew();
+  doc.setDrawColor(0);doc.setLineWidth(0.5);doc.line(M,y,W-M,y); y+=16;
+  doc.setFont("helvetica","bold");doc.setTextColor(0);doc.setFontSize(10);
+  doc.text(`Resumo Final: ${brl(fatT)}`,M,y);
+  doc.setFont("helvetica","normal");doc.setTextColor(80);doc.setFontSize(8);
+  doc.text(`Gerado em ${new Date().toLocaleString("pt-BR")} por ${USER}.`,M,y+12);
+  doc.text(`LOJA ${cxStore} — ${longFmt(cxDate)}`,M,y+22);
+  
+  doc.save(`Caixa_LOJA${cxStore}_${cxDate}.pdf`);
+}
+
+/* ============================ bind / entrada ============================== */
+async function enter(){
+  const v=$("#caixaView"); const main=document.querySelector("main.panel-main");
+  if(main)main.style.display="none"; if(v)v.removeAttribute("hidden");
+  if(!canRun){blocked();return;}
+  const my=sessionStore();
+  if(isCashier&&my===null){blocked();return;}
+  let avail=[];
+  if(isAdmin)avail=await discover(); else {if(my===null){blocked();return;}avail=[my];}
+  if(!avail.length)avail=[1];
+  let act=isAdmin?"GERAL":(my||avail[0]);
+  if(act==null)act="GERAL";
+  cxAvail=avail; cxStore=act; cxTab="vendas";
+  document.querySelectorAll(".top-nav a").forEach(a=>a.classList.remove("active"));
+  const b=$("#caixaButton"); if(b)b.classList.add("active");
+  drawShell();
+}
+function showFatal(txt){
+  const v=$("#caixaView"); if(!v)return;
+  v.removeAttribute("hidden");
+  v.innerHTML=`<div class="cx-card"><h2 class="cx-title">Caixa</h2><p class="caixa-warn">⚠️ ${esc(String(txt&&txt.message?txt.message:txt).slice(0,300))}</p></div>`;
+}
+async function fireOpen(ev,force){
+  try{ if(ev&&ev.preventDefault)ev.preventDefault(); await enter(); }
+  catch(e){ console.error("[cx] erro ao abrir:",e); try{showFatal(e);}catch(_){} }
+}
+function bindCaixa(){
+  const b=$("#caixaButton"); if(!b)return;
+  b.addEventListener("click",fireOpen);
+}
+bindCaixa();
+window.caixaModule={enter,fireOpen,openNewOS,closeCaixa,toggleConsolid,todayStr:()=>TODAY};
+/* exporta também via módulo (namespace) para import dinâmico/debug */
+export { enter, fireOpen, openNewOS, closeCaixa, toggleConsolid };
+export const todayStr2=()=>TODAY;
