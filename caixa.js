@@ -111,6 +111,9 @@ function hasStoreAccess(store=cxStore){
   const ownStore=sessionStore();
   return ownStore!==null&&store!=="GERAL"&&Number(store)===ownStore;
 }
+function canViewCurrentCaixa(){
+  return canRun&&(isEst&&cxStore==="GERAL"||hasStoreAccess());
+}
 
 /* estado UI */
 let cxStore=null, cxAvail=[], cxDate=TODAY, cxTab="vendas";
@@ -159,7 +162,7 @@ function viewCls(){$("#caixaView")&&($("main.panel-main").style.display="none");
 
 function drawShell(){
   const v=$("#caixaView"); if(!v)return;
-  if(!canRun||!hasStoreAccess()){blocked();return;}
+  if(!canViewCurrentCaixa()){blocked();return;}
   const canPick=isAdmin;
   const isG = cxStore==="GERAL";
   const selOpt=(n,lab,sel)=>`<option value="${n}" ${sel?"selected":""}>${lab}</option>`;
@@ -182,7 +185,7 @@ function drawShell(){
       </div>
       <div class="cx-grow"></div>
       <div class="cx-ctl">
-        <span class="cx-ctl-item"><button type="button" class="caixa-btn ghost cx-postsale-open" id="cxPostSaleOpen">Pós Venda</button></span>
+        ${isG?"":'<span class="cx-ctl-item"><button type="button" class="caixa-btn ghost cx-postsale-open" id="cxPostSaleOpen">Pós Venda</button></span>'}
         <span class="cx-ctl-item cx-date" title="Calendário para escolher o dia"><input type="date" id="cxDateInput" value="${cxDate}"></span>
         <span class="cx-ctl-item cx-store">${pick}</span>
         ${closeBtn}
@@ -1462,17 +1465,37 @@ async function paintGeral(){
   const stores=(cxAvail&&cxAvail.length)?cxAvail.filter(s=>s!=="GERAL"):[cxStore];
   b.innerHTML=`<p class="caixa-empty">Carregando consolidado…</p>`;
   const per=[];
+  const readErrors=[];
   for(const s of stores){
-    let v={...out},e={...out};
-    try{(await getDocs(collection(db,"vendas",`LOJA ${s}`,"caixa",cxDate,"VendasDia"))).forEach(d=>{PAY.forEach(p=>v[p]=v[p]+(Number(d.data()[p])||0));});}catch(err){}
-    try{(await getDocs(collection(db,"vendas",`LOJA ${s}`,"caixa",cxDate,"EntregasDia"))).forEach(d=>{PAY.forEach(p=>e[p]=e[p]+(Number(d.data()[p])||0));});}catch(err){}
-    const din=v.dinheiro+e.dinheiro, pix=v.pix+e.pix, cart=v.cartao+e.cartao, conv=v.convenio+e.convenio, carn=v.carne+e.carne, outr=v.outros+e.outros, fat=fatOf(v)+fatOf(e);
-    per.push({st:s,din,pix,cart,conv,carn,outr,fat});
+    let v={...out},e={...out},vendas=0;
+    try{
+      const snapshot=await getDocs(collection(db,"vendas",`LOJA ${s}`,"caixa",cxDate,"VendasDia"));
+      vendas=snapshot.size;
+      snapshot.forEach(d=>{PAY.forEach(p=>v[p]=v[p]+(Number(d.data()[p])||0));});
+    }catch(error){
+      console.error(`Erro ao carregar vendas da LOJA ${s}:`,error);
+      readErrors.push(`LOJA ${s} · vendas`);
+    }
+    try{
+      (await getDocs(collection(db,"vendas",`LOJA ${s}`,"caixa",cxDate,"EntregasDia"))).forEach(d=>{PAY.forEach(p=>e[p]=e[p]+(Number(d.data()[p])||0));});
+    }catch(error){
+      console.error(`Erro ao carregar entregas da LOJA ${s}:`,error);
+      readErrors.push(`LOJA ${s} · entregas`);
+    }
+    const din=v.dinheiro+e.dinheiro, pix=v.pix+e.pix, cart=v.cartao+e.cartao, conv=v.convenio+e.convenio, carn=v.carne+e.carne, fat=fatOf(v)+fatOf(e);
+    per.push({st:s,din,pix,cart,conv,carn,vendas,fat});
   }
-  let gd={...out};
-  per.forEach(p=>PAY.forEach(k=>gd[k]+= (k==="dinheiro"?p.din:(k==="pix"?p.pix:(k==="cartao"?p.cart:(k==="convenio"?p.conv:(k==="carne"?p.carn:p.outr))))) ));
+  const gd={...out};
+  per.forEach(p=>{
+    gd.dinheiro+=p.din;
+    gd.pix+=p.pix;
+    gd.cartao+=p.cart;
+    gd.convenio+=p.conv;
+    gd.carne+=p.carn;
+  });
+  const totalVendas=per.reduce((total,p)=>total+p.vendas,0);
   const fatT=per.reduce((a,p)=>a+Number(p.fat||0),0);
-  const trs=per.length?per.map(p=>`<tr><td class="os" data-label="Loja">LOJA ${esc(p.st)}</td><td class="m" data-label="Dinheiro">${brl(p.din)}</td><td class="m" data-label="Pix">${brl(p.pix)}</td><td class="m" data-label="Cartão">${brl(p.cart)}</td><td class="m" data-label="Convênio">${brl(p.conv)}</td><td class="m c-carne" data-label="Carnê">${brl(p.carn)}</td><td class="m" data-label="Outros">${brl(p.outr)}</td><td class="m fat-col" data-label="Faturado">${brl(p.fat)}</td></tr>`).join("")
+  const trs=per.length?per.map(p=>`<tr><td class="os" data-label="Loja">LOJA ${esc(p.st)}</td><td class="m" data-label="Dinheiro">${brl(p.din)}</td><td class="m" data-label="Pix">${brl(p.pix)}</td><td class="m" data-label="Cartão">${brl(p.cart)}</td><td class="m" data-label="Convênio">${brl(p.conv)}</td><td class="m c-carne" data-label="Carnê">${brl(p.carn)}</td><td class="m" data-label="Quantidade de vendas">${p.vendas}</td><td class="m fat-col" data-label="Faturado">${brl(p.fat)}</td></tr>`).join("")
     :`<tr><td colspan="8" class="caixa-empty">Nenhuma loja disponível.</td></tr>`;
   const MG=[["dinheiro","Dinheiro"],["pix","Pix"],["cartao","Cartão"],["carne","Carnê"],["convenio","Convênio"]];
   const gdCards=MG.map(([k,lab])=>`<div class="cm-body ${k}"><span class="cm-lb">${lab}</span><strong class="cm-val">${brl(gd[k])}</strong></div>`).join("");
@@ -1483,13 +1506,14 @@ async function paintGeral(){
       <div class="cx-kpi falta"><span>Falta p/ meta</span><b id="gFalta">—</b></div>
     </div>
     <div class="cx-meta-header" style="font-size:.86rem;font-weight:700;color:var(--muted);margin:2px 0 2px">Visão consolidada de todas as lojas em ${esc(longFmt(cxDate))}</div>
+    ${readErrors.length?`<div class="caixa-warn" role="alert">⚠️ Não foi possível carregar todos os dados: ${esc(readErrors.join(", "))}. Os valores exibidos podem estar incompletos.</div>`:""}
     <div class="cx-means"><div class="cx-means-head">Meios de pagamento do dia · todas as lojas</div><div class="cx-means-grid">${gdCards}</div></div>
     <div class="cx-lanc-title">Detalhamento por loja</div>
     <div class="cv-wrap" style="overflow-x:auto">
       <table class="cvtable planilha">
-        <thead><tr><th>Loja</th><th>Dinheiro</th><th>Pix</th><th>Cartão</th><th>Convênio</th><th>Carnê</th><th>Outros</th><th>Faturado</th></tr></thead>
+        <thead><tr><th>Loja</th><th>Dinheiro</th><th>Pix</th><th>Cartão</th><th>Convênio</th><th>Carnê</th><th>Quantidade de vendas</th><th>Faturado</th></tr></thead>
         <tbody>${trs}</tbody>
-        <tfoot><tr class="tf-somas"><td class="os" data-label="Loja">TOTAL</td><td class="m" data-label="Dinheiro">${brl(gd.dinheiro)}</td><td class="m" data-label="Pix">${brl(gd.pix)}</td><td class="m" data-label="Cartão">${brl(gd.cartao)}</td><td class="m" data-label="Convênio">${brl(gd.convenio)}</td><td class="m c-carne" data-label="Carnê">${brl(gd.carne)}</td><td class="m" data-label="Outros">${brl(gd.outros)}</td><td class="m fat-col" data-label="Faturado">${brl(fatT)}</td></tr></tfoot>
+        <tfoot><tr class="tf-somas"><td class="os" data-label="Loja">TOTAL</td><td class="m" data-label="Dinheiro">${brl(gd.dinheiro)}</td><td class="m" data-label="Pix">${brl(gd.pix)}</td><td class="m" data-label="Cartão">${brl(gd.cartao)}</td><td class="m" data-label="Convênio">${brl(gd.convenio)}</td><td class="m c-carne" data-label="Carnê">${brl(gd.carne)}</td><td class="m" data-label="Quantidade de vendas">${totalVendas}</td><td class="m fat-col" data-label="Faturado">${brl(fatT)}</td></tr></tfoot>
       </table>
     </div>`;
   paintGeralMeta(fatT);
@@ -1777,9 +1801,9 @@ async function enter(){
   const my=sessionStore();
   if(isCashier&&my===null){blocked();return;}
   let avail=[];
-  if(isAdmin)avail=await discover(); else {if(my===null){blocked();return;}avail=[my];}
+  if(isAdmin||isEst)avail=await discover(); else {if(my===null){blocked();return;}avail=[my];}
   if(!avail.length)avail=[1];
-  let act=isAdmin?"GERAL":(my||avail[0]);
+  let act=isAdmin||isEst?"GERAL":(my||avail[0]);
   if(act==null)act="GERAL";
   cxAvail=avail; cxStore=act; cxTab="vendas";
   document.querySelectorAll(".top-nav a").forEach(a=>a.classList.remove("active"));

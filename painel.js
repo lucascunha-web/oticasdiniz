@@ -80,12 +80,9 @@ const savedTheme = localStorage.getItem("theme");
 const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
 const initialTheme = savedTheme || (systemPrefersDark ? "dark" : "light");
 
-// Garantir que o DOM está carregado para o checkbox
-document.addEventListener("DOMContentLoaded", () => {
-  applyTheme(initialTheme);
-  document.getElementById("themeCheckbox")?.addEventListener("change", (e) => {
-    applyTheme(e.target.checked ? "dark" : "light");
-  });
+applyTheme(initialTheme);
+themeCheckbox?.addEventListener("change", (event) => {
+  applyTheme(event.currentTarget.checked ? "dark" : "light");
 });
 
 if (!user) {
