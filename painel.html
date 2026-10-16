@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="painel.css?v=33">
+  <link rel="stylesheet" href="painel.css?v=35">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     .header-identity .brand-mark {
@@ -129,6 +129,12 @@
       <div class="store-selector-wrapper">
         <div class="store-tabs" id="storeTabs"></div>
         <div class="horizontal-indicators" id="activeStoreDisplay"></div>
+        <section class="manager-sellers-section" id="managerSellerSection" aria-labelledby="managerSellerTitle" hidden>
+          <div class="ranking-heading manager-sellers-heading">
+            <h2 id="managerSellerTitle">Equipe da loja</h2>
+          </div>
+          <div class="manager-seller-grid" id="managerSellerCards"></div>
+        </section>
         <!-- Gráfico será inserido aqui -->
         <div id="storeChartContainer" style="margin-top: 20px; margin-bottom: 35px; position: relative; display: none;">
           <div id="storeChartHeader" class="store-chart-header">
@@ -547,7 +553,7 @@
 
   <img class="panel-watermark" src="logodiniz.png" alt="" aria-hidden="true">
 
-  <script type="module" src="painel.js?v=20261013-theme"></script>
+  <script type="module" src="painel.js?v=20261016-store-id"></script>
   <script type="module" src="admin.js"></script>
   <script type="module" src="caixa.js?v=20261013-geral-readonly"></script>
 </body>

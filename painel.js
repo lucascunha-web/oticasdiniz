@@ -51,7 +51,6 @@ sessionStorage.setItem("usuarioLoja", accessProfile.loja);
 
 // Store unsubscribe functions for real-time listeners
 let unsubscribeSellerMetrics = null;
-let unsubscribeStoreMetrics = null;
 
 // Global variables to store day configurations for daily goal calculations
 let globalDiasTrabalhados = 1;
@@ -92,9 +91,12 @@ if (!user) {
 const normalizedRole = normalizeText(role);
 const isSeller = normalizedRole === "vendedor";
 const isAdmin = ["admin", "administrador"].includes(normalizedRole);
+const isManager = normalizedRole === "gerente";
 const canSwitchRanking = ["admin", "administrador", "gerente"].includes(normalizedRole);
 const monthKey = getCurrentMonthKey();
 const rankings = {};
+let managerSellerProfiles = [];
+let managerTeamLoadError = null;
 
 const metrics = {
   faturamento: {
@@ -129,6 +131,12 @@ document.getElementById("monthLabel").textContent = `Referencia ${formatMonth(mo
 
 if (!isSeller) {
   document.getElementById("sellerIndicators").hidden = true;
+}
+
+if (isManager) {
+  document.body.classList.add("manager-view");
+  document.getElementById("managerSellerSection").hidden = false;
+  document.getElementById("managerSection").style.display = "block";
 }
 
 if (!canSwitchRanking) {
@@ -831,7 +839,6 @@ document.getElementById("closeTabelas")?.addEventListener("click", () => {
 // Unsubscribe all listeners on logout
 document.getElementById("logoutButton").addEventListener("click", async () => {
   if (unsubscribeSellerMetrics) unsubscribeSellerMetrics();
-  if (unsubscribeStoreMetrics) unsubscribeStoreMetrics();
   try { await signOut(auth); } catch(e){}
   localStorage.removeItem("usuarioLogado");
   localStorage.removeItem("usuarioCargo");
@@ -842,6 +849,12 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
 
 async function loadPanel() {
   setRankingLoading();
+  if (isManager) {
+    document.getElementById("activeStoreDisplay").innerHTML =
+      `<p class="empty-state">Carregando indicadores da loja ${escapeHtml(accessProfile.loja)}...</p>`;
+    document.getElementById("managerSellerCards").innerHTML =
+      `<p class="empty-state">Carregando equipe da loja...</p>`;
+  }
 
   // Fetch global day configurations from the 'GERAL' store document
   try {
@@ -860,10 +873,24 @@ async function loadPanel() {
       setProfilePhoto(currentSeller.photo);
     }
 
-    // Fetch all sellers data once to map names to photos
-    const sellersSnap = await getDocs(collection(db, "vendedores"));
     const sellersMap = {};
-    sellersSnap.forEach(doc => sellersMap[doc.id] = doc.data());
+
+    if (isManager) {
+      try {
+        managerSellerProfiles = await loadManagerSellerProfiles();
+      } catch (error) {
+        managerTeamLoadError = error;
+        console.error("Erro ao carregar os perfis da equipe do gerente:", error);
+      }
+    }
+
+    // Fotos são complementares; uma falha nessa lista não deve bloquear os indicadores do gerente.
+    try {
+      const sellersSnap = await getDocs(collection(db, "vendedores"));
+      sellersSnap.forEach(doc => sellersMap[doc.id] = doc.data());
+    } catch (error) {
+      console.error("Erro ao carregar perfis de vendedores:", error);
+    }
 
     // Setup real-time listener for seller metrics
     if (unsubscribeSellerMetrics) {
@@ -917,7 +944,20 @@ async function loadPanel() {
         }
       }
 
+      if (isManager) {
+        renderManagerSellerCards(allSellerMetrics, sellersMap);
+      }
+
       renderRanking("faturamento"); // Render default ranking
+      if (canSwitchRanking && !isSeller) {
+        renderStoreRankingData(snapshot).catch(error => {
+          console.error("Erro ao processar métricas das lojas:", error);
+          if (isManager) {
+            document.getElementById("activeStoreDisplay").innerHTML =
+              `<p class="empty-state">Não foi possível carregar os indicadores da loja.</p>`;
+          }
+        });
+      }
 
       // Esconde o loader após a primeira carga de dados
       if (!initialLoadComplete) {
@@ -928,18 +968,19 @@ async function loadPanel() {
         initialLoadComplete = true;
       }
     }, (error) => {
-      console.error("Erro ao carregar métricas de vendedor em tempo real:", error);
+      console.error("Erro ao carregar métricas e rankings em tempo real:", error);
       document.getElementById("rankingTable").innerHTML = `
         <p class="empty-state">Nao foi possivel carregar os dados do ranking agora.</p>
       `;
+      if (isManager) {
+        document.getElementById("activeStoreDisplay").innerHTML =
+          `<p class="empty-state">Não foi possível carregar os indicadores da loja.</p>`;
+        document.getElementById("managerSection").style.display = "block";
+        renderManagerSellerCards([], sellersMap);
+      }
       // Esconde o loader mesmo em caso de erro para não travar a tela
       document.getElementById("loaderOverlay")?.classList.add("hidden");
     });
-
-    // Load store ranking data if applicable
-    if (canSwitchRanking && !isSeller) {
-      loadStoreRankingData();
-    }
 
   } catch (error) {
     console.error("Erro ao carregar painel (inicial):", error);
@@ -1007,6 +1048,31 @@ function buildRanking(records, metricKey) {
     }));
 }
 
+function getSellerDailyGoal(sellerMetrics) {
+  const faturamento = Number(sellerMetrics.faturamento);
+  const metaFaturamento = Number(sellerMetrics.metaFaturamento);
+  if (faturamento >= metaFaturamento && metaFaturamento > 0) {
+    return {
+      label: "Saldo da Meta",
+      value: `+${formatCurrency(faturamento - metaFaturamento)}`,
+      isMetaHit: true
+    };
+  }
+
+  const [year, month] = monthKey.split("-").map(Number);
+  const totalDays = new Date(year, month, 0).getDate();
+  const remainingDays = totalDays - globalFeriados - globalDiasTrabalhados;
+  const dailyGoal = remainingDays > 0
+    ? Math.max(0, (metaFaturamento - faturamento) / remainingDays)
+    : 0;
+
+  return {
+    label: "Meta Diária Atual",
+    value: formatCurrency(dailyGoal),
+    isMetaHit: false
+  };
+}
+
 function renderSellerIndicators(sellerMetrics) {
   Object.entries(metrics).forEach(([metricKey, config]) => {
     const metricElement = document.querySelector(`[data-metric="${metricKey}"]`);
@@ -1022,37 +1088,17 @@ function renderSellerIndicators(sellerMetrics) {
     let statusText = getStatusText(metricKey, active);
 
     if (metricKey === "faturamento") {
-      const fat = Number(sellerMetrics.faturamento);
-      const metaF = Number(sellerMetrics.metaFaturamento);
-      const isMetaHit = fat >= metaF && metaF > 0;
+      const dailyGoal = getSellerDailyGoal(sellerMetrics);
       const metaDiariaElem = document.querySelector(`[data-metric="metaDiaria"]`);
       const metaDiariaLabelElem = document.querySelector(`[data-label="metaDiaria"]`);
 
-      if (isMetaHit) {
-        // Se a meta foi batida, mostra o saldo positivo
-        const saldo = fat - metaF;
-        if (metaDiariaElem) {
-          metaDiariaElem.textContent = `+${formatCurrency(saldo)}`;
-          metaDiariaElem.style.color = "var(--green)";
-        }
-        if (metaDiariaLabelElem) metaDiariaLabelElem.textContent = "Saldo da Meta";
-      } else {
-        // Se não, calcula e mostra a meta diária
-        const [year, mNum] = monthKey.split("-").map(Number);
-        // mNum já é 1-based, então new Date(year, mNum, 0) pega o último dia do mês correto
-        const totalDays = new Date(year, mNum, 0).getDate();
-        const diasRestantes = totalDays - globalFeriados - globalDiasTrabalhados;
-        const metaDiariaVal = diasRestantes > 0 ? Math.max(0, (metaF - fat) / diasRestantes) : 0;
-        if (metaDiariaElem) {
-          metaDiariaElem.textContent = formatCurrency(metaDiariaVal);
-          metaDiariaElem.style.color = ""; // Reseta a cor para o padrão
-        }
-        if (metaDiariaLabelElem) metaDiariaLabelElem.textContent = "Meta Diária Atual";
+      if (metaDiariaElem) {
+        metaDiariaElem.textContent = dailyGoal.value;
+        metaDiariaElem.style.color = dailyGoal.isMetaHit ? "var(--green)" : "";
       }
+      if (metaDiariaLabelElem) metaDiariaLabelElem.textContent = dailyGoal.label;
 
-      const pctMeta = metaF > 0 ? (fat / metaF) * 100 : 0;
-
-      if (isMetaHit) {
+      if (dailyGoal.isMetaHit) {
         statusText = "Meta Batida";
         if (statusElement) {
           statusElement.style.background = "#3182ce";
@@ -1082,6 +1128,87 @@ function renderSellerIndicators(sellerMetrics) {
       }
     }
   });
+}
+
+function renderManagerSellerCards(allSellerMetrics, sellersMap) {
+  const container = document.getElementById("managerSellerCards");
+  if (!container) return;
+
+  if (managerTeamLoadError) {
+    container.innerHTML = `
+      <p class="empty-state">
+        As regras do Firestore não permitem consultar os vendedores vinculados a esta loja.
+        Solicite a liberação de leitura dos perfis de acesso da própria loja.
+      </p>
+    `;
+    return;
+  }
+
+  const profiles = managerSellerProfiles
+    .filter(profile =>
+      normalizeText(profile.cargo) === "vendedor" &&
+      isSameStoreId(profile.loja, accessProfile.loja) &&
+      typeof profile.nomeUsuario === "string" &&
+      profile.nomeUsuario.trim()
+    )
+    .filter((profile, index, list) =>
+      list.findIndex(candidate => normalizeText(candidate.nomeUsuario) === normalizeText(profile.nomeUsuario)) === index
+    );
+
+  if (!profiles.length) {
+    container.innerHTML = `<p class="empty-state">Nenhum vendedor está vinculado a esta loja.</p>`;
+    return;
+  }
+
+  const sellers = profiles
+    .map(profile => {
+      const name = profile.nomeUsuario.trim();
+      const sellerId = Object.keys(sellersMap).find(id => normalizeText(id) === normalizeText(name));
+      const sellerData = sellerId ? sellersMap[sellerId] : {};
+      if (sellerData.ativo === false) return null;
+
+      const record = allSellerMetrics.find(item => normalizeText(item.name) === normalizeText(name));
+      if (!record) return null;
+      return { ...record, name, photo: normalizePhotoUrl(sellerData.foto || record.photo || "") };
+    })
+    .filter(Boolean)
+    .sort((a, b) => normalizeText(a.name).localeCompare(normalizeText(b.name)));
+
+  if (!sellers.length) {
+    container.innerHTML = `<p class="empty-state">Nenhum vendedor ativo está vinculado a esta loja.</p>`;
+    return;
+  }
+
+  container.innerHTML = sellers.map(seller => {
+    const dailyGoal = getSellerDailyGoal(seller);
+    return `
+      <article class="manager-seller-card">
+        <header class="manager-seller-header">
+          <div class="manager-seller-photo">
+            ${seller.photo ? `<img src="${escapeHtml(seller.photo)}" alt="">` : "<span></span>"}
+          </div>
+          <h3>${escapeHtml(formatName(seller.name))}</h3>
+        </header>
+        <div class="manager-seller-stats">
+          <div class="manager-seller-stat-row">
+            <span>${escapeHtml(dailyGoal.label)}</span>
+            <strong>${escapeHtml(dailyGoal.value)}</strong>
+            <span class="manager-seller-meta-note">Diária</span>
+          </div>
+          ${Object.entries(metrics).map(([metricKey, config]) => {
+            const rankingItem = rankings[metricKey]?.find(item => normalizeText(item.name) === normalizeText(seller.name));
+            return `
+              <div class="manager-seller-stat-row">
+                <span>${escapeHtml(config.label)}</span>
+                <strong>${escapeHtml(config.format(seller[metricKey]))}</strong>
+                <span class="manager-seller-rank">Geral <b>${rankingItem ? `${rankingItem.position}º` : "--"}</b></span>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </article>
+    `;
+  }).join("");
 }
 
 function renderRanking(metricKey) {
@@ -1326,6 +1453,16 @@ function normalizeText(value) {
     .trim();
 }
 
+function isSameStoreId(first, second) {
+  const normalizeStoreId = value => {
+    const normalized = normalizeText(value);
+    const storeNumber = normalized.match(/^(?:loja\s*)?(\d+)$/);
+    return storeNumber ? String(Number(storeNumber[1])) : normalized;
+  };
+
+  return normalizeStoreId(first) === normalizeStoreId(second);
+}
+
 function formatCurrency(value) {
   return Number(value).toLocaleString("pt-BR", {
     style: "currency",
@@ -1414,136 +1551,173 @@ document.addEventListener("click", () => {
 let cachedStores = [];
 let cachedLojasConfigMap = null;
 
-async function loadStoreRankingData() {
+async function loadManagerSellerProfiles() {
+  const snapshot = await getDocs(query(
+    collection(db, "acessos"),
+    where("loja", "==", accessProfile.loja),
+    where("cargo", "==", "vendedor")
+  ));
+
+  return snapshot.docs
+    .map(accessDoc => accessDoc.data())
+    .filter(profile =>
+      isSameStoreId(profile.loja, accessProfile.loja) &&
+      typeof profile.nomeUsuario === "string" &&
+      profile.nomeUsuario.trim()
+    );
+}
+
+async function renderStoreRankingData(snapshot) {
   const section = document.getElementById("managerSection");
   const tabs = document.getElementById("storeTabs");
   const rankingList = document.getElementById("storeRankingList");
 
   if (!section || !tabs || !rankingList) return;
 
-  if (unsubscribeStoreMetrics) {
-    unsubscribeStoreMetrics();
-  }
-
   const curMonthKey = monthKey;
   const prevMonthKey = getPreviousMonthKey();
-
-  const qStoreMetrics = query(collectionGroup(db, "metricas"));
-
-  unsubscribeStoreMetrics = onSnapshot(qStoreMetrics, async (snapshot) => {
-    // Reutiliza cache de configurações de lojas para economizar leituras no Firestore
-    if (!cachedLojasConfigMap) {
-      try {
-        const lojasSnap = await getDocs(collection(db, "lojas"));
-        cachedLojasConfigMap = {};
-        lojasSnap.forEach(d => cachedLojasConfigMap[d.id] = d.data());
-      } catch (e) {
-        cachedLojasConfigMap = {};
-      }
+  // Reutiliza cache de configurações de lojas para economizar leituras no Firestore.
+  if (!cachedLojasConfigMap) {
+    try {
+      const lojasSnap = await getDocs(collection(db, "lojas"));
+      cachedLojasConfigMap = {};
+      lojasSnap.forEach(d => cachedLojasConfigMap[d.id] = d.data());
+    } catch (error) {
+      console.error("Erro ao carregar configurações das lojas:", error);
+      cachedLojasConfigMap = {};
     }
-    const configMap = cachedLojasConfigMap;
+  }
+  const configMap = cachedLojasConfigMap;
+  const storeMetricDocs = snapshot.docs.filter(metricDoc =>
+    metricDoc.ref.path.startsWith("lojas/")
+  );
+  const mapStoreMetric = metricDoc => {
+    const id = metricDoc.ref.parent.parent.id;
+    const config = configMap[id] || {};
+    return {
+      id,
+      ...metricDoc.data(),
+      diasTrabalhados: config.diasTrabalhados,
+      feriados: config.feriados
+    };
+  };
 
-    const hasCurrentMonthData = snapshot.docs.some(doc => doc.id === curMonthKey && doc.ref.path.startsWith("lojas/"));
-    const targetMonth = hasCurrentMonthData ? curMonthKey : prevMonthKey;
+  if (isManager) {
+    const managerStoreMetricDoc = storeMetricDocs.find(metricDoc =>
+      metricDoc.id === curMonthKey &&
+      isSameStoreId(metricDoc.ref.parent.parent.id, accessProfile.loja)
+    ) || storeMetricDocs.find(metricDoc =>
+      metricDoc.id === prevMonthKey &&
+      isSameStoreId(metricDoc.ref.parent.parent.id, accessProfile.loja)
+    );
 
-    const allMetrics = snapshot.docs
-      .filter(doc => doc.id === targetMonth && doc.ref.path.startsWith("lojas/"))
-      .map(doc => {
-        const id = doc.ref.parent.parent.id;
-        const config = configMap[id] || {};
-        return { 
-          id, 
-          ...doc.data(),
-          diasTrabalhados: config.diasTrabalhados,
-          feriados: config.feriados
-        };
-      });
-
-    if (allMetrics.length === 0) {
-      section.style.display = "none";
-      return;
-    }
-
-    // 1. Separar lojas individuais do documento GERAL
-    const individualStores = allMetrics.filter(s => s.id !== "GERAL");
-    let geralStore = allMetrics.find(s => s.id === "GERAL") || { id: "GERAL", desconto: 0, mkp: 0, ticketMedio: 0 };
-    
-    const geralConfig = configMap["GERAL"] || {};
-    geralStore.diasTrabalhados = geralConfig.diasTrabalhados;
-    geralStore.feriados = geralConfig.feriados;
-
-    // 2. Calcular somas para o GERAL (Faturamento, Projeção e Vendas)
-    const totals = individualStores.reduce((acc, store) => ({
-      faturamento: acc.faturamento + Number(store.faturamento || 0),
-      vendas: acc.vendas + Number(store.vendas || 0),
-      projeção: acc.projeção + Number(store.projeção || 0),
-      metaFaturamento: acc.metaFaturamento + Number(store.metaFaturamento || 0)
-    }), { faturamento: 0, vendas: 0, projeção: 0, metaFaturamento: 0 });
-
-    geralStore.faturamento = totals.faturamento;
-    geralStore.vendas = totals.vendas;
-    geralStore.projeção = totals.projeção;
-    geralStore.metaFaturamento = totals.metaFaturamento;
-
-    // Atualiza o cache global incluindo o GERAL processado
-    cachedStores = [geralStore, ...individualStores];
-
-    // 3. Renderizar Ranking em Lista (Ignorando o GERAL e ordenando por faturamento)
-    const rankingData = [...individualStores].sort((a, b) => Number(b.faturamento || 0) - Number(a.faturamento || 0));
-    
-    rankingList.innerHTML = rankingData.map((store, index) => {
-      const fat = Number(store.faturamento || 0);
-      const mCom = Number(store.metaComissao || 0);
-      const mFat = Number(store.metaFaturamento || 0);
-      
-      const isCommActive = fat >= mCom && mCom > 0;
-      const isMetaHit = fat >= mFat && mFat > 0;
-
-      return `
-        <div class="rank-card-white">
-          <div class="r-header">
-            <span class="r-pos-badge">${index + 1}</span>
-            <span class="r-store-name">${store.id}</span>
-          </div>
-          <div class="r-featured">${formatCurrency(fat)}</div>
-          <div class="r-sub-info">Comissão: ${formatCurrency(mCom)}</div>
-          <div class="r-sub-info">Meta: ${formatCurrency(mFat)}</div>
-          <div class="r-footer-badges">
-            ${isMetaHit ? 
-              '<span class="s-badge blue">Meta Batida</span>' : 
-              (isCommActive ? '<span class="s-badge green">Comissão Ativa</span>' : '<span class="s-badge red">Comissão não ativa</span>')}
-          </div>
-        </div>
+    if (managerStoreMetricDoc) {
+      renderStoreIndicators(mapStoreMetric(managerStoreMetricDoc));
+    } else {
+      document.getElementById("activeStoreDisplay").innerHTML = `
+        <p class="empty-state">Não há indicadores disponíveis para a loja ${escapeHtml(accessProfile.loja)} em ${formatMonth(curMonthKey)} ou ${formatMonth(prevMonthKey)}.</p>
       `;
-    }).join("");
+    }
+  }
 
-    // 4. Renderizar Botões de Seleção (Tabs) - Colocando o GERAL em primeiro
+  const hasCurrentMonthData = storeMetricDocs.some(metricDoc => metricDoc.id === curMonthKey);
+  const targetMonth = hasCurrentMonthData ? curMonthKey : prevMonthKey;
+  const allMetrics = storeMetricDocs
+    .filter(metricDoc => metricDoc.id === targetMonth)
+    .map(mapStoreMetric);
+
+  const individualStores = allMetrics.filter(store => store.id !== "GERAL");
+  if (allMetrics.length === 0) {
+    if (isManager) section.style.display = "block";
+    else section.style.display = "none";
+    return;
+  }
+
+  let geralStore = allMetrics.find(store => store.id === "GERAL")
+    || { id: "GERAL", desconto: 0, mkp: 0, ticketMedio: 0 };
+  const geralConfig = configMap["GERAL"] || {};
+  geralStore.diasTrabalhados = geralConfig.diasTrabalhados;
+  geralStore.feriados = geralConfig.feriados;
+
+  const totals = individualStores.reduce((acc, store) => ({
+    faturamento: acc.faturamento + Number(store.faturamento || 0),
+    vendas: acc.vendas + Number(store.vendas || 0),
+    projeção: acc.projeção + Number(store.projeção || 0),
+    metaFaturamento: acc.metaFaturamento + Number(store.metaFaturamento || 0)
+  }), { faturamento: 0, vendas: 0, projeção: 0, metaFaturamento: 0 });
+
+  geralStore.faturamento = totals.faturamento;
+  geralStore.vendas = totals.vendas;
+  geralStore.projeção = totals.projeção;
+  geralStore.metaFaturamento = totals.metaFaturamento;
+  cachedStores = [geralStore, ...individualStores];
+
+  const rankingData = [...individualStores].sort((a, b) =>
+    Number(b.faturamento || 0) - Number(a.faturamento || 0)
+  );
+  rankingList.innerHTML = rankingData.map((store, index) => {
+    const fat = Number(store.faturamento || 0);
+    const mCom = Number(store.metaComissao || 0);
+    const mFat = Number(store.metaFaturamento || 0);
+    const isCommActive = fat >= mCom && mCom > 0;
+    const isMetaHit = fat >= mFat && mFat > 0;
+
+    return `
+      <div class="rank-card-white">
+        <div class="r-header">
+          <span class="r-pos-badge">${index + 1}</span>
+          <span class="r-store-name">${store.id}</span>
+        </div>
+        <div class="r-featured">${formatCurrency(fat)}</div>
+        <div class="r-sub-info">Comissão: ${formatCurrency(mCom)}</div>
+        <div class="r-sub-info">Meta: ${formatCurrency(mFat)}</div>
+        <div class="r-footer-badges">
+          ${isMetaHit
+            ? '<span class="s-badge blue">Meta Batida</span>'
+            : (isCommActive ? '<span class="s-badge green">Comissão Ativa</span>' : '<span class="s-badge red">Comissão não ativa</span>')}
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  if (isManager) {
+    tabs.innerHTML = "";
+  } else {
     const tabOrder = [geralStore, ...individualStores.sort((a, b) => a.id.localeCompare(b.id))];
-    tabs.innerHTML = tabOrder.map((store, i) => `
-      <button class="store-tab-btn ${store.id === 'GERAL' ? 'active' : ''}" onclick="window.switchStoreView('${store.id}')">
+    tabs.innerHTML = tabOrder.map(store => `
+      <button class="store-tab-btn ${store.id === "GERAL" ? "active" : ""}" onclick="window.switchStoreView('${store.id}')">
         ${store.id}
       </button>
     `).join("");
-
-    // 5. Iniciar visão com o GERAL selecionado
     window.switchStoreView("GERAL");
+  }
 
-    section.style.display = "block";
-  }, (error) => {
-    console.error("Erro ao carregar visão gerencial em tempo real:", error);
-    section.style.display = "none";
-  });
+  section.style.display = "block";
 }
 
 window.switchStoreView = (storeId) => {
-  const store = cachedStores.find(s => s.id === storeId);
+  const store = cachedStores.find(s => normalizeText(s.id) === normalizeText(storeId));
   if (!store) return;
+  if (isManager && (
+    store.id === "GERAL" ||
+    !isSameStoreId(store.id, accessProfile.loja)
+  )) return;
 
   // Atualiza estado visual dos botões
   document.querySelectorAll(".store-tab-btn").forEach(btn => {
     btn.classList.toggle("active", btn.innerText.trim() === storeId);
   });
 
+  renderStoreIndicators(store);
+
+  if (isManager) {
+    document.getElementById("storeChartContainer").style.display = "none";
+  } else {
+    renderStoreHistoryChart(store.id);
+  }
+};
+
+function renderStoreIndicators(store) {
   const metaF = Number(store.metaFaturamento || 0);
   const fat = Number(store.faturamento || 0);
   const isMetaHit = fat >= metaF && metaF > 0;
@@ -1597,10 +1771,7 @@ window.switchStoreView = (storeId) => {
       <strong>${formatCurrency(store.projeção || 0)}</strong>
     </div>
   `;
-
-  // Chamar a função para renderizar o gráfico
-  renderStoreHistoryChart(storeId);
-};
+}
 
 function createProportionalScale(goal) {
   if (goal <= 0) {
