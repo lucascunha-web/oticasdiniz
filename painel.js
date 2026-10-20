@@ -127,6 +127,8 @@ const metrics = {
 };
 
 document.getElementById("userName").textContent = formatName(user || "Usuario");
+document.getElementById("mobileUserName").textContent = formatName(user || "Usuario");
+document.getElementById("userRole").textContent = accessProfile.cargo;
 document.getElementById("monthLabel").textContent = `Referencia ${formatMonth(monthKey)}`;
 
 if (!isSeller) {
@@ -152,11 +154,7 @@ document.getElementById("profileAvatar").addEventListener("click", () => {
 });
 
 document.getElementById("announcementsButton").addEventListener("click", () => {
-  toggleAnnouncements(true);
-});
-
-document.getElementById("closeAnnouncements").addEventListener("click", () => {
-  toggleAnnouncements(false);
+  setActivePanelPage("documents");
 });
 
 document.addEventListener("click", (event) => {
@@ -164,12 +162,6 @@ document.addEventListener("click", (event) => {
     setProfileMenu(false);
   }
 
-  if (
-    !event.target.closest(".announcements-card") &&
-    !event.target.closest("#announcementsButton")
-  ) {
-    toggleAnnouncements(false);
-  }
 });
 
 document.getElementById("changePasswordButton")?.addEventListener("click", async () => {
@@ -218,14 +210,12 @@ const lessonsGrid = document.getElementById("lessonsGrid");
 
 trainingsButton?.addEventListener("click", (e) => {
   e.preventDefault();
-  trainingsPanel.classList.add("open");
-  document.body.classList.add("modal-open");
+  setActivePanelPage("trainings");
   loadTrainings();
 });
 
 document.getElementById("closeTrainings")?.addEventListener("click", () => {
-  trainingsPanel.classList.remove("open");
-  document.body.classList.remove("modal-open");
+  setActivePanelPage("dashboard");
 });
 
 let trainingModules = []; // Cache para os módulos
@@ -381,9 +371,8 @@ let pendingReservation = null;
 
 stockButton?.addEventListener("click", (e) => {
   e.preventDefault();
+  setActivePanelPage("stock");
   populateStockSelects();
-  stockPanel.classList.add("open");
-  document.body.classList.add("modal-open");
   
   // Se for ADM/Estoquista, expande o card e mostra a coluna lateral
   if (isControlRole && stockCardContainer && stockAdminSection) {
@@ -394,10 +383,9 @@ stockButton?.addEventListener("click", (e) => {
 });
 
 closeStock?.addEventListener("click", () => {
-  stockPanel.classList.remove("open");
+  setActivePanelPage("dashboard");
   stockCardContainer.classList.remove("admin-view");
   stockAdminSection.style.display = "none";
-  document.body.classList.remove("modal-open");
 });
 
 // --- Lógica de Alternância de Lentes (Barras) ---
@@ -779,19 +767,36 @@ window.cancelReserva = async (resId) => {
   } catch (e) { alert("Erro ao cancelar."); }
 };
 
-// Lógica do menu Tabelas e Navegação Mobile
+// Navegação entre as páginas e menu lateral responsivo
 const tabelasToggle = document.getElementById("tabelasToggle");
 const tabelasDropdown = document.getElementById("tabelasDropdown");
 const menuToggle = document.getElementById("mobileMenuToggle");
-const topNav = document.querySelector(".top-nav");
 const navBackdrop = document.getElementById("navBackdrop");
+const panelSidebar = document.getElementById("panelSidebar");
+
+function setActivePanelPage(page, keepSidebarOpen = false) {
+  const pages = document.querySelectorAll("[data-page-view]");
+  pages.forEach((pageElement) => {
+    const isActive = pageElement.dataset.pageView === page;
+    pageElement.classList.toggle("active", isActive);
+    pageElement.classList.toggle("open", isActive);
+    pageElement.hidden = !isActive;
+  });
+
+  document.querySelectorAll(".top-nav [data-page]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.page === page);
+  });
+  document.getElementById("announcementsButton").setAttribute("aria-expanded", String(page === "documents"));
+  if (!keepSidebarOpen) closeMobileMenu();
+}
+
+window.setActivePanelPage = setActivePanelPage;
 
 function closeMobileMenu() {
-  if (topNav?.classList.contains("active")) {
-    topNav.classList.remove("active");
+  if (panelSidebar?.classList.contains("open")) {
+    panelSidebar.classList.remove("open");
     menuToggle?.classList.remove("open");
     navBackdrop?.classList.remove("active");
-    document.body.classList.remove("modal-open");
   }
 }
 
@@ -799,41 +804,33 @@ navBackdrop?.addEventListener("click", closeMobileMenu);
 
 menuToggle?.addEventListener("click", (e) => {
   e.stopPropagation();
-  const isOpen = topNav.classList.toggle("active");
+  const isOpen = panelSidebar.classList.toggle("open");
   menuToggle.classList.toggle("open", isOpen);
   navBackdrop?.classList.toggle("active", isOpen);
-  document.body.classList.toggle("modal-open", isOpen);
 });
 
-// Fecha gaveta mobile ao clicar em qualquer item de navegação
-document.querySelectorAll(".top-nav a, .top-nav > button:not(#tabelasToggle), #tabelasDropdown button").forEach(elem => {
-  elem.addEventListener("click", () => {
-    closeMobileMenu();
-  });
+document.querySelector('.top-nav [data-page="dashboard"]')?.addEventListener("click", () => {
+  setActivePanelPage("dashboard");
 });
 
 document.addEventListener("click", (e) => {
-  if (topNav?.classList.contains("active") && !topNav.contains(e.target) && !menuToggle?.contains(e.target)) {
+  if (panelSidebar?.classList.contains("open") && !panelSidebar.contains(e.target) && !menuToggle?.contains(e.target)) {
     closeMobileMenu();
   }
 });
 
 tabelasToggle?.addEventListener("click", (e) => {
   e.stopPropagation();
-  tabelasDropdown.classList.toggle("show");
+  const isExpanded = tabelasDropdown.classList.toggle("show");
+  tabelasToggle.setAttribute("aria-expanded", String(isExpanded));
+  tabelasToggle.classList.toggle("active", isExpanded);
 });
 
 document.querySelectorAll("#tabelasDropdown button").forEach(btn => {
   btn.addEventListener("click", () => {
     const type = btn.dataset.type;
     openTabelasPanel(type);
-    tabelasDropdown.classList.remove("show");
-    closeMobileMenu();
   });
-});
-
-document.getElementById("closeTabelas")?.addEventListener("click", () => {
-  document.getElementById("tabelasPanel").classList.remove("open");
 });
 
 // Unsubscribe all listeners on logout
@@ -1374,7 +1371,7 @@ function setProfilePhoto(photoUrl) {
     return;
   }
 
-  document.getElementById("profileAvatar").innerHTML = `<img src="${photoUrl}" alt="">`;
+  document.getElementById("profilePhoto").innerHTML = `<img src="${photoUrl}" alt="">`;
 }
 
 function listenAnnouncements() {
@@ -1412,12 +1409,6 @@ function toggleProfileMenu() {
 function setProfileMenu(isOpen) {
   document.getElementById("profileAvatar").setAttribute("aria-expanded", String(isOpen));
   document.getElementById("profileDropdown").classList.toggle("open", isOpen);
-}
-
-function toggleAnnouncements(isOpen) {
-  document.getElementById("announcementsButton").setAttribute("aria-expanded", String(isOpen));
-  document.getElementById("announcementsPanel").classList.toggle("open", isOpen);
-  document.body.classList.toggle("modal-open", isOpen);
 }
 
 function normalizePhotoUrl(value) {
@@ -1492,14 +1483,12 @@ function escapeHtml(value) {
 
 let cachedTabelasList = null;
 async function openTabelasPanel(type) {
-  const panel = document.getElementById("tabelasPanel");
-  const list = document.getElementById("tabelasContentList");
-  const title = document.getElementById("tabelasPanelTitle");
+  const sidebarLinks = document.getElementById("tabelasBrandLinks");
   
-  title.textContent = type === "precos" ? "Tabelas de Preços" : "Códigos Técnicos";
-  panel.classList.add("open");
-  document.body.classList.add("modal-open");
-  list.innerHTML = "<p>Buscando arquivos...</p>";
+  document.querySelectorAll("#tabelasDropdown [data-type]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.type === type);
+  });
+  sidebarLinks.innerHTML = `<p class="table-brand-empty">Carregando arquivos...</p>`;
 
   try {
     if (!cachedTabelasList) {
@@ -1514,11 +1503,11 @@ async function openTabelasPanel(type) {
     });
 
     if (!filtered.length) {
-      list.innerHTML = "<p>Nenhum arquivo encontrado nesta categoria.</p>";
+      sidebarLinks.innerHTML = `<p class="table-brand-empty">Nenhum arquivo disponível.</p>`;
       return;
     }
 
-    list.innerHTML = filtered.map(t => {
+    const entries = filtered.map(t => {
       const label = t.id.replace(/cod$/i, "").toUpperCase();
       const url = t.URL || "#";
       const normalizedId = String(t.id).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -1529,23 +1518,30 @@ async function openTabelasPanel(type) {
         : "";
       const logoByBrand = { ZEISS: "zeiss.png", HOYA: "hoya.png", ESSILOR: "essilor.png", "CARDÁPIO": "ICON.png" };
       const logo = logoByBrand[brand];
-      return `
-        <a class="announcement-item${logo ? " has-brand-logo" : ""}" href="${url}" target="_blank" rel="noopener noreferrer">
-          ${logo ? `<img class="table-brand-logo" src="${logo}" alt="Logo ${brand}" loading="lazy">` : ""}
-          <strong>${label}</strong>
-          <span>Abrir PDF da Tabela</span>
-        </a>
-      `;
-    }).join("");
+      return { label, url, brand, logo };
+    });
+
+    sidebarLinks.innerHTML = entries.map(({ label, url, brand, logo }) => `
+      <a class="table-brand-link" href="${url}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(label)}">
+        ${logo
+          ? `<img src="${logo}" alt="" loading="lazy">`
+          : `<span class="table-brand-fallback">PDF</span>`}
+        <span>${escapeHtml(label)}</span>
+      </a>
+    `).join("");
 
   } catch (error) {
     console.error("Erro ao carregar tabelas:", error);
-    list.innerHTML = "<p>Erro ao acessar o banco de dados.</p>";
+    sidebarLinks.innerHTML = `<p class="table-brand-empty">Erro ao carregar os arquivos.</p>`;
   }
 }
 
-document.addEventListener("click", () => {
-  tabelasDropdown?.classList.remove("show");
+document.addEventListener("click", (event) => {
+  if (!event.target.closest(".nav-dropdown")) {
+    tabelasDropdown?.classList.remove("show");
+    tabelasToggle?.setAttribute("aria-expanded", "false");
+    tabelasToggle?.classList.remove("active");
+  }
 });
 
 let cachedStores = [];

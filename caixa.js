@@ -158,7 +158,10 @@ async function discover(){const s=new Set();
   return [...s].sort((a,b)=>a-b);}
 
 /* view-shell */
-function viewCls(){$("#caixaView")&&($("main.panel-main").style.display="none");$("#caixaView").removeAttribute("hidden");}
+function viewCls(){
+  window.setActivePanelPage?.("caixa");
+  $("#caixaView")?.removeAttribute("hidden");
+}
 
 function drawShell(){
   const v=$("#caixaView"); if(!v)return;
@@ -1795,8 +1798,7 @@ async function buildCaixaPDF(V,E,O,obs){
 
 /* ============================ bind / entrada ============================== */
 async function enter(){
-  const v=$("#caixaView"); const main=document.querySelector("main.panel-main");
-  if(main)main.style.display="none"; if(v)v.removeAttribute("hidden");
+  viewCls();
   if(!canRun){blocked();return;}
   const my=sessionStore();
   if(isCashier&&my===null){blocked();return;}
@@ -1806,8 +1808,6 @@ async function enter(){
   let act=isAdmin||isEst?"GERAL":(my||avail[0]);
   if(act==null)act="GERAL";
   cxAvail=avail; cxStore=act; cxTab="vendas";
-  document.querySelectorAll(".top-nav a").forEach(a=>a.classList.remove("active"));
-  const b=$("#caixaButton"); if(b)b.classList.add("active");
   drawShell();
 }
 function showFatal(txt){

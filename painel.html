@@ -16,26 +16,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="painel.css?v=35">
+  <link rel="stylesheet" href="painel.css?v=36">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    .header-identity .brand-mark {
-      background: none !important;
-      border-radius: 0 !important;
-      box-shadow: none !important;
-      padding: 0;
-      display: flex;
-      align-items: center;
-      width: auto !important;
-      height: auto !important;
-    }
-    .header-identity .brand-mark img {
-      height: 45px; /* Tamanho ajustado para destaque */
-      width: auto !important; /* Garante que não fique amassada */
-      filter: brightness(0) invert(1); /* Torna a logo totalmente branca */
-      display: block;
-    }
-  </style>
 </head>
 <body>
   <!-- Tela de Carregamento -->
@@ -45,64 +27,25 @@
       <span>Carregando painel...</span>
     </div>
   </div>
-  <header class="panel-header">
-    <div class="header-identity">
-      <a class="brand-mark" href="painel.html" aria-label="Oticas Diniz">
-        <img src="logodiniz.png" alt="Oticas Diniz">
+  <div class="panel-layout">
+    <aside class="panel-sidebar" id="panelSidebar" aria-label="Navegação do painel">
+      <a class="sidebar-brand" href="painel.html" aria-label="Óticas Diniz - Painel">
+        <img src="logodiniz.png" alt="Óticas Diniz">
       </a>
 
-      <h1><span class="greeting-prefix">Olá</span><span id="userName">Usuario</span></h1>
-    </div>
-
-    <nav class="top-nav" aria-label="Menu principal">
-      <a class="top-nav-button active" href="painel.html">
-        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/></svg>
-        <span>Painel</span>
-      </a>
-      <a class="top-nav-button" href="#" id="stockButton">
-        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></svg>
-        <span>Lentes de Estoque</span>
-      </a>
-      <a class="top-nav-button" href="#" id="trainingsButton">
-        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m2 9 10-5 10 5-10 5L2 9Z"/><path d="M6 11v5c3.5 3 8.5 3 12 0v-5M22 9v6"/></svg>
-        <span>Treinamentos</span>
-      </a>
-      <a class="top-nav-button" href="#" id="caixaButton">
-        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h3m4 0h3M7 3h10"/></svg>
-        <span>Caixa</span>
-      </a>
-      <div class="nav-dropdown">
-        <button class="top-nav-button" id="tabelasToggle" type="button">
-          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16m6-16v16"/></svg>
-          <span>Tabelas</span>
-        </button>
-        <div class="nav-dropdown-content" id="tabelasDropdown">
-          <button type="button" data-type="precos">Preços</button>
-          <button type="button" data-type="codigos">Códigos</button>
+      <section class="profile-menu sidebar-profile" aria-label="Perfil do usuário">
+        <div class="profile-card">
+          <button class="profile-trigger" id="profileAvatar" type="button" aria-label="Abrir opções do perfil" aria-expanded="false">
+            <span class="avatar profile-photo" id="profilePhoto"><span></span></span>
+            <span class="profile-copy">
+              <strong id="userName">Usuario</strong>
+              <span id="userRole">Cargo</span>
+            </span>
+          </button>
+          <button class="gear-button" type="button" id="adminButton" aria-label="Configurações administrativas" style="display: none;">
+            <span aria-hidden="true">⚙️</span>
+          </button>
         </div>
-      </div>
-      <button class="top-nav-button" id="announcementsButton" type="button" aria-expanded="false">
-        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Z"/><path d="M14 2v6h6M8 13h8m-8 4h8"/></svg>
-        <span>Documentos Importantes</span>
-      </button>
-    </nav>
-    <div class="nav-backdrop" id="navBackdrop"></div>
-
-    <div class="header-actions">
-      <button class="hamburger-menu" id="mobileMenuToggle" aria-label="Menu" type="button">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-
-      <button class="gear-button" type="button" id="adminButton" aria-label="Configurações" style="display: none;">
-        <span aria-hidden="true">⚙️</span>
-      </button>
-
-      <div class="profile-menu">
-        <button class="avatar" id="profileAvatar" type="button" aria-label="Abrir menu do perfil" aria-expanded="false">
-          <span></span>
-        </button>
         <div class="profile-dropdown" id="profileDropdown">
           <div class="profile-item theme-switch-wrapper">
             <span>Modo Escuro</span>
@@ -114,16 +57,55 @@
               </span>
             </label>
           </div>
-          <hr style="border: 0; border-top: 1px solid var(--line); margin: 4px 0;">
-          <button class="profile-logout" type="button" id="changePasswordButton" style="color: var(--ink);">🔑 Alterar Senha</button>
-          <hr style="border: 0; border-top: 1px solid var(--line); margin: 4px 0;">
+          <button class="profile-logout profile-secondary-action" type="button" id="changePasswordButton">🔑 Alterar Senha</button>
           <button class="profile-logout" type="button" id="logoutButton">Sair</button>
         </div>
-      </div>
-    </div>
-  </header>
+      </section>
 
-  <main class="panel-main">
+      <nav class="top-nav" aria-label="Menu principal">
+        <button class="top-nav-button active" type="button" data-page="dashboard">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/></svg>
+          <span>Painel</span>
+        </button>
+        <button class="top-nav-button" type="button" id="stockButton" data-page="stock">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></svg>
+          <span>Lentes de Estoque</span>
+        </button>
+        <button class="top-nav-button" type="button" id="trainingsButton" data-page="trainings">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m2 9 10-5 10 5-10 5L2 9Z"/><path d="M6 11v5c3.5 3 8.5 3 12 0v-5M22 9v6"/></svg>
+          <span>Treinamentos</span>
+        </button>
+        <button class="top-nav-button" type="button" id="caixaButton" data-page="caixa">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h3m4 0h3M7 3h10"/></svg>
+          <span>Caixa</span>
+        </button>
+        <div class="nav-dropdown">
+          <button class="top-nav-button" id="tabelasToggle" type="button" aria-expanded="false">
+            <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16m6-16v16"/></svg>
+            <span>Tabelas</span>
+          </button>
+          <div class="nav-dropdown-content" id="tabelasDropdown">
+            <button type="button" data-type="precos">Preços</button>
+            <button type="button" data-type="codigos">Códigos</button>
+            <div class="table-brand-links" id="tabelasBrandLinks"></div>
+          </div>
+        </div>
+        <button class="top-nav-button" id="announcementsButton" type="button" data-page="documents" aria-expanded="false">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Z"/><path d="M14 2v6h6M8 13h8m-8 4h8"/></svg>
+          <span>Documentos Importantes</span>
+        </button>
+      </nav>
+    </aside>
+    <div class="nav-backdrop" id="navBackdrop"></div>
+    <div class="workspace">
+      <header class="mobile-topbar">
+        <button class="hamburger-menu" id="mobileMenuToggle" aria-label="Abrir menu" type="button">
+          <span></span><span></span><span></span>
+        </button>
+        <span><span class="greeting-prefix">Olá, </span><span id="mobileUserName">Usuario</span></span>
+      </header>
+      <div class="workspace-content">
+  <main class="panel-main workspace-page active" id="dashboardPage" data-page-view="dashboard">
     <!-- Visão Gerencial: Dash e Ranking de Unidades -->
     <section class="manager-section" id="managerSection" style="display: none;">
       <div class="store-selector-wrapper">
@@ -265,21 +247,27 @@
   </main>
 
   <!-- ===== VISÃO PRÓPRIA DO CAIXA (Opção B · sem modal) ===== -->
-  <section id="caixaView" class="caixa-shell" aria-label="Caixa" hidden></section>
+  <section id="caixaView" class="caixa-shell workspace-page" data-page-view="caixa" aria-label="Caixa" hidden></section>
 
-  <aside class="announcements-panel" id="announcementsPanel" aria-label="Documentos Importantes">
+  <section class="announcements-panel workspace-page" id="announcementsPanel" data-page-view="documents" aria-label="Documentos Importantes" hidden>
     <div class="announcements-card documents-card">
-      <div class="announcements-heading">
-        <h2>Documentos Importantes</h2>
-        <button type="button" id="closeAnnouncements" aria-label="Fechar documentos importantes">×</button>
+      <div class="announcements-heading documents-heading">
+        <div>
+          <span class="documents-eyebrow">Central de avisos</span>
+          <h2>Documentos Importantes</h2>
+          <p>Acesse comunicados, orientações e materiais compartilhados pela equipe.</p>
+        </div>
+        <span class="documents-heading-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Z"/><path d="M14 2v6h6M8 13h8m-8 4h8"/></svg>
+        </span>
       </div>
       <div class="announcements-list" id="announcementsList">
         <p>Carregando comunicados...</p>
       </div>
     </div>
-  </aside>
+  </section>
 
-  <aside class="announcements-panel" id="stockPanel" aria-label="Consulta de Estoque">
+  <section class="announcements-panel workspace-page" id="stockPanel" data-page-view="stock" aria-label="Consulta de Estoque" hidden>
     <div class="announcements-card" id="stockCardContainer">
       <div class="announcements-heading">
         <h2 id="stockPanelTitle">Lentes de Estoque</h2>
@@ -370,7 +358,7 @@
         </div>
       </div>
     </div>
-  </aside>
+  </section>
 
   <!-- Modal de Confirmação de OS -->
   <div id="osModal" class="admin-modal" style="display: none; background: rgba(0,0,0,0.6); z-index: 9999999;">
@@ -399,7 +387,7 @@
   </aside>
 
   <!-- Painel de Treinamentos -->
-  <aside class="announcements-panel" id="trainingsPanel" aria-label="Treinamentos" style="justify-content: center; padding: 2vh;">
+  <section class="announcements-panel workspace-page" id="trainingsPanel" data-page-view="trainings" aria-label="Treinamentos" hidden>
     <div class="announcements-card" style="width: 98%; max-width: 1900px; height: 96vh;">
       <div class="announcements-heading">
         <h2>Módulos de Treinamento</h2>
@@ -418,7 +406,7 @@
         <!-- Aulas em blocos serão injetadas aqui -->
       </div>
     </div>
-  </aside>
+  </section>
 
   <!-- Modal Flutuante para Vídeo -->
   <div id="videoModal" class="admin-modal" style="display: none; background: rgba(0,0,0,0.85); z-index: 10000000;">
@@ -433,17 +421,9 @@
     </div>
   </div>
 
-  <aside class="announcements-panel" id="tabelasPanel" aria-label="Arquivos de Tabelas">
-    <div class="announcements-card resource-card">
-      <div class="announcements-heading">
-        <h2 id="tabelasPanelTitle">Tabelas</h2>
-        <button type="button" id="closeTabelas" aria-label="Fechar tabelas">×</button>
-      </div>
-      <div class="announcements-list" id="tabelasContentList">
-        <p>Carregando arquivos...</p>
       </div>
     </div>
-  </aside>
+  </div>
 
   <!-- Modal Administrativo (Matriz de Lojas) -->
   <div class="admin-modal" id="adminModal">
@@ -553,8 +533,8 @@
 
   <img class="panel-watermark" src="logodiniz.png" alt="" aria-hidden="true">
 
-  <script type="module" src="painel.js?v=20261016-store-id"></script>
+  <script type="module" src="painel.js?v=20261020-sidebar"></script>
   <script type="module" src="admin.js"></script>
-  <script type="module" src="caixa.js?v=20261013-geral-readonly"></script>
+  <script type="module" src="caixa.js?v=20261020-sidebar"></script>
 </body>
 </html>
