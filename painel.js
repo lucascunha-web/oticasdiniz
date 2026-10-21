@@ -92,6 +92,7 @@ const normalizedRole = normalizeText(role);
 const isSeller = normalizedRole === "vendedor";
 const isAdmin = ["admin", "administrador"].includes(normalizedRole);
 const isManager = normalizedRole === "gerente";
+const canViewDashboard = isAdmin || isManager;
 const canSwitchRanking = ["admin", "administrador", "gerente"].includes(normalizedRole);
 const monthKey = getCurrentMonthKey();
 const rankings = {};
@@ -144,6 +145,7 @@ if (isManager) {
 if (!canSwitchRanking) {
   document.getElementById("rankingSwitch").hidden = true;
 }
+document.getElementById("dashboardNavButton").hidden = !canViewDashboard;
 
 document.getElementById("rankingSwitch").addEventListener("change", (event) => {
   renderRanking(event.target.value);
@@ -773,8 +775,33 @@ const tabelasDropdown = document.getElementById("tabelasDropdown");
 const menuToggle = document.getElementById("mobileMenuToggle");
 const navBackdrop = document.getElementById("navBackdrop");
 const panelSidebar = document.getElementById("panelSidebar");
+const isMobileNavigation = window.matchMedia("(max-width: 900px)");
+
+function setSidebarOpen(isOpen) {
+  if (isMobileNavigation.matches) {
+    panelSidebar.classList.toggle("open", isOpen);
+    return;
+  }
+
+  document.body.classList.toggle("sidebar-collapsed", !isOpen);
+}
+
+function updateSidebarToggle(isOpen) {
+  menuToggle?.classList.toggle("open", isOpen);
+  menuToggle?.setAttribute("aria-expanded", String(isOpen));
+  menuToggle?.setAttribute(
+    "aria-label",
+    isMobileNavigation.matches
+      ? (isOpen ? "Fechar menu" : "Abrir menu")
+      : (isOpen ? "Ocultar barra lateral" : "Mostrar barra lateral")
+  );
+}
 
 function setActivePanelPage(page, keepSidebarOpen = false) {
+  if (page === "dashboard" && !canViewDashboard) {
+    page = "sellers";
+  }
+
   const pages = document.querySelectorAll("[data-page-view]");
   pages.forEach((pageElement) => {
     const isActive = pageElement.dataset.pageView === page;
@@ -794,8 +821,8 @@ window.setActivePanelPage = setActivePanelPage;
 
 function closeMobileMenu() {
   if (panelSidebar?.classList.contains("open")) {
-    panelSidebar.classList.remove("open");
-    menuToggle?.classList.remove("open");
+    setSidebarOpen(false);
+    updateSidebarToggle(false);
     navBackdrop?.classList.remove("active");
   }
 }
@@ -804,14 +831,37 @@ navBackdrop?.addEventListener("click", closeMobileMenu);
 
 menuToggle?.addEventListener("click", (e) => {
   e.stopPropagation();
-  const isOpen = panelSidebar.classList.toggle("open");
-  menuToggle.classList.toggle("open", isOpen);
-  navBackdrop?.classList.toggle("active", isOpen);
+  if (isMobileNavigation.matches) {
+    const isOpen = !panelSidebar.classList.contains("open");
+    setSidebarOpen(isOpen);
+    updateSidebarToggle(isOpen);
+    navBackdrop?.classList.toggle("active", isOpen);
+    return;
+  }
+
+  const isOpen = document.body.classList.contains("sidebar-collapsed");
+  setSidebarOpen(isOpen);
+  const isCollapsed = !isOpen;
+  updateSidebarToggle(!isCollapsed);
+});
+
+isMobileNavigation.addEventListener("change", () => {
+  panelSidebar?.classList.remove("open");
+  document.body.classList.remove("sidebar-collapsed");
+  navBackdrop?.classList.remove("active");
+  updateSidebarToggle(!isMobileNavigation.matches);
 });
 
 document.querySelector('.top-nav [data-page="dashboard"]')?.addEventListener("click", () => {
   setActivePanelPage("dashboard");
 });
+
+document.querySelector('.top-nav [data-page="sellers"]')?.addEventListener("click", () => {
+  setActivePanelPage("sellers");
+});
+
+setActivePanelPage(canViewDashboard ? "dashboard" : "sellers");
+updateSidebarToggle(!isMobileNavigation.matches);
 
 document.addEventListener("click", (e) => {
   if (panelSidebar?.classList.contains("open") && !panelSidebar.contains(e.target) && !menuToggle?.contains(e.target)) {
