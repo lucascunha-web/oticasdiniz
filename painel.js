@@ -1986,9 +1986,13 @@ async function renderStoreHistoryChart(storeId) {
           if (metaValue === -1) return 'rgba(215, 25, 32, 1)'; // Cor padrão se não há meta
           
           const metaY = chart.scales.y.getPixelForValue(metaValue);
+          const chartHeight = chartArea.bottom - chartArea.top;
+          if (!Number.isFinite(metaY) || !Number.isFinite(chartHeight) || chartHeight <= 0) {
+            return 'rgba(215, 25, 32, 1)';
+          }
           const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
           
-          const transitionPoint = Math.max(0, Math.min(1, (metaY - chartArea.top) / chartArea.height));
+          const transitionPoint = Math.max(0, Math.min(1, (metaY - chartArea.top) / chartHeight));
           
           gradient.addColorStop(0, '#2563EB'); // Cor de cima (acima da meta)
           gradient.addColorStop(transitionPoint, '#2563EB');

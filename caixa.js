@@ -1016,6 +1016,9 @@ function editRow(kind,id){
   const list=kind==="OrdemServico"?docO:kind==="EntregasDia"?docE:docV;
   const record=list.find(row=>String(row.id)===String(id));
   if(!record)return alert("Lançamento não encontrado.");
+  clearTimeout(deliveryLookupTimer);
+  deliveryLookupRequest++;
+  deliverySaleMatch=null;
   editingRow={kind,id:String(id),record};
   modalMode=kind==="OrdemServico"?"os":kind==="EntregasDia"?"entrega":"venda";
   buildModal();
@@ -1038,6 +1041,7 @@ async function reopen(){
 function parseMoney(v){const s=String(v==null?"":v).replace(/[^\d.,-]/g,"").replace(".","").replace(",",".");if(!s)return 0;const n=Number(s);return isNaN(n)?0:Math.max(0,Math.round(n*100)/100);}
 
 let modalMode="venda", modal=null, sellersCache=[], cliAll=[], cliSelId="", editingRow=null, clientsLoaded=false;
+let deliverySaleMatch=null, deliveryLookupTimer=null, deliveryLookupRequest=0;
 const CLIENTS_PAGE_LIMIT = 200;
 async function loadSellers(){
   if(sellersCache.length)return sellersCache;
@@ -1056,6 +1060,9 @@ function openNewOS(mk){
   if(!cxStore){return;}
   if(!live()){return alert("Abra o caixa antes de lançar.");}
   if(closed()){return alert("Caixa fechado — faça a reabertura para lançar.");}
+  clearTimeout(deliveryLookupTimer);
+  deliveryLookupRequest++;
+  deliverySaleMatch=null;
   modalMode=(mk==="entrega"?"entrega":mk==="os"?"os":"venda"); cliSelId=""; editingRow=null; buildModal();
 }
 
@@ -1122,6 +1129,10 @@ function buildModal(){
         <input type="hidden" id="f_cli_id" value="">
         <span class="cli-hint" id="f_cliH"></span>
       </fieldset>
+      <label id="f_deliveryClientL" style="display:none">Cliente da venda
+        <input type="text" id="f_deliveryClientName" readonly>
+        <small id="f_deliveryClientStatus" aria-live="polite">Digite a OS para localizar a venda original.</small>
+      </label>
       <fieldset id="f_payFs"><legend>Meios de pagamento</legend>
        <div class="pay-grid">
          ${["dinheiro","pix","cartao","convenio"].map(k=>`<label>${PAYL[k]} <input type="text" class="pay" data-p="${k}" inputmode="decimal"></label>`).join("")}
@@ -1153,6 +1164,18 @@ function fillEditForm(record){
   cliSelId=record.cliente||"";
   const hint=modal.querySelector("#f_cliH"); if(hint&&nome?.value)hint.textContent="✔ Cliente existente selecionado: "+nome.value;
   const queryInput=modal.querySelector("#f_cliq"); if(queryInput&&nome?.value)queryInput.value=nome.value;
+  if(modalMode==="entrega"){
+    const customerName=record.clienteNome||cliAll.find(c=>c.id===record.cliente)?.nome||"";
+    deliverySaleMatch=customerName?{
+      os:normalizeOs(record.os||record.n_os||record.id),
+      clienteId:record.cliente||"",
+      clienteNome:customerName,
+      contato:cliAll.find(c=>c.id===record.cliente)?.contato||"",
+      vendedor:record.vendedor||""
+    }:null;
+    renderDeliveryClient(customerName,customerName?"Cliente da entrega carregado.":"Consultando a venda original…");
+    if(!customerName)lookupDeliverySale(os?.value||"");
+  }
   ["dinheiro","pix","cartao","convenio","carne"].forEach(key=>{const input=modal.querySelector(`.pay[data-p="${key}"]`);if(input)input.value=record[key]||"";});
   const annex=modal.querySelector("#f_anexo"); if(annex)annex.checked=Boolean(record.anexo);
   const vendor=modal.querySelector("#f_vend"); if(vendor)vendor.value=record.vendedor||"";
@@ -1168,12 +1191,26 @@ function setMode(tp){
   modal.querySelectorAll("[data-mode]").forEach(b=>b.classList.toggle("on",b.dataset.mode===tp));
   const th=modal.querySelector(".cx-sw-thumb"); if(th)th.style.display="none"; // visual fica nos botões .on
   const isV=tp==="venda", isE=tp==="entrega", isOs=tp==="os";
+  if(!isE){
+    clearTimeout(deliveryLookupTimer);
+    deliveryLookupRequest++;
+    deliverySaleMatch=null;
+  }
   if(!isV){const ax=modal.querySelector("#f_anexo"); if(ax)ax.checked=false;}
   show(modal,"f_anexoL",isV); show(modal,"f_carL",isV);
   show(modal,"f_osTypeFs",isOs);
+  show(modal,"cliFs",!isE);
+  show(modal,"f_deliveryClientL",isE);
   updateOsTypeFields();
   show(modal,"f_venL",true);
+  const vendor=modal.querySelector("#f_vend");
+  if(vendor)vendor.disabled=isE;
   show(modal,"f_payFs",isV||isE); // Ordem de Serviço não tem meios de pagamento
+  if(isE){
+    renderDeliveryClient(deliverySaleMatch?.clienteNome||"","Digite a OS para localizar a venda original.");
+    const os=modal.querySelector("#f_os")?.value.trim();
+    if(os)scheduleDeliveryLookup(os);
+  }
   refreshTotal();
 }
 function show(modal,id,on){const it=modal.querySelector("#"+id);if(!it)return;if(on){it.style.removeProperty("display");}else{it.style.setProperty("display","none","important");}}
@@ -1339,23 +1376,134 @@ function wireModal(){
   modal.querySelector("#f_garantiaAorL")?.addEventListener("change",updateOsTypeFields);
   modal.querySelector("#f_garantiaAorL")?.addEventListener("input",updateOsTypeFields);
   (async()=>{const sel=await loadSellers();const v=modal.querySelector("#f_vend");if(v){const options=["PADRÃO",USER,...sel];v.innerHTML=`<option value="">Selecionar vendedor…</option>`+options.filter((s,i,a)=>s&&a.indexOf(s)===i).map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("");if(editingRow)v.value=editingRow.record.vendedor||"";else prefillSellerFromOS();}} )();
-  modal.querySelector("#f_os")?.addEventListener("input",prefillSellerFromOS);
+  modal.querySelector("#f_os")?.addEventListener("input",()=>{
+    prefillSellerFromOS();
+    if(modalMode==="entrega")scheduleDeliveryLookup(modal.querySelector("#f_os")?.value.trim()||"");
+  });
+  modal.querySelector("#f_os")?.addEventListener("change",()=>{
+    if(modalMode==="entrega")lookupDeliverySale(modal.querySelector("#f_os")?.value.trim()||"");
+  });
   modal.querySelectorAll(".pay").forEach(inp=>inp.oninput=refreshTotal);
   modal.querySelector("#f_anexo").onchange=refreshTotal;
   modal.querySelector("#cxForm").onsubmit=async(ev)=>{ev.preventDefault();await saveOS();};
   bindClientUI();
+}
+function renderDeliveryClient(name,status){
+  if(!modal)return;
+  const nameInput=modal.querySelector("#f_deliveryClientName");
+  const statusText=modal.querySelector("#f_deliveryClientStatus");
+  if(nameInput)nameInput.value=name||"";
+  if(statusText)statusText.textContent=status;
+}
+function scheduleDeliveryLookup(os){
+  clearTimeout(deliveryLookupTimer);
+  const request=++deliveryLookupRequest;
+  deliverySaleMatch=null;
+  renderDeliveryClient("","Aguardando uma OS válida para consultar a venda original.");
+  if(!os||!/^\d+$/.test(os)){
+    renderDeliveryClient("",os?"Informe uma OS numérica válida.":"Digite a OS para localizar a venda original.");
+    return;
+  }
+  renderDeliveryClient("","Consultando venda original…");
+  deliveryLookupTimer=setTimeout(()=>lookupDeliverySale(os,request),350);
+}
+async function lookupDeliverySale(os,request=++deliveryLookupRequest){
+  const normalizedOs=normalizeOs(os);
+  if(!modal||modalMode!=="entrega"||!normalizedOs||!/^\d+$/.test(String(os))){
+    return null;
+  }
+  if(deliverySaleMatch?.os===normalizedOs)return deliverySaleMatch;
+  clearTimeout(deliveryLookupTimer);
+  renderDeliveryClient("","Consultando venda original…");
+  try{
+    const storePath=`LOJA ${cxStore}`;
+    const daySnapshot=await getDocs(collection(db,"vendas",storePath,"caixa"));
+    if(request!==deliveryLookupRequest||!modal||modalMode!=="entrega")return null;
+    const dates=daySnapshot.docs
+      .map(day=>day.id)
+      .filter(date=>/^\d{4}-\d{2}-\d{2}$/.test(date)&&date<=cxDate)
+      .sort((a,b)=>b.localeCompare(a));
+    let sale=null;
+    for(let i=0;i<dates.length&&!sale;i+=10){
+      const batch=await Promise.all(dates.slice(i,i+10).map(date=>
+        getDoc(doc(db,"vendas",storePath,"caixa",date,"VendasDia",String(os).trim()))
+      ));
+      if(request!==deliveryLookupRequest||!modal||modalMode!=="entrega")return null;
+      sale=batch.find(snapshot=>snapshot.exists()
+        &&normalizeOs(snapshot.data()?.os||snapshot.data()?.n_os||snapshot.id)===normalizedOs)||null;
+    }
+    if(!sale){
+      deliverySaleMatch=null;
+      renderDeliveryClient("","Venda original não encontrada para esta OS nesta loja.");
+      return null;
+    }
+    const saleData=sale.data()||{};
+    const clienteId=String(saleData.cliente||"");
+    const cachedCustomer=cliAll.find(client=>client.id===clienteId);
+    let customerName=String(saleData.clienteNome||cachedCustomer?.nome||"").trim();
+    let contact=String(cachedCustomer?.contato||"");
+    if(clienteId&&!customerName){
+      const customerSnapshot=await getDoc(doc(db,"clientes",clienteId));
+      if(request!==deliveryLookupRequest||!modal||modalMode!=="entrega")return null;
+      if(customerSnapshot.exists()){
+        const customer=customerSnapshot.data()||{};
+        customerName=String(customer.nome||"").trim();
+        contact=String(customer.contato||contact);
+        upsertClientCache({id:clienteId,nome:customerName,contato:contact});
+      }
+    }
+    if(!customerName&&clienteId){
+      customerName=cliAll.find(client=>client.id===clienteId)?.nome||"";
+    }
+    if(!customerName){
+      deliverySaleMatch=null;
+      renderDeliveryClient("","A venda foi localizada, mas não possui cliente identificado.");
+      return null;
+    }
+    const saleSeller=String(saleData.vendedor||"").trim();
+    deliverySaleMatch={os:normalizedOs,clienteId,clienteNome:customerName,contato:contact,vendedor:saleSeller};
+    const customerIdInput=modal.querySelector("#f_cli_id");
+    if(customerIdInput)customerIdInput.value=clienteId;
+    const customerNameInput=modal.querySelector("#f_nome");
+    if(customerNameInput)customerNameInput.value=customerName;
+    const contactInput=modal.querySelector("#f_contato");
+    if(contactInput)contactInput.value=maskPhone(contact);
+    selectDeliverySeller(saleSeller);
+    renderDeliveryClient(customerName,"Cliente identificado pela venda original.");
+    return deliverySaleMatch;
+  }catch(error){
+    if(request===deliveryLookupRequest){
+      console.error("Erro ao consultar a venda original da entrega:",error);
+      deliverySaleMatch=null;
+      renderDeliveryClient("","Não foi possível consultar a venda original. Tente novamente.");
+    }
+    return null;
+  }
 }
 function prefillSellerFromOS(){
   if(!modal||editingRow)return;
   const os=modal.querySelector("#f_os")?.value.trim();
   const vendor=modal.querySelector("#f_vend");
   if(!os||!vendor)return;
+  if(modalMode==="entrega"&&deliverySaleMatch?.os===normalizeOs(os)&&deliverySaleMatch.vendedor){
+    selectDeliverySeller(deliverySaleMatch.vendedor);
+    return;
+  }
   const match=[...docV,...docO].find(row=>normalizeOs(row.os||row.n_os||row.id)===normalizeOs(os));
   const seller=String(match?.vendedor||"").trim();
   if(seller){
     if(![...vendor.options].some(option=>option.value===seller))vendor.add(new Option(seller,seller));
     vendor.value=seller;
   }
+}
+function selectDeliverySeller(sellerName){
+  const seller=String(sellerName||"").trim();
+  const vendor=modal?.querySelector("#f_vend");
+  if(!vendor||!seller)return;
+  if(![...vendor.options].some(option=>option.value===seller)){
+    vendor.add(new Option(seller,seller));
+  }
+  vendor.value=seller;
 }
 function readonlyMeans(){return ["dinheiro","pix","cartao","convenio"].concat(modalMode==="venda"?["carne"]:[]);}
 function refreshTotal(){
@@ -1375,6 +1523,10 @@ async function saveOS(){
   const annexEl=modal.querySelector("#f_anexo"); const annex=annexEl.checked;
   const osTxt=osEl?osEl.value.trim():"";
   if(!/^\d+$/.test(osTxt))return alert("Informe a OS com número inteiro (sem letras/pontos).");
+  if(modalMode==="entrega"){
+    const match=await lookupDeliverySale(osTxt);
+    if(!match)return alert("Não foi possível identificar o cliente pela venda original desta OS. Confira a OS e tente novamente.");
+  }
   
   if (modalMode === "venda" || modalMode === "entrega") {
     const vendEl = modal.querySelector("#f_vend");
@@ -1400,17 +1552,22 @@ async function saveOS(){
   if(!isOS){ readonlyMeans().forEach(k=>{const it=modal.querySelector(`.pay[data-p="${k}"]`);const v=parseMoney(it?it.value:"" );pays[k]=v;if(v>0)paid=1;}); }
   if(annex&&!isOS&&modalMode!=="venda")return alert("Anexo só se aplica a Vendas.");
   if(!annex&&!paid&&modalMode==="venda")return alert("Venda sem anexo: informe ao menos um meio de pagamento maior que zero (Carnê conta como meio).");
-  const cidEl=modal.querySelector("#f_cli_id"); const selId=(cidEl&&cidEl.value)||cliSelId||"";
-  const hasNome=(nome?nome.value.trim():""); const rawCont=(cont?cont.value:""); const contDig=onlyDigits(rawCont);
+  const cidEl=modal.querySelector("#f_cli_id");
+  const selId=modalMode==="entrega"?deliverySaleMatch?.clienteId||"":(cidEl&&cidEl.value)||cliSelId||"";
+  const hasNome=modalMode==="entrega"?deliverySaleMatch?.clienteNome||"":(nome?nome.value.trim():"");
+  const rawCont=modalMode==="entrega"?deliverySaleMatch?.contato||"":(cont?cont.value:"");
+  const contDig=onlyDigits(rawCont);
   if(!selId && !hasNome)return alert("O cliente é obrigatório — busque um cadastrado ou clique em '＋ Novo Cliente' para cadastrar.");
-  if(contDig.length!==10&&contDig.length!==11)return alert("Telefone obrigatório — formato (00)00000-0000.");
+  if(modalMode!=="entrega"&&contDig.length!==10&&contDig.length!==11)return alert("Telefone obrigatório — formato (00)00000-0000.");
   const contSave=maskPhone(contDig);
   let cliente="";
   if(selId){
     cliente=selId;
-    try{ await updateDoc(doc(db,"clientes",cliente),{nome:hasNome||undefined,contato:contDig?contSave:undefined}); }catch(e){}
-    upsertClientCache({id:cliente,nome:hasNome,contato:contSave});
-  } else if(hasNome){
+    if(modalMode!=="entrega"){
+      try{ await updateDoc(doc(db,"clientes",cliente),{nome:hasNome||undefined,contato:contDig?contSave:undefined}); }catch(e){}
+      upsertClientCache({id:cliente,nome:hasNome,contato:contSave});
+    }
+  } else if(hasNome&&modalMode!=="entrega"){
     cliente="c"+String(Date.now());
     try{ await setDoc(doc(db,"clientes",cliente),{nome:hasNome,contato:contSave,criadoEm:new Date()}); }catch(e){console.error(e);}
     upsertClientCache({id:cliente,nome:hasNome,contato:contSave});
