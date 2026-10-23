@@ -5460,14 +5460,140 @@ body.manager-view #storeChartContainer {
   }
 
   #activeStoreDisplay .ind-group span {
-    font-size: clamp(0.52rem, 0.58vw, 0.62rem);
+    font-size: clamp(0.62rem, 0.7vw, 0.72rem);
     letter-spacing: 0.02em;
     overflow-wrap: anywhere;
   }
 
   #activeStoreDisplay .ind-group strong {
-    font-size: clamp(0.68rem, 0.9vw, 0.82rem);
+    font-size: clamp(0.82rem, 0.95vw, 0.95rem);
     overflow-wrap: anywhere;
+  }
+}
+
+@media (min-width: 901px) {
+  .store-ranking-list {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    overflow: visible;
+  }
+
+  .store-ranking-list .rank-card-white {
+    min-width: 0;
+    flex: 1 1 0;
+    padding: 10px;
+  }
+
+  .store-ranking-list .r-header {
+    min-width: 0;
+    gap: 7px;
+    margin-bottom: 10px;
+  }
+
+  .store-ranking-list .r-pos-badge {
+    width: 28px;
+    height: 28px;
+    flex-basis: 28px;
+    font-size: 0.78rem;
+  }
+
+  .store-ranking-list .r-store-name {
+    min-width: 0;
+    font-size: clamp(0.68rem, 0.75vw, 0.82rem);
+    overflow-wrap: anywhere;
+  }
+
+  .store-ranking-list .r-featured {
+    margin-bottom: 7px;
+    font-size: clamp(0.8rem, 1vw, 1.05rem);
+    overflow-wrap: anywhere;
+  }
+
+  .store-ranking-list .r-sub-info {
+    font-size: clamp(0.58rem, 0.65vw, 0.68rem);
+    overflow-wrap: anywhere;
+  }
+
+  .store-ranking-list .r-footer-badges {
+    margin-top: 10px;
+  }
+
+  .store-ranking-list .s-badge {
+    padding: 4px;
+    font-size: clamp(0.52rem, 0.58vw, 0.62rem);
+  }
+
+  .manager-seller-grid {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    overflow: visible;
+  }
+
+  .manager-seller-grid .manager-seller-card {
+    min-width: 0;
+    flex: 1 1 0;
+    padding: 10px;
+  }
+
+  .manager-seller-grid .manager-seller-header {
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .manager-seller-grid .manager-seller-photo {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+  }
+
+  .manager-seller-grid .manager-seller-header h3 {
+    font-size: clamp(0.68rem, 0.75vw, 0.82rem);
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .manager-seller-grid .manager-seller-stat-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 4px;
+    padding: 6px;
+  }
+
+  .manager-seller-grid .manager-seller-stat-row > span:first-child {
+    font-size: clamp(0.54rem, 0.58vw, 0.64rem);
+    overflow-wrap: anywhere;
+  }
+
+  .manager-seller-grid .manager-seller-stat-row > strong {
+    font-size: clamp(0.58rem, 0.65vw, 0.7rem);
+  }
+
+  .manager-seller-grid .manager-seller-stat-row .manager-seller-rank,
+  .manager-seller-grid .manager-seller-stat-row .manager-seller-meta-note {
+    grid-column: 2;
+    font-size: 0.56rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .store-ranking-list,
+  .manager-seller-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    overflow: visible;
+    padding: 0;
+  }
+
+  .store-ranking-list .rank-card-white,
+  .manager-seller-grid .manager-seller-card {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .manager-seller-grid .manager-seller-stat-row {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.15fr) minmax(0, 1fr);
   }
 }
 
