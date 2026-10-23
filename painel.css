@@ -5399,7 +5399,7 @@ body.manager-view #storeChartContainer {
   }
 }
 
-@media (min-width: 901px) and (max-width: 1300px) {
+@media (min-width: 901px) and (max-width: 1200px) {
   #activeStoreDisplay.horizontal-indicators {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
@@ -5438,6 +5438,35 @@ body.manager-view #storeChartContainer {
   .r-sub-info {
     min-width: 0;
     max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (min-width: 1201px) and (max-width: 1600px) {
+  #activeStoreDisplay.horizontal-indicators {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 8px;
+    overflow: visible;
+  }
+
+  #activeStoreDisplay .ind-group,
+  #activeStoreDisplay .ind-group.featured-green {
+    min-width: 0;
+    width: auto;
+    gap: 6px;
+    padding: 9px 8px;
+  }
+
+  #activeStoreDisplay .ind-group span {
+    font-size: clamp(0.52rem, 0.58vw, 0.62rem);
+    letter-spacing: 0.02em;
+    overflow-wrap: anywhere;
+  }
+
+  #activeStoreDisplay .ind-group strong {
+    font-size: clamp(0.68rem, 0.9vw, 0.82rem);
     overflow-wrap: anywhere;
   }
 }
