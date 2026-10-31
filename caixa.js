@@ -84,9 +84,17 @@ const FATm=["dinheiro","pix","cartao","convenio","outros"];
 const out={dinheiro:0,pix:0,cartao:0,convenio:0,carne:0,outros:0};
 const WARRANTY_TYPES={
   lente:["Alteração médica","Riscos","Defeito no ar","Não adaptação","Erro de grau","Outros"],
-  armacao:["Mola","Oxidação","Quebra / trinco","Manchas","Defeitos de fabricação","Outros"]
+  armacao:["Mola","Oxidação","Quebra / trinco","Manchas","Defeitos de fabricação","Devolução","Troca","Outros"]
 };
-const WARRANTY_SUBGROUPS=["Devolução","Troca"];
+const FRAME_BRANDS=[
+  "ADIDAS","ANA HICKMANN","ARAMIS","BULGET","CAROLINA HERRERA","CARRERA","CAVALERA",
+  "DII COLLECTION","DNZ ARMACAO","DNZ DCRIS","DUDALINA","EMILIO PUCCI","EMPORIO ARMANI",
+  "FEMME PARIS","FILA","GRAZI MASSAFERA","HB","HICKMANN","HIT","HURLEY","IODICE",
+  "JEAN MARCELL","JOLIE","LANCA PERFUME","LILICA RIPILICA","MARESIA","MARIA VALENTINA",
+  "MORENA ROSA","MOSCHINO","NIKE","OAKLEY","PIERRE CARDIN","POLICE","PRADA LINEA ROSSA",
+  "PROMOCAO","RAY BAN","SANTA LOLLA","SESTINI","SPEEDO","STEPPER","SWAROVSKI",
+  "TOMMY HILFIGER","VERSACE","VIZZANO","VOGUE","ZEGNA"
+];
 function warrantyTypesFor(material){
   return norm(material)==="armacao"?WARRANTY_TYPES.armacao:WARRANTY_TYPES.lente;
 }
@@ -641,7 +649,8 @@ function openGeneratedOS(osId){
       <fieldset><legend>Dioptria e medidas — todos os campos obrigatórios</legend>${side("Olho direito","od")}${side("Olho esquerdo","oe")}</fieldset>
       <fieldset><legend>Medidas da armação</legend><div class="cx-os-grid cx-os-grid--frame">${["aro","md","vertical","ponte"].map(k=>field(k.toUpperCase(),`armacao_${k}`,"text",detail[`armacao_${k}`]||"")).join("")}</div></fieldset>`;
   }else if(frame){
-    body=`<fieldset><legend>Dados da garantia de armação</legend><div class="cx-os-grid cx-os-grid--frame-guarantee">${select("Tipo de garantia","tipoGarantia",guaranteeOptions,detail.tipoGarantia||"")}${select("Subgrupo da garantia","subgrupoGarantia",WARRANTY_SUBGROUPS,detail.subgrupoGarantia||record.subgrupoGarantia||"")}${yesNo("Antecipada?","garantiaAntecipada",detail.garantiaAntecipada||"")}${field("Data da compra original","dataCompra","date",detail.dataCompra||"")}${field("OS original","osOriginal","text",detail.osOriginal||"")}${field("Produto","produto","text",detail.produto||"")}</div></fieldset>`;
+    const frameProduct=String(detail.produto||"").replace(/^D11 COLLECTION$/i,"DII COLLECTION");
+    body=`<fieldset><legend>Dados da garantia de armação</legend><div class="cx-os-grid cx-os-grid--frame-guarantee">${select("Tipo de garantia","tipoGarantia",guaranteeOptions,detail.tipoGarantia||"")}${yesNo("Antecipada?","garantiaAntecipada",detail.garantiaAntecipada||"")}${field("Data da compra original","dataCompra","date",detail.dataCompra||"")}${field("OS original","osOriginal","text",detail.osOriginal||"")}${select("Produto","produto",FRAME_BRANDS,frameProduct)}</div></fieldset>`;
   }else if(kind==="reparo"){
     body=`<fieldset><legend>Dados do reparo</legend><div class="cx-os-grid">${field("Produto","produto","text",detail.produto||"")}${textarea("Serviço / defeito relatado","servicoSolicitado",detail.servicoSolicitado||"")}</div></fieldset>`;
   }else if(kind==="cortesia"){
@@ -913,7 +922,6 @@ function osPrintHtml(record, detail) {
     <div class="detail-grid detail-grid--frame-guarantee">
       ${dataCard("Tipo de atendimento",attendanceType)}
       ${dataCard("Tipo de garantia",display("tipoGarantia"))}
-      ${dataCard("Subgrupo da garantia",display("subgrupoGarantia"))}
       ${dataCard("Antecipada",display("garantiaAntecipada"))}
       ${dataCard("OS original / Data da compra original",`${display("osOriginal")} · ${display("dataCompra")}`)}
       ${dataCard("Produto",display("produto"),"data-card--product")}
@@ -1179,13 +1187,6 @@ function buildModal(){
             <option value="Outros">Outros</option>
           </select>
         </label>
-        <label id="f_subgrupoGarantiaL" style="display:none">Subgrupo da garantia
-          <select id="f_subgrupoGarantia">
-            <option value="">Selecione…</option>
-            <option value="Devolução">Devolução</option>
-            <option value="Troca">Troca</option>
-          </select>
-        </label>
         <label id="f_dataPrevisaoL" class="cx-os-deadline" style="display:none">Prazo / Data prevista
           <input type="date" id="f_dataPrevisao" required>
         </label>
@@ -1312,10 +1313,8 @@ function updateOsTypeFields(){
   const tipo=modal.querySelector("#f_tipoNota")?.value||"";
   const isOS=modalMode==="os", isGuarantee=isOS&&tipo==="garantia";
   const garantiaDe=modal.querySelector("#f_garantiaAorL")?.value||"";
-  const isFrameGuarantee=isGuarantee&&garantiaDe==="Armação";
   show(modal,"f_garantiaL",isGuarantee);
   show(modal,"f_tipoGarantiaL",isGuarantee);
-  show(modal,"f_subgrupoGarantiaL",isFrameGuarantee);
   show(modal,"f_dataPrevisaoL",isOS);
   show(modal,"f_prazoLaboratorioL",(isGuarantee&&garantiaDe==="Lente")||tipo==="reparo"||tipo==="cortesia");
   show(modal,"f_garantiaAntecipadaL",isGuarantee&&garantiaDe==="Armação");
@@ -1330,7 +1329,6 @@ function updateOsTypeFields(){
     tipoGarantia.innerHTML=`<option value="">Selecione…</option>${choices.map(value=>`<option value="${esc(value)}">${esc(value)}</option>`).join("")}`;
     if(choices.includes(previous))tipoGarantia.value=previous;
   }
-  const subgrupoGarantia=modal.querySelector("#f_subgrupoGarantia"); if(subgrupoGarantia)subgrupoGarantia.required=isFrameGuarantee;
   const prazo=modal.querySelector("#f_dataPrevisao"); if(prazo)prazo.required=isOS;
   const prazoLaboratorio=modal.querySelector("#f_prazoLaboratorio"); if(prazoLaboratorio)prazoLaboratorio.required=(isGuarantee&&garantiaDe==="Lente")||tipo==="reparo"||tipo==="cortesia";
   const antecipada=modal.querySelector("#f_garantiaAntecipada"); if(antecipada)antecipada.required=isGuarantee&&garantiaDe==="Armação";
@@ -1659,7 +1657,6 @@ async function saveOS(){
   const tipoGarantia=isOS&&tipoNota==="garantia"?(modal.querySelector("#f_tipoGarantia")?.value||""):"";
   const dataPrevisao=isOS?(modal.querySelector("#f_dataPrevisao")?.value||""):"";
   const prazoLaboratorio=isOS&&(garantiaAorL==="Lente"||tipoNota==="reparo"||tipoNota==="cortesia")?(modal.querySelector("#f_prazoLaboratorio")?.value||""):"";
-  const subgrupoGarantia=isOS&&garantiaAorL==="Armação"?(modal.querySelector("#f_subgrupoGarantia")?.value||""):"";
   const garantiaAntecipada=isOS&&garantiaAorL==="Armação"?(modal.querySelector("#f_garantiaAntecipada")?.value||""):"";
   const dataCompra=isOS&&garantiaAorL==="Armação"?(modal.querySelector("#f_dataCompra")?.value||""):"";
   if(isOS&&!tipoNota)return alert("Selecione o tipo da ordem de serviço: Garantia, Reparo ou Cortesia.");
@@ -1670,7 +1667,6 @@ async function saveOS(){
   if(isOS&&(garantiaAorL==="Lente"||tipoNota==="reparo"||tipoNota==="cortesia")&&!prazoLaboratorio)return alert("Informe o prazo para o laboratório.");
   if(isOS&&garantiaAorL==="Armação"&&!garantiaAntecipada)return alert("Informe se a garantia de armação é antecipada.");
   if(isOS&&garantiaAorL==="Armação"&&!dataCompra)return alert("Informe a data da compra original da armação.");
-  if(isOS&&garantiaAorL==="Armação"&&!subgrupoGarantia)return alert("Selecione o subgrupo da garantia de armação: devolução ou troca.");
   if(!isOS){ readonlyMeans().forEach(k=>{const it=modal.querySelector(`.pay[data-p="${k}"]`);const v=parseMoney(it?it.value:"" );pays[k]=v;if(v>0)paid=1;}); }
   if(annex&&!isOS&&modalMode!=="venda")return alert("Anexo só se aplica a Vendas.");
   if(!annex&&!paid&&modalMode==="venda")return alert("Venda sem anexo: informe ao menos um meio de pagamento maior que zero (Carnê conta como meio).");
@@ -1700,7 +1696,6 @@ async function saveOS(){
     data.tipoNota=tipoNota;
     data.garantiaAorL=garantiaAorL;
     data.tipoGarantia=tipoGarantia;
-    data.subgrupoGarantia=subgrupoGarantia;
     data.dataPrevisao=dataPrevisao;
     data.detalhesOS={
       ...(editingRow?.record.detalhesOS||{}),
