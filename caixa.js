@@ -645,9 +645,9 @@ function openGeneratedOS(osId){
   const existingFiles=Array.isArray(detail.anexos)?detail.anexos:[];
   let body="";
   if(lens){
-    body=`<fieldset><legend>Dados da garantia de lente</legend><div class="cx-os-grid cx-os-grid--lens">${select("Tipo de garantia","tipoGarantia",guaranteeOptions,detail.tipoGarantia||"")}${yesNo("Garantia antecipada?","garantiaAntecipada",detail.garantiaAntecipada||"")}${yesNo("Troca de armação?","trocaArmacao",detail.trocaArmacao||"")}${yesNo("Troca de medidas?","trocaMedidas",detail.trocaMedidas||"")}${field("Data da compra","dataCompra","date",detail.dataCompra||"")}${field("OS original","osOriginal","text",detail.osOriginal||"")}${field("Produto","produto","text",detail.produto||"")}</div></fieldset>
-      <fieldset><legend>Dioptria e medidas — todos os campos obrigatórios</legend>${side("Olho direito","od")}${side("Olho esquerdo","oe")}</fieldset>
-      <fieldset><legend>Medidas da armação</legend><div class="cx-os-grid cx-os-grid--frame">${["aro","md","vertical","ponte"].map(k=>field(k.toUpperCase(),`armacao_${k}`,"text",detail[`armacao_${k}`]||"")).join("")}</div></fieldset>`;
+    body=`<fieldset><legend>Dioptria e medidas — todos os campos obrigatórios</legend>${side("Olho direito","od")}${side("Olho esquerdo","oe")}</fieldset>
+      <fieldset><legend>Medidas da armação</legend><div class="cx-os-grid cx-os-grid--frame">${["aro","md","vertical","ponte"].map(k=>field(k.toUpperCase(),`armacao_${k}`,"text",detail[`armacao_${k}`]||"")).join("")}</div></fieldset>
+      <fieldset><legend>Dados da garantia de lente</legend><div class="cx-os-grid cx-os-grid--lens">${select("Tipo de garantia","tipoGarantia",guaranteeOptions,detail.tipoGarantia||"")}${yesNo("Garantia antecipada?","garantiaAntecipada",detail.garantiaAntecipada||"")}${yesNo("Troca de armação?","trocaArmacao",detail.trocaArmacao||"")}${yesNo("Troca de medidas?","trocaMedidas",detail.trocaMedidas||"")}${field("Data da compra","dataCompra","date",detail.dataCompra||"")}${field("OS original","osOriginal","text",detail.osOriginal||"")}${field("Produto","produto","text",detail.produto||"")}</div></fieldset>`;
   }else if(frame){
     const frameProduct=String(detail.produto||"").replace(/^D11 COLLECTION$/i,"DII COLLECTION");
     body=`<fieldset><legend>Dados da garantia de armação</legend><div class="cx-os-grid cx-os-grid--frame-guarantee">${select("Tipo de garantia","tipoGarantia",guaranteeOptions,detail.tipoGarantia||"")}${yesNo("Antecipada?","garantiaAntecipada",detail.garantiaAntecipada||"")}${field("Data da compra original","dataCompra","date",detail.dataCompra||"")}${field("OS original","osOriginal","text",detail.osOriginal||"")}${select("Produto","produto",FRAME_BRANDS,frameProduct)}</div></fieldset>`;
@@ -873,6 +873,13 @@ function osPrintHtml(record, detail) {
   const isCourtesy=noteKind==="cortesia";
   const isLens=!isRepair&&guaranteeKind==="lente";
   const isFrame=!isRepair&&guaranteeKind==="armação";
+  const documentTheme=isLens
+    ?{main:"#a51d2a",light:"#fff8f8",soft:"#f8eded",className:"print-theme--lens"}
+    :isFrame
+      ?{main:"#145c38",light:"#eff8f3",soft:"#e7f1eb",className:"print-theme--frame"}
+      :isRepair
+        ?{main:"#3f464d",light:"#f0f1f2",soft:"#e5e7e9",className:"print-theme--repair"}
+        :{main:"#a51d2a",light:"#fff8f8",soft:"#f8eded",className:"print-theme--default"};
   const os=record.os||record.id||"—";
   const display=(key)=>{
     const value=detail[key];
@@ -890,9 +897,10 @@ function osPrintHtml(record, detail) {
           <tr><th>OE · Esquerdo</th><td>${esc(display("oe_esf"))}</td><td>${esc(display("oe_cil"))}</td><td>${esc(display("oe_eixo"))}</td><td>${esc(display("oe_ad"))}</td><td>${esc(display("oe_dnp"))}</td><td>${esc(display("oe_alt"))}</td></tr>
         </tbody>
       </table>
-    </section>
+    </section>`:"";
+  const frameMeasures=isLens||isCourtesy?`
     <section class="print-section">
-      <h2 class="section-heading"><span>03</span> Medidas da armação</h2>
+      <h2 class="section-heading"><span>${isLens?"04":"03"}</span> Medidas da armação</h2>
       <div class="measure-cards">
         ${dataCard("Aro",display("armacao_aro"))}${dataCard("MD",display("armacao_md"))}${dataCard("Vertical",display("armacao_vertical"))}${dataCard("Ponte",display("armacao_ponte"))}
       </div>
@@ -929,8 +937,8 @@ function osPrintHtml(record, detail) {
   const photos=(Array.isArray(detail.anexos)?detail.anexos:[]).map((file,index)=>`<li>${esc(file?.nome||`Imagem ${index+1}`)}</li>`).join("");
   const detailsTitle=isCourtesy?"Dados da cortesia":isRepair?"Dados do reparo":isFrame?"Dados da garantia de armação":isLens?"Dados da garantia de lente":"Dados da garantia";
   const observationTitle=isRepair?"Observações adicionais":isFrame?"Observações da armação":isLens?"Observações da lente":"Relato e observações";
-  const observationNumber=isLens?"04":isRepair?"03":"02";
-  const photosSectionNumber=isLens?"05":isRepair?"04":"03";
+  const observationNumber=isLens?"05":isRepair?"03":"02";
+  const photosSectionNumber=isLens?"06":isRepair?"04":"03";
   const title=isCourtesy?"Ordem de serviço · Cortesia":isRepair?"Ordem de serviço · Reparo":isFrame?"Ordem de serviço · Garantia de armação":isLens?"Ordem de serviço · Garantia de lente":"Ordem de serviço · Garantia";
   const serviceRequested=String(detail.servicoSolicitado||"").trim();
   const observation=String(detail.observacoes||"").trim()||"Nenhuma observação adicional registrada.";
@@ -942,28 +950,29 @@ function osPrintHtml(record, detail) {
   <title>${esc(title)} ${esc(os)}</title>
   <style>
     * { box-sizing:border-box; }
+    :root { --document-color:${documentTheme.main}; --document-light:${documentTheme.light}; --document-soft:${documentTheme.soft}; }
     body { margin:0; padding:28px; background:#edf0f4; color:#202938; font:12px/1.45 Inter,Arial,sans-serif; }
-    .sheet { width:min(100%,850px); margin:0 auto; padding:34px 38px; background:#fff; border:1px solid #d8dee8; box-shadow:0 8px 28px rgba(25,35,50,.12); }
-    .brand-header { display:flex; align-items:center; justify-content:space-between; gap:24px; padding-bottom:18px; border-bottom:3px solid #b21f2d; }
+    .sheet { width:min(100%,850px); margin:0 auto; padding:34px 38px; background:#fff; border:1px solid var(--document-color); box-shadow:0 8px 28px rgba(25,35,50,.12); }
+    .brand-header { display:flex; align-items:center; justify-content:space-between; gap:24px; padding-bottom:18px; border-bottom:3px solid var(--document-color); }
     .brand { display:flex; align-items:center; gap:14px; min-width:0; }
     .brand img { display:block; width:auto; max-width:170px; max-height:52px; object-fit:contain; }
     .brand-caption { color:#6b7280; font-size:9px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
     .document-title { text-align:right; }
-    .document-title h1 { margin:0; color:#a51d2a; font-size:20px; line-height:1.15; font-weight:900; text-transform:uppercase; }
+    .document-title h1 { margin:0; color:var(--document-color); font-size:20px; line-height:1.15; font-weight:900; text-transform:uppercase; }
     .document-title p { margin:5px 0 0; color:#555f6e; font-size:11px; font-weight:700; }
     .identity-grid { display:grid; grid-template-columns:.7fr 1.5fr 1fr; gap:10px; margin:18px 0 20px; }
     .identity-card { min-width:0; padding:12px 14px; border:1px solid #dce1e8; border-radius:8px; background:#f7f8fa; }
     .identity-card span,.data-card span { display:block; margin-bottom:4px; color:#687385; font-size:9px; font-weight:900; letter-spacing:.07em; text-transform:uppercase; }
     .identity-card strong { display:block; color:#202938; font-size:13px; font-weight:800; overflow-wrap:anywhere; }
-    .identity-card.os-number { border-color:#b21f2d; background:#fff8f8; }
-    .identity-card.os-number strong { color:#a51d2a; font-size:18px; }
+    .identity-card.os-number { border-color:var(--document-color); background:var(--document-light); }
+    .identity-card.os-number strong { color:var(--document-color); font-size:18px; }
     .meta-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-bottom:20px; }
-    .meta-item { padding:9px 11px; border-left:3px solid #b21f2d; background:#f7f8fa; }
+    .meta-item { padding:9px 11px; border-left:3px solid var(--document-color); background:var(--document-soft); }
     .meta-item span { display:block; color:#687385; font-size:8px; font-weight:900; letter-spacing:.06em; text-transform:uppercase; }
     .meta-item strong { display:block; margin-top:3px; color:#283244; font-size:10px; }
     .print-section { margin-top:20px; page-break-inside:avoid; }
     .section-heading { display:flex; align-items:center; gap:9px; margin:0 0 11px; padding-bottom:7px; border-bottom:1px solid #dce1e8; color:#263244; font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.035em; }
-    .section-heading span { display:grid; width:22px; height:22px; place-items:center; border-radius:50%; background:#a51d2a; color:#fff; font-size:9px; }
+    .section-heading span { display:grid; width:22px; height:22px; place-items:center; border-radius:50%; background:var(--document-color); color:#fff; font-size:9px; }
     .detail-grid { display:grid; grid-template-columns:repeat(${isLens?3:2},minmax(0,1fr)); gap:8px; }
     .lens-details { display:grid; gap:8px; }
     .detail-grid--lens-types { grid-template-columns:repeat(2,minmax(0,1fr)); }
@@ -972,8 +981,8 @@ function osPrintHtml(record, detail) {
     .detail-grid--frame-guarantee { grid-template-columns:repeat(2,minmax(0,1fr)); }
     .data-card { min-width:0; padding:10px 12px; border:1px solid #e0e4ea; border-radius:7px; background:#fff; break-inside:avoid; page-break-inside:avoid; }
     .data-card--full { grid-column:1/-1; }
-    .data-card--product { border-color:#b21f2d; background:#fff8f8; }
-    .data-card--product strong { color:#a51d2a; font-size:13px; }
+    .data-card--product { border-color:var(--document-color); background:var(--document-light); }
+    .data-card--product strong { color:var(--document-color); font-size:13px; }
     .data-card strong { display:block; color:#202938; font-size:11px; font-weight:750; overflow-wrap:anywhere; }
     .optical-table { width:100%; border-collapse:collapse; table-layout:fixed; }
     .optical-table th,.optical-table td { padding:9px 5px; border:1px solid #dce1e8; text-align:center; overflow-wrap:anywhere; }
@@ -981,7 +990,7 @@ function osPrintHtml(record, detail) {
     .optical-table tbody th { width:100px; background:#fafbfc; color:#283244; font-size:9px; text-align:left; }
     .optical-table td { color:#202938; font-size:10px; font-weight:750; font-variant-numeric:tabular-nums; }
     .measure-cards { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
-    .note-box { min-height:72px; padding:13px 14px; border:1px solid #dce1e8; border-radius:7px; background:#fbfbfc; white-space:pre-wrap; overflow-wrap:anywhere; color:#303a49; font-size:11px; }
+    .note-box { min-height:72px; padding:13px 14px; border:1px solid var(--document-color); border-radius:7px; background:var(--document-light); white-space:pre-wrap; overflow-wrap:anywhere; color:#303a49; font-size:11px; }
     .photo-list { display:flex; flex-wrap:wrap; gap:7px; margin:0; padding:0; list-style:none; }
     .photo-list li { padding:6px 9px; border:1px solid #dce1e8; border-radius:6px; color:#4e5969; background:#f7f8fa; font-size:9px; font-weight:700; overflow-wrap:anywhere; }
     .signature-grid { display:grid; grid-template-columns:1fr 1fr; gap:42px; margin:62px 12px 0; page-break-inside:avoid; }
@@ -1019,7 +1028,7 @@ function osPrintHtml(record, detail) {
   </style>
 </head>
 <body>
-  <main class="sheet">
+  <main class="sheet ${documentTheme.className}">
     <header class="brand-header">
       <div class="brand"><img src="logodiniz.png" alt="Óticas Diniz"><span class="brand-caption">Assistência técnica óptica</span></div>
       <div class="document-title"><h1>${esc(title)}</h1><p>Registro de atendimento e acompanhamento</p></div>
@@ -1035,11 +1044,16 @@ function osPrintHtml(record, detail) {
       <div class="meta-item"><span>Atendente</span><strong>${esc(record.vendedor||"—")}</strong></div>
       ${(isRepair||isCourtesy||isLens)?`<div class="meta-item"><span>Prazo do laboratório</span><strong>${esc(detail.prazoLaboratorio?formatNoteDate(detail.prazoLaboratorio):"Não informado")}</strong></div>`:""}
     </section>
-    <section class="print-section">
+    ${isLens?"":`<section class="print-section">
       <h2 class="section-heading"><span>01</span> ${detailsTitle}</h2>
-      ${isLens?lensDetails:isFrame?frameDetails:`<div class="detail-grid">${dataCard("Tipo de atendimento",attendanceType)}${detailCards}</div>`}
-    </section>
+      ${isFrame?frameDetails:`<div class="detail-grid">${dataCard("Tipo de atendimento",attendanceType)}${detailCards}</div>`}
+    </section>`}
     ${opticalTable}
+    ${frameMeasures}
+    ${isLens?`<section class="print-section">
+      <h2 class="section-heading"><span>04</span> ${detailsTitle}</h2>
+      ${lensDetails}
+    </section>`:""}
     ${(isRepair||isCourtesy)?`<section class="print-section"><h2 class="section-heading"><span>02</span> Serviço solicitado</h2><div class="note-box">${esc(serviceRequested||"Não informado")}</div></section>`:""}
     <section class="print-section">
       <h2 class="section-heading"><span>${observationNumber}</span> ${observationTitle}</h2>
@@ -1317,7 +1331,7 @@ function updateOsTypeFields(){
   show(modal,"f_tipoGarantiaL",isGuarantee);
   show(modal,"f_dataPrevisaoL",isOS);
   show(modal,"f_prazoLaboratorioL",(isGuarantee&&garantiaDe==="Lente")||tipo==="reparo"||tipo==="cortesia");
-  show(modal,"f_garantiaAntecipadaL",isGuarantee&&garantiaDe==="Armação");
+  show(modal,"f_garantiaAntecipadaL",isGuarantee&&garantiaDe==="Armação"&&Boolean(editingRow));
   show(modal,"f_dataCompraL",isGuarantee&&garantiaDe==="Armação");
   const tipoNota=modal.querySelector("#f_tipoNota"); if(tipoNota)tipoNota.required=isOS;
   const garantia=modal.querySelector("#f_garantiaAorL"); if(garantia)garantia.required=isGuarantee;
@@ -1331,7 +1345,7 @@ function updateOsTypeFields(){
   }
   const prazo=modal.querySelector("#f_dataPrevisao"); if(prazo)prazo.required=isOS;
   const prazoLaboratorio=modal.querySelector("#f_prazoLaboratorio"); if(prazoLaboratorio)prazoLaboratorio.required=(isGuarantee&&garantiaDe==="Lente")||tipo==="reparo"||tipo==="cortesia";
-  const antecipada=modal.querySelector("#f_garantiaAntecipada"); if(antecipada)antecipada.required=isGuarantee&&garantiaDe==="Armação";
+  const antecipada=modal.querySelector("#f_garantiaAntecipada"); if(antecipada)antecipada.required=isGuarantee&&garantiaDe==="Armação"&&Boolean(editingRow);
   const dataCompra=modal.querySelector("#f_dataCompra"); if(dataCompra)dataCompra.required=isGuarantee&&garantiaDe==="Armação";
 }
 
@@ -1665,7 +1679,7 @@ async function saveOS(){
   if(isOS&&tipoNota==="garantia"&&!warrantyTypesFor(garantiaAorL).includes(tipoGarantia))return alert("Selecione um tipo de garantia válido para o material escolhido.");
   if(isOS&&!dataPrevisao)return alert("Informe o prazo / data prevista da ordem de serviço.");
   if(isOS&&(garantiaAorL==="Lente"||tipoNota==="reparo"||tipoNota==="cortesia")&&!prazoLaboratorio)return alert("Informe o prazo para o laboratório.");
-  if(isOS&&garantiaAorL==="Armação"&&!garantiaAntecipada)return alert("Informe se a garantia de armação é antecipada.");
+  if(isOS&&garantiaAorL==="Armação"&&editingRow&&!garantiaAntecipada)return alert("Informe se a garantia de armação é antecipada.");
   if(isOS&&garantiaAorL==="Armação"&&!dataCompra)return alert("Informe a data da compra original da armação.");
   if(!isOS){ readonlyMeans().forEach(k=>{const it=modal.querySelector(`.pay[data-p="${k}"]`);const v=parseMoney(it?it.value:"" );pays[k]=v;if(v>0)paid=1;}); }
   if(annex&&!isOS&&modalMode!=="venda")return alert("Anexo só se aplica a Vendas.");
