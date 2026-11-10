@@ -247,7 +247,7 @@ function wireStatic(){
   $("#cxPostSaleOpen")?.addEventListener("click",openPostSaleModal);
   const cbtn=$("#cxCloseBtn"); if(cbtn)cbtn.addEventListener("click",closeCaixa);
   const fab=$("#cxFab"), fb=$("#cxFabBtn");
-  if(fb&&fab){fb.addEventListener("click",(ev)=>{ev.stopPropagation();openNewOS("venda");});}
+  if(fb&&fab){fb.addEventListener("click",(ev)=>{ev.stopPropagation();openNewOS(cxTab==="entregas"?"entrega":cxTab==="os"?"os":"venda");});}
 }
 
 let postSaleModal=null;
